@@ -1,0 +1,2007 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<!-- สำคัญมากสำหรับมือถือ/ไอแพด: ถ้าไม่มีบรรทัดนี้ ทุกอย่างจะถูกย่อจนเล็ก -->
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Caminalcule Evolution</title>
+
+<!-- ล็อกเวอร์ชัน Konva ไว้ ไม่ให้เปลี่ยนเอง -->
+<script src="https://cdn.jsdelivr.net/npm/konva@9.3.6/konva.min.js"></script>
+
+<style>
+:root {
+  --line: #b9bdb5;
+  --ink: #23261f;
+  --accent: #c8322b;
+  --glow: #2fd651;
+  --paper: #f4f5f1;
+  --font: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans Thai", "Sarabun", Tahoma, sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
+  background: #d6d8d2;
+  color: var(--ink);
+  font-family: var(--font);
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+#app {
+  display: flex;
+  flex-direction: column;
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
+}
+
+/* ---------- แถบเครื่องมือด้านบน ---------- */
+#toolbar {
+  flex: 0 0 auto;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 8px;
+  background: #e6e8e2;
+  border-bottom: 1px solid var(--line);
+}
+.spacer { flex: 1; }
+
+button {
+  padding: 8px 11px;
+  font: inherit;
+  font-size: 14px;
+  color: var(--ink);
+  background: #fff;
+  border: 1px solid #9a9e95;
+  border-radius: 6px;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+button:active { background: #e7e9e3; }
+button:disabled { opacity: 0.4; cursor: default; }
+button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+button.primary { background: var(--ink); color: #fff; border-color: var(--ink); }
+
+/* ปุ่มสลับหน้าจอ: คามินาคูล / เส้นเวลา */
+.switch {
+  display: inline-flex;
+  border: 1px solid #9a9e95;
+  border-radius: 7px;
+  overflow: hidden;
+}
+.switch button { border: none; border-radius: 0; background: #fff; }
+.switch button + button { border-left: 1px solid #9a9e95; }
+.switch button[aria-pressed="true"] { background: var(--ink); color: #fff; }
+
+body.view-gallery .timeline-only { display: none; }
+
+/* ---------- พื้นที่หลัก ---------- */
+#main { position: relative; flex: 1 1 auto; min-height: 0; }
+#container { position: absolute; inset: 0; touch-action: none; }
+
+/* ---------- หน้ารวมตัวคามินาคูลทั้งหมด ---------- */
+#gallery {
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  background: var(--paper);
+  touch-action: none;          /* ไม่มีการเลื่อนหน้า: ทุกตัวอยู่ในจอเดียว จึงไม่แย่งท่าทางกับการลาก */
+  transition: opacity 0.15s;
+}
+body.view-timeline #gallery { opacity: 0; pointer-events: none; }
+#galleryHint {
+  flex: 0 0 auto;
+  margin: 0;
+  padding: 8px 12px 0;
+  font-size: 13px;
+  line-height: 1.4;
+  text-align: center;
+  color: #555;
+}
+#galleryBody {
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--section-gap, 18px);
+}
+.ggrid {
+  display: grid;
+  grid-template-columns: repeat(var(--cols, 8), var(--cell, 70px));
+  grid-auto-rows: var(--cell, 70px);
+  gap: 6px;
+  justify-content: center;
+}
+/* กรอบดำหนา: เฉพาะตัวที่ 1–14 (ยังมีชีวิต) และเฉพาะในหน้ารวมตัวเท่านั้น */
+.gitem {
+  border: 3px solid transparent;   /* ฟอสซิล: ไม่มีกรอบ แต่ขนาดเท่ากัน */
+  padding: 3px;
+  cursor: grab;
+  -webkit-user-drag: none;
+}
+#livingGrid .gitem {
+  background: #fff;
+  border-color: #111;
+}
+.gitem img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+  -webkit-user-drag: none;
+}
+.gitem.used { opacity: 0.25; cursor: default; }
+.gitem.pressed { box-shadow: 0 0 0 3px var(--glow); }
+
+/* ภาพขยายตอนกดค้าง (ไม่รับการแตะ เพื่อให้นิ้วเลื่อนต่อได้) */
+#peek {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  z-index: 60;
+  width: min(70vw, 60vh);
+  height: min(70vw, 60vh);
+  transform: translate(-50%, -50%);
+  padding: 12px;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.35);
+  pointer-events: none;
+}
+#peek img { width: 100%; height: 100%; object-fit: contain; }
+
+/* เมนูเมื่อแตะตัวบนเส้นเวลา */
+#nodeMenu {
+  position: absolute;
+  z-index: 20;
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  background: #fff;
+  border: 1px solid #9a9e95;
+  border-radius: 9px;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.25);
+  white-space: nowrap;
+}
+#nodeMenu button { padding: 9px 12px; border-color: #c9ccc4; }
+
+/* แถบบอกว่าตอนนี้อยู่ในโหมดไหน */
+#modeBar {
+  position: absolute;
+  bottom: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 15;
+  max-width: calc(100% - 16px);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 8px 7px 12px;
+  font-size: 14px;
+  line-height: 1.35;
+  color: #fff;
+  background: rgba(35,38,31,0.92);
+  border-radius: 8px;
+}
+#modeBar button { padding: 5px 10px; flex: 0 0 auto; }
+#modeBar.no-button button { display: none; }
+#modeBar.no-button { padding-right: 12px; }
+
+#vbar {
+  position: absolute;
+  right: 3px;
+  width: 6px;
+  z-index: 6;
+  border-radius: 3px;
+  background: rgba(35,38,31,0.35);
+  pointer-events: none;
+}
+body.view-gallery #vbar { display: none; }
+
+#hint {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: 8px;
+  z-index: 5;
+  font-size: 13px;
+  color: #444;
+  background: rgba(255,255,255,0.88);
+  border-radius: 6px;
+  padding: 6px 10px;
+  pointer-events: none;
+  transition: opacity 0.6s;
+}
+#hint.faded { opacity: 0; }
+
+/* ภาพที่ลอยตามนิ้วระหว่างนำตัวไปวาง */
+#ghost {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 50;
+  pointer-events: none;
+  object-fit: contain;
+  opacity: 0.9;
+  filter: drop-shadow(0 4px 6px rgba(0,0,0,0.35));
+}
+
+/* ---------- หน้าต่างซ้อน ---------- */
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  background: rgba(0,0,0,0.6);
+}
+.overlay.solid { background: var(--paper); }
+.hidden { display: none !important; }
+
+.box {
+  max-width: 100%;
+  max-height: 100%;
+  overflow: auto;
+  background: #fff;
+  border-radius: 10px;
+  padding: 20px;
+  text-align: center;
+}
+.box h2, .box h3 { margin: 0 0 12px; }
+.small { font-size: 13px; color: #555; margin: 4px 0 12px; }
+.box button { margin: 3px; }
+.error { color: var(--accent); font-size: 14px; margin: 8px 0; }
+
+/* หน้าเลือกภาษา */
+#langScreen .box { border: 1px solid var(--line); }
+.bigBtn { min-width: 150px; padding: 14px 20px; font-size: 20px; }
+
+/* หน้ากรอกข้อมูลนิสิต */
+#nameScreen .box { width: min(640px, 100%); border: 1px solid var(--line); }
+.srow {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 36px;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+.srow input {
+  min-width: 0;
+  padding: 9px 10px;
+  font-size: 16px;              /* 16px กัน iPhone/iPad ซูมเองตอนพิมพ์ */
+  font-family: var(--font);
+  border: 1px solid #9a9e95;
+  border-radius: 5px;
+  -webkit-user-select: text;
+  user-select: text;
+}
+.srow .rm { padding: 0; margin: 0; }
+@media (max-width: 560px) {
+  .srow { grid-template-columns: 1fr 1fr 36px; }
+  .srow input.sid { grid-column: 1 / 3; }
+  .srow .rm { grid-row: 1; grid-column: 3; }
+}
+#rowsLabel { display: grid; grid-template-columns: 1fr 1fr 1fr 36px; gap: 6px; font-size: 13px; color: #555; text-align: left; margin-bottom: 4px; }
+@media (max-width: 560px) { #rowsLabel { display: none; } }
+
+/* หน้าอธิบายการทำงาน */
+#tutorial .box {
+  width: min(900px, 100%);
+  max-height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  text-align: left;
+  border: 1px solid var(--line);
+}
+.tutTop { display: flex; align-items: center; gap: 8px; }
+.tutTop h3 { margin: 0; flex: 1; font-size: 17px; }
+#tutStage {
+  border: 2px solid #333;
+  border-radius: 8px;
+  background: #fff;
+  overflow: hidden;
+}
+#tutStage svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: calc(100dvh - 300px);
+  min-height: 180px;
+}
+#tutText {
+  border: 2px solid #333;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 16px;
+  line-height: 1.65;
+  min-height: 5.2em;
+}
+.pager { display: flex; justify-content: center; align-items: center; gap: 6px; flex-wrap: wrap; }
+.pager button { min-width: 40px; }
+.pager button.cur { background: var(--ink); color: #fff; border-color: var(--ink); }
+#btnTutStart { margin-left: 8px; }
+
+#previewImg {
+  display: block;
+  width: min(80vw, 65vh);
+  height: min(80vw, 65vh);
+  object-fit: contain;
+}
+#exportImg {
+  display: block;
+  max-width: 100%;
+  max-height: 60vh;
+  margin: 0 auto 10px;
+  border: 1px solid var(--line);
+  -webkit-touch-callout: default;   /* ให้กดค้างเพื่อบันทึกภาพได้ */
+  -webkit-user-select: auto;
+  user-select: auto;
+}
+</style>
+</head>
+
+<body class="view-gallery">
+
+<div id="app">
+  <div id="toolbar">
+    <div class="switch" role="group">
+      <button id="btnGallery" aria-pressed="true" data-i18n="tabGallery"></button>
+      <button id="btnTimeline" aria-pressed="false" data-i18n="tabTimeline"></button>
+    </div>
+    <button id="btnUndo" disabled data-i18n="undo"></button>
+    <button id="btnZoomOut" class="timeline-only">−</button>
+    <button id="btnFit" class="timeline-only" data-i18n="fit"></button>
+    <button id="btnZoomIn" class="timeline-only">+</button>
+    <span class="spacer"></span>
+    <button id="btnHelp">?</button>
+    <button id="btnExport" data-i18n="export"></button>
+    <button id="btnReset" data-i18n="reset"></button>
+  </div>
+
+  <div id="main">
+    <div id="container"></div>
+
+    <div id="gallery">
+      <p id="galleryHint" data-i18n="galleryHint"></p>
+      <div id="galleryBody">
+        <div id="livingGrid" class="ggrid"></div>
+        <div id="fossilGrid" class="ggrid"></div>
+      </div>
+    </div>
+
+    <div id="nodeMenu" class="hidden" role="menu">
+      <button data-act="move" data-i18n="menuMove"></button>
+      <button data-act="link" data-i18n="menuLink"></button>
+      <button data-act="unlink" data-i18n="menuUnlink"></button>
+      <button data-act="putback" data-i18n="menuPutback"></button>
+    </div>
+
+    <div id="modeBar" class="hidden">
+      <span id="modeText"></span>
+      <button id="btnDone" data-i18n="done"></button>
+    </div>
+
+    <div id="vbar" class="hidden"></div>
+    <div id="hint" class="faded" data-i18n="hintTimeline"></div>
+  </div>
+</div>
+
+<div id="peek" class="hidden"><img id="peekImg" alt=""></div>
+<img id="ghost" class="hidden" alt="">
+
+<!-- 1) เลือกภาษา -->
+<div id="langScreen" class="overlay solid">
+  <div class="box">
+    <h2>Caminalcule Evolution</h2>
+    <p class="small">เลือกภาษา · Choose your language</p>
+    <button class="bigBtn primary" data-lang="th">ไทย</button>
+    <button class="bigBtn primary" data-lang="en">English</button>
+  </div>
+</div>
+
+<!-- พบงานที่ทำค้างไว้ในเครื่องนี้ -->
+<div id="resumeScreen" class="overlay solid hidden">
+  <div class="box">
+    <h3 data-i18n="resumeTitle"></h3>
+    <p id="resumeNames"></p>
+    <button id="btnContinue" class="primary" data-i18n="continue"></button>
+    <button id="btnStartNew" data-i18n="startNew"></button>
+  </div>
+</div>
+
+<!-- 2) กรอกข้อมูลนิสิต -->
+<div id="nameScreen" class="overlay solid hidden">
+  <div class="box">
+    <h3 data-i18n="nameTitle"></h3>
+    <div id="rowsLabel">
+      <span data-i18n="first"></span><span data-i18n="last"></span><span data-i18n="sid"></span><span></span>
+    </div>
+    <div id="rows"></div>
+    <button id="btnAddRow" data-i18n="addMember"></button>
+    <p id="nameError" class="error hidden" data-i18n="nameError"></p>
+    <div><button id="btnNameNext" class="primary" data-i18n="next"></button></div>
+  </div>
+</div>
+
+<!-- 3) อธิบายการทำงาน -->
+<div id="tutorial" class="overlay solid hidden">
+  <div class="box">
+    <div class="tutTop">
+      <h3 data-i18n="tutTitle"></h3>
+      <button id="btnTutLang"></button>
+      <button id="btnTutSkip" data-i18n="skip"></button>
+    </div>
+    <div id="tutStage"></div>
+    <div id="tutText"></div>
+    <div class="pager" id="pager"></div>
+  </div>
+</div>
+
+<!-- ดูภาพขยาย (แตะสั้น ๆ) -->
+<div id="preview" class="overlay hidden">
+  <div class="box">
+    <img id="previewImg" alt="">
+    <p class="small" data-i18n="tapClose"></p>
+  </div>
+</div>
+
+<!-- ผลการส่งออก -->
+<div id="exportOverlay" class="overlay hidden">
+  <div class="box">
+    <img id="exportImg" alt="">
+    <p class="small" data-i18n="exportHint"></p>
+    <button id="btnShare" class="primary hidden" data-i18n="share"></button>
+    <button id="btnDownload" class="primary" data-i18n="download"></button>
+    <button id="btnCloseExport" data-i18n="close"></button>
+  </div>
+</div>
+
+<script>
+// ================= ตั้งค่า =================
+const CONFIG = {
+  TOTAL: 71,
+  LIVING_COUNT: 14,         // ตัวที่ 1–14 = ชนิดที่ยังมีชีวิต, 15–71 = ฟอสซิล
+  IMG: n => `images/caminacu_${String(n).padStart(2, '0')}.png`,
+  BG: 'images/timeline.png',
+
+  // ตัดที่ว่างด้านซ้ายของ timeline.png (1512×1323) ออก ให้เส้นเวลาใหญ่ขึ้นบนจอ
+  // ถ้าเปลี่ยนภาพ timeline ให้แก้ค่านี้ หรือใส่ null เพื่อใช้ทั้งภาพ
+  BG_CROP: { x: 520, y: 30, width: 992, height: 1260 },
+
+  // ตำแหน่ง y ของเส้น present, 1, 2, … 19 ในภาพ timeline.png (วัดจากภาพจริง)
+  LINE_YS: [82.5, 141.5, 204.5, 265.5, 329.5, 391.5, 452.5, 511.5, 571.5, 632.5,
+            691.5, 753.5, 812.5, 874.5, 937.5, 999.5, 1060.5, 1120.5, 1180.5, 1240.5],
+  SNAP_TO_LINES: true,      // วางแล้วตัวจะลงไปอยู่บนเส้นที่ใกล้ที่สุด
+
+  NODE_SIZE: 56,            // ขนาดตัวบนเส้นเวลา (หน่วย = พิกเซลของภาพ timeline; เส้นห่างกันราว 60)
+  LONG_PRESS_MS: 350,       // กดค้างนานเท่านี้ (มิลลิวินาที) จึงขยายภาพ
+  MAX_STUDENTS: 6,
+  FALLBACK_WORLD: { w: 1000, h: 1260 },
+  STORAGE_KEY: 'caminalcule-v4',
+  MAX_UNDO: 50,
+};
+
+// ================= ข้อความสองภาษา (แก้ไขข้อความได้ที่นี่) =================
+const TEXT = {
+  th: {
+    tabGallery: 'คามินาคูล', tabTimeline: 'เส้นเวลา',
+    undo: '↶ ย้อนกลับ', fit: 'พอดีจอ', export: 'ส่งออก JPG', reset: 'ล้างทั้งหมด',
+    galleryHint: 'แถวบน: ชนิดที่ยังมีชีวิตในปัจจุบัน · แถวล่าง: ฟอสซิล — กดค้างเพื่อดูภาพขยาย แล้วเลื่อนนิ้วเพื่อพาไปวางบนเส้นเวลา',
+    menuMove: 'ย้าย', menuLink: 'โยงเส้น', menuUnlink: 'ลบเส้น', menuPutback: 'นำออก',
+    done: 'เสร็จ',
+    modeMove: 'ลากเพื่อย้าย แตะข้างนอกเมื่อเสร็จ',
+    modeLink: 'แตะคามินาคูลตัวที่ต้องการโยงเส้นไปหา',
+    modeUnlink: 'กด ✕ บนเส้นสีแดงเพื่อลบ แตะข้างนอกเมื่อเสร็จ',
+    flashLinked: 'สองตัวนี้โยงเส้นกันอยู่แล้ว',
+    flashUsed: 'ตัวนี้อยู่บนเส้นเวลาแล้ว',
+    flashPutback: 'นำกลับไปที่หน้าคามินาคูลแล้ว',
+    hintTimeline: 'ลากคามินาคูลเพื่อย้าย แตะหนึ่งครั้งเพื่อโยงเส้น ลบเส้น หรือนำออก',
+    confirmReset: 'ลบคามินาคูลและเส้นทั้งหมดออกจากเส้นเวลา? (กด “ย้อนกลับ” เพื่อเอาคืนได้)',
+    exportFail: 'ส่งออกภาพไม่สำเร็จ กรุณาเปิดหน้านี้ผ่านเว็บเซิร์ฟเวอร์ (http:// หรือ https://) ไม่ใช่เปิดไฟล์จากเครื่องโดยตรง',
+    exportHint: 'บนมือถือหรือไอแพด กดค้างที่ภาพเพื่อบันทึกได้',
+    share: 'แชร์หรือบันทึก', download: 'ดาวน์โหลด JPG', close: 'ปิด',
+    tapClose: 'แตะที่ใดก็ได้เพื่อปิด',
+    resumeTitle: 'พบงานที่ทำค้างไว้ในเครื่องนี้',
+    continue: 'ทำต่อ', startNew: 'เริ่มใหม่ (ลบงานเดิม)',
+    nameTitle: 'กรอกข้อมูลนิสิต',
+    first: 'ชื่อ', last: 'นามสกุล', sid: 'รหัสนิสิต',
+    addMember: '+ เพิ่มสมาชิกในกลุ่ม',
+    nameError: 'กรุณากรอกชื่อ นามสกุล และรหัสนิสิตให้ครบ อย่างน้อย 1 คน',
+    next: 'ถัดไป',
+    tutTitle: 'วิธีทำกิจกรรม', skip: 'ข้าม', start: 'เริ่มทำกิจกรรม',
+    tut: [
+      'คามินาคูลเป็นสิ่งมีชีวิตในจินตนาการ มีลักษณะที่หลากหลายแตกต่างกันไป มีชีวิตมาหลายล้านปี พบฟอสซิลจำนวนมาก',
+      'ตัวเลขที่มุมซ้ายบนของภาพคือชื่อชนิด ภาพที่ไม่มีวงเล็บคือชนิดที่ยังมีชีวิตอยู่ในปัจจุบัน ส่วนฟอสซิลจะมีตัวเลขในวงเล็บที่มุมขวาล่าง บอกว่าฟอสซิลนั้นพบเมื่อกี่ล้านปีมาแล้ว',
+      'ในหน้า “คามินาคูล” แถวบนคือชนิดที่ยังมีชีวิตอยู่ แถวถัดลงมาคือฟอสซิล กดค้างที่ภาพเพื่อดูภาพขยาย แล้วเลื่อนนิ้วเพื่อพาไปวางในหน้า “เส้นเวลา” (ถ้าใช้เมาส์ ให้กดค้างแล้วลาก)',
+      'ในหน้า “เส้นเวลา” แถบบนสุด (present) คือปัจจุบัน เส้นที่อยู่ถัดลงมาคือเวลาในอดีต หน่วยเป็นล้านปี เช่น เส้นที่ 17 คือ 17 ล้านปีที่แล้ว เมื่อวางคามินาคูล ระบบจะวางลงบนเส้นที่ใกล้ที่สุดให้เอง',
+      'การโยงเส้น: ① แตะคามินาคูลบนเส้นเวลาหนึ่งครั้ง จะมีกรอบสีเขียวและเมนูขึ้นมา ② กด “โยงเส้น” ③ แตะคามินาคูลอีกตัวที่ต้องการโยงไปหา — ถ้าต้องการลบเส้น ให้เลือก “ลบเส้น” แล้วกด ✕ บนเส้นสีแดง และลากคามินาคูลเพื่อย้ายตำแหน่งได้ทุกเมื่อ',
+      'ตัวอย่างแผนภาพแบบคร่าว ๆ: บรรพบุรุษอยู่ด้านล่าง (อดีต) เส้นแตกแขนงขึ้นไปจนถึงชนิดที่ยังมีชีวิตอยู่ด้านบน (ปัจจุบัน) สายที่หยุดกลางทางคือสายที่สูญพันธุ์ไปแล้ว เมื่อพร้อมแล้ว กด “เริ่มทำกิจกรรม”',
+    ],
+    lblSpecies: 'ชื่อชนิด', lblAge1: 'อายุฟอสซิล', lblAge2: '(ล้านปีที่แล้ว)',
+    lblLiving: 'ยังมีชีวิตในปัจจุบัน', lblFossil: 'ฟอสซิล',
+    lblHold: '① กดค้างเพื่อดูภาพขยาย', lblSlide: '② เลื่อนนิ้วไปวางบนเส้น',
+    lblTop: 'แถบบนสุด = ปัจจุบัน', lblMya: 'ล้านปีที่แล้ว', lbl17: 'เส้น 17 = 17 ล้านปีที่แล้ว',
+    lblTap: '① แตะหนึ่งครั้ง', lblChoose: '② กด “โยงเส้น”', lblTapOther: '③ แตะอีกตัว',
+    lblNow: 'ปัจจุบัน', lblPast: 'อดีต', lblExtinct: 'สูญพันธุ์', lblAncestor: 'บรรพบุรุษ',
+    dateLocale: 'th-TH',
+  },
+  en: {
+    tabGallery: 'Caminalcules', tabTimeline: 'Timeline',
+    undo: '↶ Undo', fit: 'Fit', export: 'Export JPG', reset: 'Clear all',
+    galleryHint: 'Top rows: species living today · Lower rows: fossils — press and hold to look closely, then slide your finger to carry it to the timeline',
+    menuMove: 'Move', menuLink: 'Create link', menuUnlink: 'Remove link', menuPutback: 'Put back',
+    done: 'Done',
+    modeMove: 'Drag to move. Tap outside when done.',
+    modeLink: 'Tap the caminalcule you want to link to.',
+    modeUnlink: 'Tap ✕ on a red line to delete it. Tap outside when done.',
+    flashLinked: 'These two are already linked.',
+    flashUsed: 'This caminalcule is already on the timeline.',
+    flashPutback: 'Put back in the Caminalcules screen.',
+    hintTimeline: 'Drag a caminalcule to move it. Tap it once to link, unlink or put it back.',
+    confirmReset: 'Remove all caminalcules and lines from the timeline? (Undo can bring them back.)',
+    exportFail: 'Export failed. Open this page from a web server (http:// or https://), not as a local file.',
+    exportHint: 'On a phone or iPad you can also press and hold the image to save it.',
+    share: 'Share or save', download: 'Download JPG', close: 'Close',
+    tapClose: 'Tap anywhere to close',
+    resumeTitle: 'Unfinished work was found on this device',
+    continue: 'Continue', startNew: 'Start new (delete old work)',
+    nameTitle: 'Student information',
+    first: 'First name', last: 'Last name', sid: 'Student ID',
+    addMember: '+ Add a group member',
+    nameError: 'Enter first name, last name and student ID for at least one student.',
+    next: 'Next',
+    tutTitle: 'How this activity works', skip: 'Skip', start: 'Start the activity',
+    tut: [
+      'Caminalcules are imaginary organisms. They come in many different forms, have lived for millions of years, and left behind many fossils.',
+      'The number at the top left of each picture is its species name. Pictures without brackets are species living today. Fossils also have a number in brackets at the bottom right: how many millions of years ago the fossil was found.',
+      'On the “Caminalcules” screen, the top rows are species living today and the lower rows are fossils. Press and hold a picture to look closely, then slide your finger to carry it to the “Timeline” screen. (With a mouse, press and drag.)',
+      'On the “Timeline” screen, the top line (present) is today. Each line below is further in the past, in millions of years. For example, line 17 is 17 million years ago. A caminalcule you place snaps onto the nearest line.',
+      'Linking: ① tap a caminalcule on the timeline once — a green frame and a menu appear. ② Choose “Create link”. ③ Tap the caminalcule you want to link to. To delete a line, choose “Remove link” and tap ✕ on the red line. You can drag a caminalcule to move it at any time.',
+      'A rough example of a finished tree: the ancestor is at the bottom (the past), and lines branch upward to the species living today at the top (the present). A branch that stops partway is a lineage that went extinct. When you are ready, tap “Start the activity”.',
+    ],
+    lblSpecies: 'Species name', lblAge1: 'Fossil age', lblAge2: '(million years ago)',
+    lblLiving: 'Living today', lblFossil: 'Fossil',
+    lblHold: '① Press and hold', lblSlide: '② Slide onto a line',
+    lblTop: 'Top line = present', lblMya: 'Millions of years ago', lbl17: 'Line 17 = 17 million years ago',
+    lblTap: '① Tap once', lblChoose: '② Choose “Create link”', lblTapOther: '③ Tap another',
+    lblNow: 'Present', lblPast: 'Past', lblExtinct: 'Extinct', lblAncestor: 'Ancestor',
+    dateLocale: 'en-GB',
+  },
+};
+
+let lang = 'th';
+const t = key => TEXT[lang][key] ?? key;
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+function applyLang() {
+  document.documentElement.lang = lang;
+  document.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = t(el.dataset.i18n); });
+  document.querySelectorAll('#rows .srow').forEach(row => {
+    row.querySelector('.first').placeholder = t('first');
+    row.querySelector('.last').placeholder = t('last');
+    row.querySelector('.sid').placeholder = t('sid');
+  });
+  $('btnTutLang').textContent = lang === 'th' ? 'English' : 'ไทย';
+  $('hint').textContent = t('hintTimeline');
+  requestAnimationFrame(() => { layoutGallery(); positionMenu(); });
+}
+
+const LINE_COLOR = '#23261f';
+const REMOVE_COLOR = '#c8322b';
+const GLOW_COLOR = '#2fd651';
+
+Konva.hitOnDragEnabled = true;   // ให้ pinch ทำงานระหว่างลาก
+Konva.dragDistance = 6;          // ขยับน้อยกว่านี้ถือว่าเป็นการแตะ ไม่ใช่การลาก
+
+const $ = id => document.getElementById(id);
+const containerEl = $('container');
+const galleryEl = $('gallery');
+const menuEl = $('nodeMenu');
+const isTouch = window.matchMedia('(pointer: coarse)').matches;
+const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+// ================= สถานะ =================
+let WORLD = { ...CONFIG.FALLBACK_WORLD };  // พิกัดโลก = ขนาดของ timeline หลังตัดขอบ
+let NODE = CONFIG.NODE_SIZE;
+let U = 1;                                 // หน่วยสเกลสำหรับเส้น/ตัวอักษร
+let lineYs = [];                           // ตำแหน่งเส้นในพิกัดโลก
+let fitScale = 1;
+let students = [];                         // [{ first, last, sid }]
+let ready = false;
+let view = 'gallery';                      // 'gallery' | 'timeline'
+
+const images = new Map();   // id -> HTMLImageElement
+const items = new Map();    // id -> div.gitem ในหน้ารวมตัว
+const nodes = new Map();    // id -> Konva.Group บนเส้นเวลา
+const links = [];           // { a, b, line }
+const history = [];
+
+// โหมดของตัวที่ถูกแตะ: null | { type: 'menu' | 'move' | 'link' | 'unlink', id }
+let mode = null;
+let unlinkBtns = [];
+
+// ================= Konva =================
+const stage = new Konva.Stage({
+  container: 'container',
+  width: containerEl.clientWidth || 1,
+  height: containerEl.clientHeight || 1,
+  draggable: true,           // ลากพื้นที่ว่าง = เลื่อนมุมมอง
+});
+
+const bgLayer = new Konva.Layer({ listening: false });
+const lineLayer = new Konva.Layer({ listening: false });   // ลบเส้นผ่านเมนู “ลบเส้น” เท่านั้น
+const nodeLayer = new Konva.Layer();
+const uiLayer = new Konva.Layer();
+stage.add(bgLayer);
+stage.add(lineLayer);
+stage.add(nodeLayer);
+stage.add(uiLayer);
+
+// บนจอสัมผัส Konva อาจยิงทั้ง tap และ click ซ้อนกัน: ใช้ตัวนี้กันซ้ำ
+let lastTouchTap = 0;
+function tapOK(e) {
+  if (e.type === 'tap') { lastTouchTap = Date.now(); return true; }
+  return Date.now() - lastTouchTap > 700;
+}
+
+// ================= โหลดภาพ =================
+function loadBackground() {
+  return new Promise(resolve => {
+    const img = new Image();
+    img.onload = () => { buildBackground(img); resolve(); };
+    img.onerror = () => {
+      console.warn('โหลดภาพพื้นหลังไม่สำเร็จ:', CONFIG.BG);
+      buildBackground(null);
+      resolve();
+    };
+    img.src = CONFIG.BG;
+  });
+}
+
+function buildBackground(img) {
+  let crop = null;
+  if (img) {
+    const c = CONFIG.BG_CROP;
+    const cropFits = c && c.x + c.width <= img.naturalWidth && c.y + c.height <= img.naturalHeight;
+    crop = cropFits ? c : { x: 0, y: 0, width: img.naturalWidth, height: img.naturalHeight };
+    WORLD = { w: crop.width, h: crop.height };
+    // ถ้าค่า crop ใช้กับภาพนี้ไม่ได้ (เช่นเปลี่ยนภาพ) ก็ไม่ snap เพราะตำแหน่งเส้นอาจไม่ตรง
+    lineYs = (cropFits || !c) ? CONFIG.LINE_YS.map(y => y - crop.y) : [];
+  }
+  U = NODE / 70;
+  // พื้นขาวรองไว้ ไม่ให้ JPG ออกมาเป็นสีดำตรงส่วนโปร่งใส
+  bgLayer.add(new Konva.Rect({ width: WORLD.w, height: WORLD.h, fill: '#fff' }));
+  if (img) {
+    bgLayer.add(new Konva.Image({ image: img, width: WORLD.w, height: WORLD.h, crop }));
+  } else {
+    bgLayer.add(new Konva.Text({
+      x: 20, y: 20, fontSize: 24, fill: '#999',
+      text: CONFIG.BG + ' could not be loaded',
+    }));
+  }
+}
+
+function loadCaminalcules() {
+  const jobs = [];
+  for (let id = 1; id <= CONFIG.TOTAL; id++) {
+    const el = document.createElement('div');
+    el.className = 'gitem';
+    el.dataset.id = id;
+    const img = new Image();
+    img.alt = '';
+    img.draggable = false;
+    el.append(img);
+    // 14 ตัวแรก (ยังมีชีวิต) กับฟอสซิล อยู่คนละกลุ่มแถว
+    (id <= CONFIG.LIVING_COUNT ? $('livingGrid') : $('fossilGrid')).append(el);
+
+    jobs.push(new Promise(resolve => {
+      img.onload = () => { images.set(id, img); items.set(id, el); resolve(); };
+      img.onerror = () => {
+        console.warn('โหลดไม่สำเร็จ:', img.src);
+        el.remove();
+        resolve();
+      };
+    }));
+    img.src = CONFIG.IMG(id);   // โหลดพร้อมกันทุกตัว
+  }
+  return Promise.all(jobs);
+}
+
+// ================= หน้ารวมตัว: จัดให้ทุกตัวพอดีในจอเดียว =================
+function layoutGallery() {
+  const body = $('galleryBody');
+  const nl = $('livingGrid').children.length;
+  const nf = $('fossilGrid').children.length;
+  if (!nl && !nf) return;
+  const gap = 6;
+  const sectionGap = 18;
+  const W = body.clientWidth - 16;
+  const H = body.clientHeight - 16;
+  if (W <= 0 || H <= 0) return;
+
+  let cell = 24;
+  let cols = Math.max(1, Math.floor((W + gap) / (cell + gap)));
+  for (let s = Math.floor(Math.min(W, H, 200)); s >= 24; s--) {
+    const c = Math.floor((W + gap) / (s + gap));
+    if (c < 1) continue;
+    const rows = Math.ceil(nl / c) + Math.ceil(nf / c);
+    const h = rows * (s + gap) - gap * 2 + sectionGap;
+    if (h <= H) { cell = s; cols = c; break; }
+  }
+  // แต่ละกลุ่มใช้จำนวนคอลัมน์ให้แถวเต็มสมดุล (เช่น 14 ตัว = 2 แถวละ 7 แทน 12 + 2)
+  const balanced = n => Math.ceil(n / Math.ceil(n / cols));
+  body.style.setProperty('--cell', cell + 'px');
+  $('livingGrid').style.setProperty('--cols', balanced(nl));
+  $('fossilGrid').style.setProperty('--cols', Math.min(cols, nf));
+  body.style.setProperty('--section-gap', sectionGap + 'px');
+}
+
+// ================= สลับหน้าจอ =================
+function showView(v) {
+  view = v;
+  document.body.classList.toggle('view-gallery', v === 'gallery');
+  document.body.classList.toggle('view-timeline', v === 'timeline');
+  $('btnGallery').setAttribute('aria-pressed', v === 'gallery');
+  $('btnTimeline').setAttribute('aria-pressed', v === 'timeline');
+  if (v === 'gallery') {
+    exitMode();
+    $('hint').classList.add('faded');
+  }
+}
+
+// ================= หน้ารวมตัว: แตะ = ดูภาพใหญ่, กดค้าง = ขยาย, เลื่อนนิ้ว = นำไปวาง =================
+const ghost = $('ghost');
+let ghostSize = 0;
+let ghostLift = 0;
+let carry = null;
+
+// กัน iPad แสดงเมนูกดค้าง/แว่นขยาย/ลากรูปแบบของระบบ ซึ่งจะแย่งท่าทางไป
+galleryEl.addEventListener('touchstart', e => e.preventDefault(), { passive: false });
+galleryEl.addEventListener('contextmenu', e => e.preventDefault());
+
+galleryEl.addEventListener('pointerdown', e => {
+  const item = e.target.closest('.gitem');
+  if (!item || carry || !ready) return;
+  if (e.pointerType === 'mouse' && e.button !== 0) return;
+
+  const id = +item.dataset.id;
+  carry = {
+    id, item,
+    pid: e.pointerId,
+    type: e.pointerType,
+    sx: e.clientX,
+    sy: e.clientY,
+    long: false,
+    dragging: false,
+  };
+  item.classList.add('pressed');
+  carry.timer = setTimeout(() => {
+    if (carry && !carry.dragging) { carry.long = true; showPeek(id); }
+  }, CONFIG.LONG_PRESS_MS);
+
+  // ฟังที่ window: นิ้วจะยังถูกติดตามได้แม้หน้าจอสลับไปเส้นเวลาแล้ว
+  window.addEventListener('pointermove', onCarryMove);
+  window.addEventListener('pointerup', onCarryUp);
+  window.addEventListener('pointercancel', onCarryCancel);
+});
+
+function onCarryMove(e) {
+  if (!carry || e.pointerId !== carry.pid) return;
+  if (!carry.dragging) {
+    if (Math.hypot(e.clientX - carry.sx, e.clientY - carry.sy) < 10) return;
+    clearTimeout(carry.timer);
+    if (carry.item.classList.contains('used')) return;      // อยู่บนเส้นเวลาแล้ว
+    carry.dragging = true;
+    hidePeek();
+    showView('timeline');
+    showGhost(carry.id, carry.type);
+  }
+  moveGhost(e.clientX, e.clientY);
+  updateAutoPan(e.clientX, e.clientY - ghostLift, null);
+}
+
+function onCarryUp(e) {
+  if (!carry || e.pointerId !== carry.pid) return;
+  const c = carry;
+  endCarry();
+  if (c.dragging) {
+    dropOnTimeline(c.id, e.clientX, e.clientY - ghostLift);
+  } else if (!c.long) {
+    showPreview(c.id);                                       // แตะสั้น ๆ = เปิดภาพใหญ่ค้างไว้
+  } else if (c.item.classList.contains('used')) {
+    flash(t('flashUsed'));
+  }
+}
+
+function onCarryCancel(e) {
+  if (!carry || e.pointerId !== carry.pid) return;
+  endCarry();
+}
+
+function endCarry() {
+  if (!carry) return;
+  clearTimeout(carry.timer);
+  carry.item.classList.remove('pressed');
+  carry = null;
+  stopAutoPan();
+  hidePeek();
+  ghost.classList.add('hidden');
+  window.removeEventListener('pointermove', onCarryMove);
+  window.removeEventListener('pointerup', onCarryUp);
+  window.removeEventListener('pointercancel', onCarryCancel);
+}
+
+function showPeek(id) {
+  $('peekImg').src = images.get(id).src;
+  $('peek').classList.remove('hidden');
+}
+function hidePeek() {
+  $('peek').classList.add('hidden');
+}
+
+function showGhost(id, pointerType) {
+  ghost.src = images.get(id).src;
+  ghostSize = Math.max(64, NODE * stage.scaleX() * 1.3);
+  ghostLift = pointerType === 'touch' ? ghostSize * 0.6 : 0;  // ยกภาพขึ้นเหนือนิ้วเล็กน้อย
+  ghost.style.width = ghostSize + 'px';
+  ghost.style.height = ghostSize + 'px';
+  ghost.classList.remove('hidden');
+}
+
+function moveGhost(x, y) {
+  ghost.style.transform =
+    `translate(${x - ghostSize / 2}px, ${y - ghostSize / 2 - ghostLift}px)`;
+}
+
+function dropOnTimeline(id, cx, cy) {
+  const r = containerEl.getBoundingClientRect();
+  if (cx < r.left || cx > r.right || cy < r.top || cy > r.bottom) return;
+  exitMode();
+  const s = stage.scaleX();
+  const p = placeInWorld({
+    x: (cx - r.left - stage.x()) / s,
+    y: (cy - r.top - stage.y()) / s,
+  });
+  pushHistory();
+  addNode(id, p.x, p.y);
+  afterChange();
+  showHintOnce();
+}
+
+// ================= มุมมองเส้นเวลา: ย่อขยาย / หมุนจอ =================
+// fitScale  = ความกว้างของกระดาษเต็มจอพอดี (ค่าเริ่มต้นทุกครั้งที่เอียงจอ)
+// wholeScale = เห็นกระดาษทั้งแผ่นในจอเดียว
+const MARGIN = 8;
+let wholeScale = 1;
+let lastLandscape = null;
+
+function clampScale(s) {
+  return Math.max(wholeScale * 0.9, Math.min(fitScale * 6, s));
+}
+
+// กันไม่ให้เลื่อนกระดาษหลุดออกนอกจอ
+function clampPos(p, s = stage.scaleX()) {
+  const W = stage.width();
+  const H = stage.height();
+  const ww = WORLD.w * s;
+  const wh = WORLD.h * s;
+  const axis = (v, view, size) => (size <= view - MARGIN * 2
+    ? (view - size) / 2
+    : Math.max(view - MARGIN - size, Math.min(MARGIN, v)));
+  return { x: axis(p.x, W, ww), y: axis(p.y, H, wh) };
+}
+
+function setView(s, pos) {
+  stage.scale({ x: s, y: s });
+  stage.position(clampPos(pos, s));
+  onViewChange();
+}
+
+// ความกว้างของกระดาษเต็มจอ เริ่มจากด้านบน (present)
+function fitWidth() {
+  setView(fitScale, { x: MARGIN, y: MARGIN });
+}
+
+// เห็นทั้งแผ่น
+function fitWhole() {
+  setView(wholeScale, { x: 0, y: 0 });
+}
+
+// reset = true: กลับไปกว้างเต็มจอ / false: คงระดับซูมและจุดกึ่งกลางเดิม
+function layoutStage(reset) {
+  const W = containerEl.clientWidth;
+  const H = containerEl.clientHeight;
+  if (!W || !H) return;
+
+  // เอียงจอ (แนวตั้ง ↔ แนวนอน) = กลับไปกว้างเต็มจอทุกครั้ง
+  const landscape = window.innerWidth > window.innerHeight;
+  if (lastLandscape !== null && landscape !== lastLandscape) reset = true;
+  lastLandscape = landscape;
+
+  const oldS = stage.scaleX();
+  const rel = oldS / fitScale;
+  const center = {
+    x: (stage.width() / 2 - stage.x()) / oldS,
+    y: (stage.height() / 2 - stage.y()) / oldS,
+  };
+
+  stage.size({ width: W, height: H });
+  fitScale = (W - MARGIN * 2) / WORLD.w;
+  wholeScale = Math.min(fitScale, (H - MARGIN * 2) / WORLD.h);
+
+  if (reset) {
+    fitWidth();
+  } else {
+    const sc = clampScale(fitScale * rel);
+    setView(sc, { x: W / 2 - center.x * sc, y: H / 2 - center.y * sc });
+  }
+}
+
+function zoomAt(pt, factor) {
+  const old = stage.scaleX();
+  const sc = clampScale(old * factor);
+  const wp = { x: (pt.x - stage.x()) / old, y: (pt.y - stage.y()) / old };
+  setView(sc, { x: pt.x - wp.x * sc, y: pt.y - wp.y * sc });
+}
+
+// ของที่ต้องคงขนาดบนจอ ไม่ว่าจะซูมเท่าไร
+function onViewChange() {
+  const sc = stage.scaleX();
+  unlinkBtns.forEach(b => b.scale({ x: 1 / sc, y: 1 / sc }));
+  onPan();
+}
+
+function onPan() {
+  positionMenu();
+  updateScrollBar();
+}
+
+// แถบบอกตำแหน่งด้านขวา: ให้รู้ว่ายังมีเส้นเวลาต่อลงไปด้านล่าง
+function updateScrollBar() {
+  const bar = $('vbar');
+  const H = stage.height();
+  const wh = WORLD.h * stage.scaleX();
+  if (wh <= H - MARGIN * 2 + 1) { bar.classList.add('hidden'); return; }
+  const track = H - 16;
+  const h = Math.max(30, track * (H / (wh + MARGIN * 2)));
+  const range = wh + MARGIN * 2 - H;
+  const progress = Math.min(1, Math.max(0, (MARGIN - stage.y()) / range));
+  bar.style.height = h + 'px';
+  bar.style.top = 8 + (track - h) * progress + 'px';
+  bar.classList.remove('hidden');
+}
+
+stage.dragBoundFunc(pos => clampPos(pos));
+stage.on('dragmove', e => { if (e.target === stage) onPan(); });
+
+// เมาส์/แทร็กแพด: เลื่อนล้อ = เลื่อนขึ้นลง, Ctrl + ล้อ หรือ pinch บนแทร็กแพด = ซูม
+stage.on('wheel', e => {
+  e.evt.preventDefault();
+  if (e.evt.ctrlKey || e.evt.metaKey) {
+    zoomAt(stage.getPointerPosition(), Math.exp(-e.evt.deltaY * 0.01));
+  } else {
+    const dx = e.evt.shiftKey ? e.evt.deltaY : e.evt.deltaX;
+    const dy = e.evt.shiftKey ? 0 : e.evt.deltaY;
+    stage.position(clampPos({ x: stage.x() - dx, y: stage.y() - dy }));
+    onPan();
+  }
+});
+
+// ซูมด้วยสองนิ้ว
+let lastDist = 0;
+let lastCenter = null;
+stage.on('touchmove', e => {
+  const tt = e.evt.touches;
+  if (tt.length < 2) return;
+  e.evt.preventDefault();
+  if (stage.isDragging()) stage.stopDrag();
+
+  const r = containerEl.getBoundingClientRect();
+  const p1 = { x: tt[0].clientX - r.left, y: tt[0].clientY - r.top };
+  const p2 = { x: tt[1].clientX - r.left, y: tt[1].clientY - r.top };
+  const c = { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 };
+  const d = Math.hypot(p1.x - p2.x, p1.y - p2.y);
+  if (!lastCenter) { lastCenter = c; lastDist = d; return; }
+
+  const old = stage.scaleX();
+  const wp = { x: (c.x - stage.x()) / old, y: (c.y - stage.y()) / old };
+  const sc = clampScale(old * (d / lastDist));
+  setView(sc, {
+    x: c.x - wp.x * sc + (c.x - lastCenter.x),
+    y: c.y - wp.y * sc + (c.y - lastCenter.y),
+  });
+  lastDist = d;
+  lastCenter = c;
+});
+stage.on('touchend touchcancel', () => { lastDist = 0; lastCenter = null; });
+
+// ----- เลื่อนจอเองเมื่อนิ้วลากเข้าใกล้ขอบบน/ล่าง (ขณะพาตัวมาวาง หรือขณะลากย้าย) -----
+const autoPan = { vx: 0, vy: 0, raf: 0, onStep: null };
+
+function updateAutoPan(clientX, clientY, onStep) {
+  const r = containerEl.getBoundingClientRect();
+  const edge = Math.min(70, r.height * 0.15);
+  const speed = 14;
+  const f = d => Math.max(0, Math.min(1, 1 - d / edge));
+  autoPan.vy = f(clientY - r.top) * speed - f(r.bottom - clientY) * speed;
+  autoPan.vx = f(clientX - r.left) * speed - f(r.right - clientX) * speed;
+  autoPan.onStep = onStep;
+  if ((autoPan.vx || autoPan.vy) && !autoPan.raf) autoPan.raf = requestAnimationFrame(autoPanStep);
+}
+
+function autoPanStep() {
+  autoPan.raf = 0;
+  if (!autoPan.vx && !autoPan.vy) return;
+  const before = stage.position();
+  const after = clampPos({ x: before.x + autoPan.vx, y: before.y + autoPan.vy });
+  const dx = after.x - before.x;
+  const dy = after.y - before.y;
+  if (dx || dy) {
+    stage.position(after);
+    if (autoPan.onStep) autoPan.onStep(dx, dy);
+    onPan();
+  }
+  autoPan.raf = requestAnimationFrame(autoPanStep);
+}
+
+function stopAutoPan() {
+  autoPan.vx = autoPan.vy = 0;
+  autoPan.onStep = null;
+  cancelAnimationFrame(autoPan.raf);
+  autoPan.raf = 0;
+}
+
+function clientPoint(evt) {
+  if (!evt) return null;
+  const tc = (evt.touches && evt.touches[0]) || (evt.changedTouches && evt.changedTouches[0]);
+  if (tc) return { x: tc.clientX, y: tc.clientY };
+  if ('clientX' in evt) return { x: evt.clientX, y: evt.clientY };
+  return null;
+}
+
+// แตะพื้นที่ว่าง (นอกตัวคามินาคูล) = จบโหมด
+stage.on('click tap', e => {
+  if (e.target !== stage) return;
+  if (!tapOK(e)) return;
+  exitMode();
+});
+
+// ================= ตัวคามินาคูลบนเส้นเวลา (ไม่มีกรอบดำ) =================
+function addNode(id, x, y) {
+  const img = images.get(id);
+  if (!img || nodes.has(id)) return null;
+
+  const g = new Konva.Group({ x, y, draggable: true });   // ลากย้ายได้ทันที
+
+  // คงสัดส่วนภาพเดิม
+  const k = NODE / Math.max(img.naturalWidth, img.naturalHeight);
+  const w = img.naturalWidth * k;
+  const h = img.naturalHeight * k;
+  const pad = NODE * 0.14;
+
+  // กรอบเขียวเรือง (ซ่อนไว้จนกว่าจะถูกเลือก)
+  g.add(new Konva.Rect({
+    name: 'glow', visible: false,
+    x: -NODE / 2 - pad, y: -NODE / 2 - pad,
+    width: NODE + pad * 2, height: NODE + pad * 2,
+    cornerRadius: NODE * 0.18,
+    stroke: GLOW_COLOR, strokeWidth: NODE * 0.06,
+    fill: 'rgba(47,214,81,0.15)',
+    shadowColor: GLOW_COLOR, shadowBlur: NODE * 0.4, shadowOpacity: 1,
+  }));
+  // พื้นที่แตะเต็มกรอบ แม้ภาพจะโปร่งใสบางส่วน
+  g.add(new Konva.Rect({ x: -NODE / 2, y: -NODE / 2, width: NODE, height: NODE }));
+  g.add(new Konva.Image({ image: img, x: -w / 2, y: -h / 2, width: w, height: h }));
+
+  let before = null;
+  let from = null;
+  const inMoveMode = () => mode && mode.type === 'move' && mode.id === id;
+
+  g.on('dragstart', () => {
+    if (mode && !inMoveMode()) exitMode();
+    before = serialize();
+    from = { x: g.x(), y: g.y() };
+    g.findOne('.glow').visible(true);
+    g.scale({ x: 1.25, y: 1.25 });
+    g.moveToTop();
+  });
+
+  g.on('dragmove', e => {
+    updateLinksFor(id);
+    const p = clientPoint(e.evt);
+    if (p) {
+      updateAutoPan(p.x, p.y, (dx, dy) => {
+        const sc = stage.scaleX();
+        g.position({ x: g.x() - dx / sc, y: g.y() - dy / sc });   // ให้ตัวอยู่ใต้นิ้วเท่าเดิม
+        updateLinksFor(id);
+      });
+    }
+  });
+
+  g.on('dragend', () => {
+    stopAutoPan();
+    if (inMoveMode()) {
+      g.scale({ x: 1.12, y: 1.12 });   // ยังยกลอยอยู่จนกว่าจะแตะข้างนอก
+    } else {
+      g.findOne('.glow').visible(false);
+      g.to({ scaleX: 1, scaleY: 1, duration: 0.12 });
+    }
+    g.position(placeInWorld(g.position()));
+    updateLinksFor(id);
+    if (Math.hypot(g.x() - from.x, g.y() - from.y) > 1) {
+      pushHistory(before);
+      afterChange();
+    }
+  });
+
+  g.on('click tap', e => {
+    e.cancelBubble = true;
+    if (!tapOK(e)) return;
+    onNodeTap(id);
+  });
+
+  nodeLayer.add(g);
+  nodes.set(id, g);
+  items.get(id)?.classList.add('used');
+  return g;
+}
+
+function removeNode(id) {
+  const g = nodes.get(id);
+  if (!g) return;
+  if (mode && mode.id === id) exitMode();
+  links.filter(l => l.a === id || l.b === id).forEach(removeLink);
+  g.destroy();
+  nodes.delete(id);
+  items.get(id)?.classList.remove('used');
+}
+
+// จำกัดให้อยู่ในภาพ แล้ววางลงบนเส้นที่ใกล้ที่สุด
+function placeInWorld(p) {
+  const x = Math.max(NODE / 2, Math.min(WORLD.w - NODE / 2, p.x));
+  let y = Math.max(NODE / 2, Math.min(WORLD.h - NODE / 2, p.y));
+  if (CONFIG.SNAP_TO_LINES && lineYs.length) {
+    y = lineYs.reduce((best, v) => (Math.abs(v - y) < Math.abs(best - y) ? v : best));
+  }
+  return { x, y };
+}
+
+function linksOf(id) {
+  return links.filter(l => l.a === id || l.b === id);
+}
+
+// ================= โหมด: เมนู / ย้าย / โยงเส้น / ลบเส้น =================
+function onNodeTap(id) {
+  if (!mode) { enterMode('menu', id); return; }
+
+  const cur = mode.id;
+  switch (mode.type) {
+    case 'menu':
+      if (cur === id) exitMode();
+      else enterMode('menu', id);
+      break;
+
+    case 'link':
+      exitMode();
+      if (cur === id) break;                                  // แตะตัวเดิม = ยกเลิก
+      if (findLink(cur, id)) { flash(t('flashLinked')); break; }
+      pushHistory();
+      addLink(cur, id);
+      afterChange();
+      break;
+
+    default:                                                  // move / unlink
+      if (cur !== id) exitMode();                             // แตะตัวอื่น = นอกตัวที่เลือก
+  }
+}
+
+function enterMode(type, id) {
+  exitMode();
+  const g = nodes.get(id);
+  if (!g) return;
+  mode = { type, id };
+  setGlow(g, true);
+
+  if (type === 'menu') {
+    openMenu();
+  } else if (type === 'move') {
+    g.moveToTop();
+    g.to({ scaleX: 1.12, scaleY: 1.12, duration: 0.12 });     // ยกตัวขึ้นเล็กน้อย
+    showModeBar(t('modeMove'));
+  } else if (type === 'link') {
+    showModeBar(t('modeLink'));
+  } else if (type === 'unlink') {
+    showUnlinkButtons(id);
+    showModeBar(t('modeUnlink'));
+  }
+}
+
+function exitMode() {
+  if (!mode) return;
+  const { type, id } = mode;
+  mode = null;
+  closeMenu();
+  hideModeBar();
+  clearUnlinkButtons();
+  const g = nodes.get(id);
+  if (g) {
+    setGlow(g, false);
+    if (type === 'move') g.to({ scaleX: 1, scaleY: 1, duration: 0.15 });   // วางลงบนเส้น
+  }
+}
+
+function setGlow(g, on) {
+  g.findOne('.glow').visible(on);
+  if (on && !reduceMotion) pulse.start();
+  if (!on) pulse.stop();
+}
+
+// กรอบเรืองแสงกะพริบเบา ๆ
+const pulse = new Konva.Animation(frame => {
+  const g = mode && nodes.get(mode.id);
+  if (!g) return false;
+  const k = 0.5 + 0.5 * Math.sin(frame.time / 260);
+  g.findOne('.glow').shadowBlur(NODE * (0.25 + 0.35 * k));
+}, nodeLayer);
+
+// ----- เมนู -----
+function openMenu() {
+  menuEl.querySelector('[data-act="unlink"]').disabled = linksOf(mode.id).length === 0;
+  menuEl.querySelector('[data-act="link"]').disabled = nodes.size < 2;
+  menuEl.classList.remove('hidden');
+  positionMenu();
+}
+
+function closeMenu() {
+  menuEl.classList.add('hidden');
+}
+
+function positionMenu() {
+  if (!mode || mode.type !== 'menu') return;
+  const g = nodes.get(mode.id);
+  const s = stage.scaleX();
+  const sx = stage.x() + g.x() * s;
+  const sy = stage.y() + g.y() * s;
+  const half = (NODE / 2) * s + 12;
+  const mw = menuEl.offsetWidth;
+  const mh = menuEl.offsetHeight;
+  const W = stage.width();
+  const H = stage.height();
+
+  const left = Math.max(6, Math.min(W - mw - 6, sx - mw / 2));
+  let top = sy - half - mh;                                   // เหนือตัว
+  if (top < 6) top = sy + half;                               // ไม่พอก็ไว้ใต้ตัว
+  top = Math.max(6, Math.min(H - mh - 6, top));
+  menuEl.style.left = left + 'px';
+  menuEl.style.top = top + 'px';
+}
+
+menuEl.addEventListener('click', e => {
+  const btn = e.target.closest('button');
+  if (!btn || btn.disabled || !mode) return;
+  const id = mode.id;
+  if (btn.dataset.act === 'putback') {
+    exitMode();
+    pushHistory();
+    removeNode(id);
+    afterChange();
+    flash(t('flashPutback'));
+    return;
+  }
+  enterMode(btn.dataset.act, id);
+});
+
+// ----- แถบบอกโหมด -----
+let flashTimer = 0;
+function showModeBar(text, withButton = true) {
+  clearTimeout(flashTimer);
+  $('modeText').textContent = text;
+  $('modeBar').classList.toggle('no-button', !withButton);
+  $('modeBar').classList.remove('hidden');
+  $('hint').classList.add('faded');
+}
+function hideModeBar() {
+  $('modeBar').classList.add('hidden');
+}
+function flash(text) {
+  showModeBar(text, false);
+  flashTimer = setTimeout(hideModeBar, 2200);
+}
+$('btnDone').addEventListener('click', exitMode);
+
+// ================= เส้นเชื่อม =================
+function findLink(a, b) {
+  return links.find(l => (l.a === a && l.b === b) || (l.a === b && l.b === a));
+}
+
+function addLink(a, b) {
+  const line = new Konva.Line({ stroke: LINE_COLOR, strokeWidth: 3 * U, lineCap: 'round' });
+  const link = { a, b, line };
+  lineLayer.add(line);
+  links.push(link);
+  positionLink(link);
+  return link;
+}
+
+function positionLink(l) {
+  const A = nodes.get(l.a);
+  const B = nodes.get(l.b);
+  l.line.points([A.x(), A.y(), B.x(), B.y()]);
+}
+
+function updateLinksFor(id) {
+  linksOf(id).forEach(positionLink);
+}
+
+function removeLink(l) {
+  l.line.destroy();
+  const i = links.indexOf(l);
+  if (i !== -1) links.splice(i, 1);
+}
+
+// โหมดลบเส้น: เส้นของตัวที่เลือกเป็นสีแดง + ปุ่ม ✕ กลางเส้น
+function showUnlinkButtons(id) {
+  const s = stage.scaleX();
+  linksOf(id).forEach(l => {
+    l.line.stroke(REMOVE_COLOR).strokeWidth(5 * U);
+    const p = l.line.points();
+
+    const btn = new Konva.Group({
+      x: (p[0] + p[2]) / 2,
+      y: (p[1] + p[3]) / 2,
+      scaleX: 1 / s,
+      scaleY: 1 / s,
+    });
+    btn.add(new Konva.Circle({
+      radius: 15, fill: REMOVE_COLOR, stroke: '#fff', strokeWidth: 2,
+      shadowColor: 'black', shadowBlur: 5, shadowOpacity: 0.3,
+      hitStrokeWidth: 16,                                    // พื้นที่แตะกว้างกว่าที่เห็น
+    }));
+    btn.add(new Konva.Text({
+      text: '✕', fontSize: 15, fontStyle: 'bold', fill: '#fff', listening: false,
+      width: 30, height: 30, offsetX: 15, offsetY: 15,
+      align: 'center', verticalAlign: 'middle',
+    }));
+
+    btn.on('click tap', e => {
+      e.cancelBubble = true;
+      if (!tapOK(e)) return;
+      pushHistory();
+      removeLink(l);
+      afterChange();
+      btn.destroy();
+      unlinkBtns = unlinkBtns.filter(b => b !== btn);
+      if (!unlinkBtns.length) exitMode();                    // ไม่มีเส้นเหลือแล้ว
+    });
+
+    uiLayer.add(btn);
+    unlinkBtns.push(btn);
+  });
+}
+
+function clearUnlinkButtons() {
+  unlinkBtns.forEach(b => b.destroy());
+  unlinkBtns = [];
+  links.forEach(l => l.line.stroke(LINE_COLOR).strokeWidth(3 * U));
+}
+
+// ================= ภาพขยาย (แตะสั้น ๆ) =================
+function showPreview(id) {
+  const img = images.get(id);
+  if (!img) return;
+  $('previewImg').src = img.src;
+  $('preview').classList.remove('hidden');
+}
+$('preview').addEventListener('click', () => $('preview').classList.add('hidden'));
+
+// ================= Undo + บันทึกอัตโนมัติ =================
+// บันทึกไว้ใน localStorage ของเบราว์เซอร์ในเครื่องนี้เท่านั้น (ไม่ได้ส่งไปที่ไหน)
+// เก็บตำแหน่งเป็นสัดส่วน 0–1 ของเส้นเวลา จึงไม่เพี้ยนแม้เปลี่ยนจอ
+function serialize() {
+  return {
+    nodes: [...nodes].map(([id, g]) => ({
+      id,
+      x: +(g.x() / WORLD.w).toFixed(5),
+      y: +(g.y() / WORLD.h).toFixed(5),
+    })),
+    links: links.map(l => [l.a, l.b]),
+  };
+}
+
+function restore(state) {
+  exitMode();
+  links.slice().forEach(removeLink);
+  [...nodes.keys()].forEach(removeNode);
+  (state?.nodes || []).forEach(n => addNode(n.id, n.x * WORLD.w, n.y * WORLD.h));
+  (state?.links || []).forEach(([a, b]) => {
+    if (nodes.has(a) && nodes.has(b) && a !== b && !findLink(a, b)) addLink(a, b);
+  });
+}
+
+function pushHistory(snapshot = serialize()) {
+  history.push(snapshot);
+  if (history.length > CONFIG.MAX_UNDO) history.shift();
+}
+
+function undo() {
+  if (!history.length) return;
+  restore(history.pop());
+  afterChange();
+}
+
+function afterChange() {
+  $('btnUndo').disabled = !history.length;
+  save();
+}
+
+function readSaved() {
+  try { return JSON.parse(localStorage.getItem(CONFIG.STORAGE_KEY)); }
+  catch (_) { return null; }
+}
+
+function clearSaved() {
+  try { localStorage.removeItem(CONFIG.STORAGE_KEY); } catch (_) {}
+}
+
+function save() {
+  try {
+    // ระหว่างที่ยังโหลดไม่เสร็จ ห้ามเขียนทับงานเดิมด้วยกระดานว่าง
+    const state = ready ? serialize() : (readSaved()?.state || null);
+    localStorage.setItem(CONFIG.STORAGE_KEY, JSON.stringify({ students, state, lang }));
+  } catch (_) { /* บางเบราว์เซอร์ปิด storage ไว้: ทำงานต่อได้ แค่ไม่บันทึก */ }
+}
+
+function studentsText() {
+  return students.map(s => `${s.first} ${s.last} (${s.sid})`).join(', ');
+}
+
+// ================= ขั้นตอนเริ่มต้น: ภาษา → ข้อมูลนิสิต → คำอธิบาย =================
+let assetsReady = null;
+
+document.querySelectorAll('[data-lang]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    lang = btn.dataset.lang;
+    applyLang();
+    $('langScreen').classList.add('hidden');
+
+    const saved = readSaved();
+    if (saved?.students?.length) {
+      $('resumeNames').textContent = saved.students.map(s => `${s.first} ${s.last} (${s.sid})`).join(', ');
+      $('resumeScreen').classList.remove('hidden');
+    } else {
+      openNameScreen();
+    }
+  });
+});
+
+$('btnContinue').addEventListener('click', async () => {
+  const saved = readSaved();
+  students = saved?.students || [];
+  $('resumeScreen').classList.add('hidden');
+  await assetsReady;
+  if (saved?.state) restore(saved.state);
+  save();
+});
+
+$('btnStartNew').addEventListener('click', () => {
+  clearSaved();
+  $('resumeScreen').classList.add('hidden');
+  openNameScreen();
+});
+
+function addStudentRow() {
+  const rows = $('rows');
+  if (rows.children.length >= CONFIG.MAX_STUDENTS) return;
+  const row = document.createElement('div');
+  row.className = 'srow';
+  row.innerHTML =
+    `<input class="first" autocomplete="off">` +
+    `<input class="last" autocomplete="off">` +
+    `<input class="sid" autocomplete="off" inputmode="numeric">` +
+    `<button class="rm" aria-label="remove">✕</button>`;
+  row.querySelector('.first').placeholder = t('first');
+  row.querySelector('.last').placeholder = t('last');
+  row.querySelector('.sid').placeholder = t('sid');
+  row.querySelector('.rm').addEventListener('click', () => {
+    if (rows.children.length > 1) row.remove();
+    updateRowButtons();
+  });
+  rows.append(row);
+  updateRowButtons();
+  return row;
+}
+
+function updateRowButtons() {
+  const n = $('rows').children.length;
+  $('rows').querySelectorAll('.rm').forEach(b => { b.style.visibility = n > 1 ? 'visible' : 'hidden'; });
+  $('btnAddRow').disabled = n >= CONFIG.MAX_STUDENTS;
+}
+
+function openNameScreen() {
+  $('rows').innerHTML = '';               // ไม่เติมชื่อของคนก่อนหน้าให้อัตโนมัติ
+  addStudentRow();
+  $('nameError').classList.add('hidden');
+  $('nameScreen').classList.remove('hidden');
+}
+
+$('btnAddRow').addEventListener('click', () => addStudentRow()?.querySelector('input').focus());
+
+function submitNames() {
+  const list = [];
+  let incomplete = false;
+  $('rows').querySelectorAll('.srow').forEach(row => {
+    const s = {
+      first: row.querySelector('.first').value.trim(),
+      last: row.querySelector('.last').value.trim(),
+      sid: row.querySelector('.sid').value.trim(),
+    };
+    const filled = [s.first, s.last, s.sid].filter(Boolean).length;
+    if (filled === 3) list.push(s);
+    else if (filled > 0) incomplete = true;
+  });
+  if (!list.length || incomplete) {
+    $('nameError').classList.remove('hidden');
+    return;
+  }
+  students = list;
+  save();
+  $('nameScreen').classList.add('hidden');
+  openTutorial();
+}
+$('btnNameNext').addEventListener('click', submitNames);
+
+// ================= หน้าอธิบายการทำงาน =================
+const TUT_PAGES = 6;
+let tutPage = 0;
+let tutPicks = null;
+
+const range = (a, b) => Array.from({ length: b - a + 1 }, (_, i) => a + i);
+const pick = arr => arr[Math.floor(Math.random() * arr.length)];
+function shuffle(arr) {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function openTutorial() {
+  // สุ่มภาพใหม่ทุกครั้งที่เปิด: หน้า 2 สุ่มตัวที่ยังมีชีวิต 1–14 และฟอสซิล 15–71
+  const living = range(1, CONFIG.LIVING_COUNT);
+  const fossils = range(CONFIG.LIVING_COUNT + 1, CONFIG.TOTAL);
+  tutPicks = {
+    collage: shuffle(range(1, CONFIG.TOTAL)).slice(0, 13),
+    living: pick(living),
+    fossil: pick(fossils),
+    p3: [...shuffle(living).slice(0, 5), ...shuffle(fossils).slice(0, 10)],
+    p5: shuffle(fossils).slice(0, 2).concat(pick(living)),
+  };
+  showTutPage(0);
+  $('tutorial').classList.remove('hidden');
+}
+
+function closeTutorial() {
+  $('tutorial').classList.add('hidden');
+  showView('gallery');
+}
+
+function showTutPage(i) {
+  tutPage = Math.max(0, Math.min(TUT_PAGES - 1, i));
+  $('tutStage').innerHTML = TUT_BUILDERS[tutPage]();
+  $('tutText').textContent = t('tut')[tutPage];
+
+  const pager = $('pager');
+  pager.innerHTML = '';
+  const mk = (label, fn, cls, disabled) => {
+    const b = document.createElement('button');
+    b.textContent = label;
+    if (cls) b.className = cls;
+    b.disabled = !!disabled;
+    b.addEventListener('click', fn);
+    pager.append(b);
+  };
+  mk('◁', () => showTutPage(tutPage - 1), '', tutPage === 0);
+  for (let k = 0; k < TUT_PAGES; k++) mk(String(k + 1), () => showTutPage(k), k === tutPage ? 'cur' : '');
+  mk('▷', () => showTutPage(tutPage + 1), '', tutPage === TUT_PAGES - 1);
+  if (tutPage === TUT_PAGES - 1) {
+    const b = document.createElement('button');
+    b.id = 'btnTutStart';
+    b.className = 'primary';
+    b.textContent = t('start');
+    b.addEventListener('click', closeTutorial);
+    pager.append(b);
+  }
+}
+
+$('btnTutSkip').addEventListener('click', closeTutorial);
+$('btnTutLang').addEventListener('click', () => {
+  lang = lang === 'th' ? 'en' : 'th';
+  applyLang();
+  showTutPage(tutPage);
+  save();
+});
+
+// ----- ภาพประกอบแต่ละหน้า (SVG ขนาด 800×450) -----
+const SVG_OPEN = '<svg viewBox="0 0 800 450" xmlns="http://www.w3.org/2000/svg" ' +
+  'preserveAspectRatio="xMidYMid meet" font-family="system-ui, -apple-system, Segoe UI, Noto Sans Thai, Tahoma, sans-serif">';
+
+// frame: 'bold' = กรอบดำหนา (ตัวที่ยังมีชีวิต), 'light' = การ์ดขาวขอบบาง, false = ไม่มีกรอบ
+function svgCard(id, cx, cy, size, rot = 0, frame = 'bold') {
+  const h = size / 2;
+  const stroke = frame === 'bold' ? `stroke="#111" stroke-width="${Math.max(2, size / 40)}"` : 'stroke="#bbb" stroke-width="1.5"';
+  const border = frame ? `<rect x="${-h}" y="${-h}" width="${size}" height="${size}" fill="#fff" ${stroke}/>` : '';
+  const inset = frame ? size * 0.06 : 0;
+  return `<g transform="translate(${cx} ${cy}) rotate(${rot})">${border}` +
+    `<image href="${CONFIG.IMG(id)}" x="${-h + inset}" y="${-h + inset}" width="${size - inset * 2}" height="${size - inset * 2}" preserveAspectRatio="xMidYMid meet"/></g>`;
+}
+
+function svgLabel(x, y, w, h, text, opts = {}) {
+  const fill = opts.fill || '#fff';
+  const color = opts.color || '#111';
+  const stroke = opts.stroke || '#111';
+  const fs = opts.fs || 18;
+  const lines = Array.isArray(text) ? text : [text];
+  const lh = fs * 1.25;
+  const y0 = y + h / 2 - (lines.length - 1) * lh / 2;
+  return `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="6" fill="${fill}" stroke="${stroke}" stroke-width="2"/>` +
+    lines.map((ln, i) => `<text x="${x + w / 2}" y="${y0 + i * lh}" font-size="${fs}" fill="${color}" text-anchor="middle" dominant-baseline="central">${esc(ln)}</text>`).join('');
+}
+
+const TUT_BUILDERS = [
+  // หน้า 1: ภาพคามินาคูลหลายตัววางซ้อนกัน
+  () => {
+    const slots = [];
+    [95, 235, 375, 515, 655].forEach(x => [105, 225, 345].forEach(y => slots.push([x, y])));
+    const chosen = shuffle(slots).slice(0, tutPicks.collage.length);
+    const cards = tutPicks.collage.map((id, i) => {
+      const [x, y] = chosen[i];
+      const jx = (Math.random() - 0.5) * 50;
+      const jy = (Math.random() - 0.5) * 30;
+      const rot = (Math.random() - 0.5) * 20;
+      return svgCard(id, x + 25 + jx, y + jy, 150, rot, id <= CONFIG.LIVING_COUNT ? 'bold' : 'light');
+    });
+    return SVG_OPEN + '<rect width="800" height="450" fill="#fff"/>' + cards.join('') + '</svg>';
+  },
+
+  // หน้า 2: ตัวที่ยังมีชีวิต (สุ่มจาก 1–14) และฟอสซิล (สุ่มจาก 15–71)
+  () => {
+    const S = 220;
+    const L = { x: 120, y: 80 };
+    const R = { x: 440, y: 80 };
+    const ring = (cx, cy, r) => `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${REMOVE_COLOR}" stroke-width="4"/>`;
+    // ตำแหน่งตัวเลขในภาพ (วัดเฉลี่ยจากภาพทั้ง 71 ภาพ): มุมซ้ายบน ≈ (25%, 24%), วงเล็บมุมขวาล่าง ≈ (76%, 77%)
+    // การ์ดที่มีกรอบจะย่อภาพเข้าไป 6% ทุกด้าน
+    const at = (p, fx, fy, framed) => {
+      const k = framed ? 0.06 : 0;
+      return { x: p.x + S * (k + (1 - 2 * k) * fx), y: p.y + S * (k + (1 - 2 * k) * fy) };
+    };
+    const lt = at(L, 0.252, 0.236, true);
+    const rt = at(R, 0.252, 0.236, false);
+    const br = at(R, 0.762, 0.772, false);
+    return SVG_OPEN + '<rect width="800" height="450" fill="#fff"/>' +
+      svgCard(tutPicks.living, L.x + S / 2, L.y + S / 2, S) +
+      svgCard(tutPicks.fossil, R.x + S / 2, R.y + S / 2, S, 0, false) +
+      ring(lt.x, lt.y, 30) + ring(rt.x, rt.y, 30) + ring(br.x, br.y, 32) +
+      `<line x1="${L.x + 70}" y1="48" x2="${lt.x}" y2="${lt.y - 30}" stroke="${REMOVE_COLOR}" stroke-width="3"/>` +
+      `<line x1="${R.x + 70}" y1="48" x2="${rt.x}" y2="${rt.y - 30}" stroke="${REMOVE_COLOR}" stroke-width="3"/>` +
+      `<line x1="${br.x + 22}" y1="${br.y + 24}" x2="${700}" y2="${355}" stroke="${REMOVE_COLOR}" stroke-width="3"/>` +
+      svgLabel(L.x, 12, 150, 36, t('lblSpecies')) +
+      svgLabel(R.x, 12, 150, 36, t('lblSpecies')) +
+      svgLabel(610, 355, 180, 62, [t('lblAge1'), t('lblAge2')], { fs: 17 }) +
+      `<text x="${L.x + S / 2}" y="${L.y + S + 34}" font-size="20" font-weight="600" text-anchor="middle">${esc(t('lblLiving'))}</text>` +
+      `<text x="${R.x + S / 2}" y="${R.y + S + 34}" font-size="20" font-weight="600" text-anchor="middle">${esc(t('lblFossil'))}</text>` +
+      '</svg>';
+  },
+
+  // หน้า 3: ลากจากหน้ารวมตัวไปวางบนเส้นเวลา (มีภาพเคลื่อนไหว)
+  () => {
+    const ids = tutPicks.p3;
+    let grid = '';
+    ids.forEach((id, i) => {
+      const living = i < 5;
+      const col = living ? i : (i - 5) % 5;
+      const row = living ? 0 : 1 + Math.floor((i - 5) / 5);
+      const cx = 73 + col * 66;
+      const cy = 118 + row * 66 + (living ? 0 : 16);
+      grid += svgCard(id, cx, cy, 56, 0, living ? 'bold' : false);
+    });
+    const lines = range(0, 6).map(k => {
+      const y = 108 + k * 46;
+      return `<line x1="478" y1="${y}" x2="760" y2="${y}" stroke="#999" stroke-width="2"/>` +
+        `<text x="470" y="${y}" font-size="14" text-anchor="end" dominant-baseline="central">${k === 0 ? 'present' : k}</text>`;
+    }).join('');
+    const start = { x: 205, y: 118 };       // ช่องที่ 3 แถวบน
+    const end = { x: 640, y: 108 + 3 * 46 };
+    const anim = reduceMotion ? '' :
+      `<animateTransform attributeName="transform" type="translate" dur="4.5s" repeatCount="indefinite"
+        values="${start.x} ${start.y};${start.x} ${start.y};${start.x} ${start.y};${end.x} ${end.y};${end.x} ${end.y}"
+        keyTimes="0;0.15;0.45;0.8;1"/>`;
+    const grow = reduceMotion ? '' :
+      `<animateTransform attributeName="transform" type="scale" dur="4.5s" repeatCount="indefinite"
+        values="1;1;2.4;2.4;1;1" keyTimes="0;0.12;0.22;0.42;0.6;1"/>`;
+    return SVG_OPEN + '<rect width="800" height="450" fill="#fff"/>' +
+      '<rect x="20" y="30" width="370" height="400" rx="10" fill="#f4f5f1" stroke="#999"/>' +
+      '<rect x="420" y="30" width="360" height="400" rx="10" fill="#fff" stroke="#999"/>' +
+      `<text x="205" y="62" font-size="18" font-weight="600" text-anchor="middle">${esc(t('tabGallery'))}</text>` +
+      `<text x="600" y="62" font-size="18" font-weight="600" text-anchor="middle">${esc(t('tabTimeline'))}</text>` +
+      grid + lines +
+      `<path d="M395 230 h18 m-8 -8 l8 8 l-8 8" fill="none" stroke="#333" stroke-width="3"/>` +
+      `<text x="205" y="412" font-size="16" text-anchor="middle">${esc(t('lblHold'))}</text>` +
+      `<text x="600" y="412" font-size="16" text-anchor="middle">${esc(t('lblSlide'))}</text>` +
+      `<g transform="translate(${reduceMotion ? end.x : start.x} ${reduceMotion ? end.y : start.y})">${anim}` +
+      `<g>${grow}<rect x="-28" y="-28" width="56" height="56" fill="#fff" stroke="${GLOW_COLOR}" stroke-width="3"/>` +
+      `<image href="${CONFIG.IMG(ids[2])}" x="-25" y="-25" width="50" height="50"/></g>` +
+      `<text x="6" y="40" font-size="40">👆</text></g>` +
+      '</svg>';
+  },
+
+  // หน้า 4: แถบบนสุดคือปัจจุบัน เส้นอื่นคือล้านปีที่แล้ว
+  () => {
+    const y = k => 32 + k * 20.5;
+    let s = '';
+    for (let k = 0; k < 20; k++) {
+      const color = k === 0 ? GLOW_COLOR : (k === 17 ? REMOVE_COLOR : '#9a9e95');
+      const w = k === 0 || k === 17 ? 4 : 1.5;
+      s += `<line x1="200" y1="${y(k)}" x2="540" y2="${y(k)}" stroke="${color}" stroke-width="${w}"/>`;
+      s += `<text x="192" y="${y(k)}" font-size="14" text-anchor="end" dominant-baseline="central"${k === 0 || k === 17 ? ' font-weight="700"' : ''}>${k === 0 ? 'present' : k}</text>`;
+    }
+    return SVG_OPEN + '<rect width="800" height="450" fill="#fff"/>' + s +
+      `<defs><marker id="ah" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#333"/></marker></defs>` +
+      `<line x1="90" y1="${y(1)}" x2="90" y2="${y(19)}" stroke="#333" stroke-width="3" marker-end="url(#ah)"/>` +
+      `<text transform="translate(70 ${(y(1) + y(19)) / 2}) rotate(-90)" font-size="17" text-anchor="middle">${esc(t('lblMya'))}</text>` +
+      `<line x1="540" y1="${y(0)}" x2="572" y2="${y(0) + 22}" stroke="${GLOW_COLOR}" stroke-width="3"/>` +
+      svgLabel(572, y(0) + 4, 210, 40, t('lblTop'), { stroke: GLOW_COLOR, fs: 17 }) +
+      `<line x1="540" y1="${y(17)}" x2="572" y2="${y(17) - 40}" stroke="${REMOVE_COLOR}" stroke-width="3"/>` +
+      svgLabel(572, y(17) - 62, 210, 44, t('lbl17'), { stroke: REMOVE_COLOR, fs: 15 }) +
+      '</svg>';
+  },
+
+  // หน้า 5: วิธีโยงเส้น
+  () => {
+    const y = k => 60 + k * 66;
+    let s = '';
+    for (let k = 0; k < 6; k++) {
+      s += `<line x1="90" y1="${y(k)}" x2="760" y2="${y(k)}" stroke="#bbb" stroke-width="2"/>`;
+      s += `<text x="82" y="${y(k)}" font-size="14" text-anchor="end" dominant-baseline="central">${k === 0 ? 'present' : k}</text>`;
+    }
+    const [fa, fb, lv] = tutPicks.p5;
+    const A = { x: 360, y: y(5) };     // ตัวที่ถูกแตะ
+    const B = { x: 200, y: y(1) };     // ตัวที่จะโยงไปหา
+    const C = { x: 560, y: y(0) };     // มีเส้นอยู่แล้ว
+    const menuW = 400, menuH = 42;
+    const mx = A.x - menuW / 2, my = A.y - 104;
+    const acts = [t('menuMove'), t('menuLink'), t('menuUnlink'), t('menuPutback')];
+    const seg = menuW / 4;
+    let menu = `<rect x="${mx}" y="${my}" width="${menuW}" height="${menuH}" rx="8" fill="#fff" stroke="#888" stroke-width="1.5"/>`;
+    acts.forEach((a, i) => {
+      const hl = i === 1;
+      menu += `<rect x="${mx + 4 + i * seg}" y="${my + 4}" width="${seg - 8}" height="${menuH - 8}" rx="5" fill="${hl ? '#e3f8e7' : '#fff'}" stroke="${hl ? GLOW_COLOR : '#ccc'}" stroke-width="${hl ? 3 : 1}"/>` +
+        `<text x="${mx + i * seg + seg / 2}" y="${my + menuH / 2}" font-size="14" text-anchor="middle" dominant-baseline="central">${esc(a)}</text>`;
+    });
+    return SVG_OPEN + '<rect width="800" height="450" fill="#fff"/>' + s +
+      `<line x1="${A.x}" y1="${A.y}" x2="${C.x}" y2="${C.y}" stroke="#222" stroke-width="3"/>` +
+      `<line x1="${A.x}" y1="${A.y}" x2="${B.x}" y2="${B.y}" stroke="${GLOW_COLOR}" stroke-width="3" stroke-dasharray="8 7"/>` +
+      `<rect x="${A.x - 36}" y="${A.y - 36}" width="72" height="72" rx="10" fill="rgba(47,214,81,0.15)" stroke="${GLOW_COLOR}" stroke-width="4"/>` +
+      svgCard(fa, A.x, A.y, 56, 0, false) +
+      svgCard(fb, B.x, B.y, 56, 0, false) +
+      svgCard(lv, C.x, C.y, 56, 0, false) +
+      menu +
+      `<text x="${A.x + 48}" y="${A.y + 6}" font-size="17" font-weight="600" dominant-baseline="central">${esc(t('lblTap'))}</text>` +
+      `<text x="${mx + menuW + 10}" y="${my + menuH / 2}" font-size="17" font-weight="600" dominant-baseline="central">${esc(t('lblChoose'))}</text>` +
+      `<text x="${B.x + 4}" y="${B.y + 44}" font-size="36">👆</text>` +
+      `<text x="${B.x + 46}" y="${B.y + 30}" font-size="17" font-weight="600" dominant-baseline="central">${esc(t('lblTapOther'))}</text>` +
+      '</svg>';
+  },
+
+  // หน้า 6: ตัวอย่างการโยงเส้นแบบคร่าว ๆ
+  () => {
+    const P = {
+      R: [400, 410], A: [320, 320], B: [450, 245], E: [190, 175],
+      C: [330, 165], C2: [395, 110], D: [565, 150],
+      t1: [270, 55], t2: [350, 55], t3: [440, 55], t4: [520, 55], t5: [610, 55],
+    };
+    // ทุกจุดแตกแขนงขึ้นไปได้ไม่เกิน 2 เส้น
+    const edges = [['R','A'],['R','B'],['A','E'],['B','C'],['B','D'],['C','t1'],['C','C2'],['C2','t2'],['C2','t3'],['D','t4'],['D','t5']];
+    const lines = edges.map(([a, b]) => `<line x1="${P[a][0]}" y1="${P[a][1]}" x2="${P[b][0]}" y2="${P[b][1]}" stroke="#222" stroke-width="3"/>`).join('');
+    const boxes = Object.values(P).map(([x, y]) => `<rect x="${x - 15}" y="${y - 15}" width="30" height="30" fill="#fff" stroke="#222" stroke-width="2.5"/>`).join('');
+    return SVG_OPEN + '<rect width="800" height="450" fill="#fff"/>' +
+      `<defs><marker id="ah2" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#555"/></marker></defs>` +
+      `<line x1="70" y1="400" x2="70" y2="70" stroke="#555" stroke-width="3" marker-end="url(#ah2)"/>` +
+      `<text x="70" y="45" font-size="17" font-weight="600" text-anchor="middle">${esc(t('lblNow'))}</text>` +
+      `<text x="70" y="428" font-size="17" font-weight="600" text-anchor="middle">${esc(t('lblPast'))}</text>` +
+      lines + boxes +
+      `<text x="${P.E[0]}" y="${P.E[1] - 28}" font-size="15" fill="#777" text-anchor="middle">${esc(t('lblExtinct'))}</text>` +
+      `<text x="${P.R[0] + 26}" y="${P.R[1]}" font-size="15" fill="#555" dominant-baseline="central">${esc(t('lblAncestor'))}</text>` +
+      '</svg>';
+  },
+];
+
+// ================= ส่งออก JPG =================
+let exportBlob = null;
+let exportName = '';
+
+function exportJPG() {
+  exitMode();   // ไม่ให้กรอบเรืองหรือเส้นแดงติดไปในภาพ
+
+  // ส่งออกเฉพาะเส้นเวลาที่ความละเอียดคงที่ ไม่ขึ้นกับขนาดจอหรือการซูม
+  const FOOT = Math.round(90 * U) + Math.max(0, students.length - 2) * Math.round(28 * U);
+  const dateText = new Date().toLocaleDateString(t('dateLocale'));
+  const footer = new Konva.Group();
+  footer.add(new Konva.Rect({ x: 0, y: WORLD.h, width: WORLD.w, height: FOOT, fill: '#fff' }));
+  footer.add(new Konva.Text({
+    x: 20 * U, y: WORLD.h + 14 * U, width: WORLD.w - 40 * U,
+    fontSize: 20 * U, lineHeight: 1.4, fill: '#000',
+    fontFamily: 'Tahoma, "Noto Sans Thai", "Sarabun", sans-serif',
+    text: (students.length ? studentsText() : '-') + '\n' + dateText,
+  }));
+  uiLayer.add(footer);
+
+  const saved = { w: stage.width(), h: stage.height(), s: stage.scaleX(), x: stage.x(), y: stage.y() };
+  stage.size({ width: WORLD.w, height: WORLD.h + FOOT });
+  stage.scale({ x: 1, y: 1 });
+  stage.position({ x: 0, y: 0 });
+
+  let url = null;
+  try {
+    url = stage.toDataURL({
+      mimeType: 'image/jpeg',
+      quality: 0.92,
+      pixelRatio: Math.max(0.5, Math.min(2, 2000 / WORLD.w)),
+    });
+  } catch (err) {
+    console.error(err);
+  } finally {
+    footer.destroy();
+    stage.size({ width: saved.w, height: saved.h });
+    stage.scale({ x: saved.s, y: saved.s });
+    stage.position({ x: saved.x, y: saved.y });
+  }
+
+  if (!url) {
+    alert(t('exportFail'));
+    return;
+  }
+
+  exportBlob = dataURLtoBlob(url);
+  const d = new Date();
+  const ymd = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const sid = (students[0]?.sid || '').replace(/[^\w-]/g, '');
+  exportName = `caminalcule_${sid ? sid + '_' : ''}${ymd}.jpg`;
+  $('exportImg').src = url;
+
+  let canShare = false;
+  try {
+    const file = new File([exportBlob], exportName, { type: 'image/jpeg' });
+    canShare = isTouch && !!navigator.canShare && navigator.canShare({ files: [file] });
+  } catch (_) {}
+  $('btnShare').classList.toggle('hidden', !canShare);
+  $('exportOverlay').classList.remove('hidden');
+}
+
+function dataURLtoBlob(url) {
+  const [head, b64] = url.split(',');
+  const mime = head.match(/:(.*?);/)[1];
+  const bin = atob(b64);
+  const arr = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+  return new Blob([arr], { type: mime });
+}
+
+async function shareExport() {
+  try {
+    const file = new File([exportBlob], exportName, { type: 'image/jpeg' });
+    await navigator.share({ files: [file], title: 'Caminalcule tree' });
+  } catch (err) {
+    if (err.name !== 'AbortError') downloadExport();
+  }
+}
+
+function downloadExport() {
+  const href = URL.createObjectURL(exportBlob);
+  const a = document.createElement('a');
+  a.href = href;
+  a.download = exportName;
+  document.body.append(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(href), 10000);
+}
+
+// ================= ล้างทั้งหมด =================
+function resetAll() {
+  if (!confirm(t('confirmReset'))) return;
+  pushHistory();
+  restore({ nodes: [], links: [] });
+  afterChange();
+  fitWidth();
+}
+
+// ================= ปุ่มและคีย์บอร์ด =================
+$('btnGallery').addEventListener('click', () => showView('gallery'));
+$('btnTimeline').addEventListener('click', () => { showView('timeline'); showHintOnce(); });
+$('btnHelp').addEventListener('click', openTutorial);
+$('btnUndo').addEventListener('click', undo);
+// กดครั้งแรก = กว้างเต็มจอ, กดซ้ำ = เห็นทั้งแผ่น
+$('btnFit').addEventListener('click', () => {
+  const atFitWidth = Math.abs(stage.scaleX() - fitScale) < fitScale * 0.01 && stage.y() >= MARGIN - 1;
+  if (atFitWidth && wholeScale < fitScale * 0.99) fitWhole();
+  else fitWidth();
+});
+$('btnZoomIn').addEventListener('click', () => zoomAt({ x: stage.width() / 2, y: stage.height() / 2 }, 1.3));
+$('btnZoomOut').addEventListener('click', () => zoomAt({ x: stage.width() / 2, y: stage.height() / 2 }, 1 / 1.3));
+$('btnExport').addEventListener('click', exportJPG);
+$('btnReset').addEventListener('click', resetAll);
+$('btnShare').addEventListener('click', shareExport);
+$('btnDownload').addEventListener('click', downloadExport);
+$('btnCloseExport').addEventListener('click', () => $('exportOverlay').classList.add('hidden'));
+
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT') {
+    if (e.key === 'Enter') submitNames();
+    return;
+  }
+  if (!$('tutorial').classList.contains('hidden')) {
+    if (e.key === 'ArrowRight') showTutPage(tutPage + 1);
+    if (e.key === 'ArrowLeft') showTutPage(tutPage - 1);
+    return;
+  }
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
+    e.preventDefault();
+    undo();
+  } else if (e.key === 'Escape') {
+    exitMode();
+    $('preview').classList.add('hidden');
+  }
+});
+
+// กัน iPhone/iPad ซูมทั้งหน้าเวลา pinch
+document.addEventListener('gesturestart', e => e.preventDefault());
+
+// แสดงคำแนะนำครั้งแรกที่เปิดหน้าเส้นเวลา
+let hintShown = false;
+function showHintOnce() {
+  if (hintShown) return;
+  hintShown = true;
+  const hint = $('hint');
+  hint.classList.remove('faded');
+  setTimeout(() => hint.classList.add('faded'), 7000);
+}
+
+// ================= เริ่มทำงาน =================
+applyLang();
+assetsReady = (async () => {
+  await loadBackground();
+  await loadCaminalcules();
+  layoutStage(true);
+  layoutGallery();
+  ready = true;
+
+  // ปรับขนาดเองเมื่อหมุนจอ / ย่อขยายหน้าต่าง
+  let raf = 0;
+  new ResizeObserver(() => {
+    cancelAnimationFrame(raf);
+    raf = requestAnimationFrame(() => { layoutStage(false); layoutGallery(); });
+  }).observe($('main'));
+})();
+</script>
+</body>
+</html>

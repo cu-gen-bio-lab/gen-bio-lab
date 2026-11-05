@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>Cell Division Game</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{overscroll-behavior:none}
+body{font-family:sans-serif;padding:10px;background:#f5f5f0;color:#222;-webkit-tap-highlight-color:transparent;overflow-x:hidden}
+.tabs{display:flex;gap:8px;margin-bottom:10px}
+.tb{flex:1;padding:8px;border:1px solid #ccc;border-radius:8px;font-size:13px;cursor:pointer;background:#fff;color:#666;text-align:center}
+.tb.active{background:#eee;color:#111;border-color:#999;font-weight:500}
+.sec-lbl{font-size:11px;color:#888;margin-bottom:5px}
+
+/* Drop slots */
+.drop-row{display:flex;gap:4px;margin-bottom:12px;flex-wrap:wrap}
+.ds{flex:1;min-width:52px;height:100px;border:1.5px dashed #ccc;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;background:#fafafa;transition:border-color .2s,background .2s;padding-bottom:14px}
+.ds.over{border-color:#378ADD;background:rgba(55,138,221,0.1)}
+.ds.correct{border-color:#1D9E75;background:rgba(29,158,117,0.07)}
+.ds.wrong{border-color:#E24B4A;background:rgba(226,75,74,0.07)}
+.sn{position:absolute;top:3px;left:5px;font-size:9px;color:#bbb;font-weight:600}
+/* ชื่อระยะในช่อง */
+.slot-name{position:absolute;bottom:3px;left:0;right:0;text-align:center;font-size:8px;color:#aaa;line-height:1.2;padding:0 2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sl{font-size:9px;color:#bbb;text-align:center}
+.ri{position:absolute;top:3px;right:4px;font-size:10px;display:none}
+.ds.correct .ri,.ds.wrong .ri{display:block}
+.ds img.placed{width:56px;height:56px;object-fit:contain;border-radius:4px;pointer-events:none}
+/* ปุ่มดึงกลับ */
+.ds .remove-btn{position:absolute;top:2px;right:2px;width:16px;height:16px;border-radius:50%;border:none;background:rgba(0,0,0,0.15);color:#fff;font-size:10px;line-height:16px;text-align:center;cursor:pointer;display:none;padding:0;z-index:5}
+.ds.has-card .remove-btn{display:block}
+.ds.has-card .ri{display:none}
+.ds.correct.has-card .ri{display:block;top:3px;right:20px}
+.ds.wrong.has-card .ri{display:block;top:3px;right:20px}
+
+/* Carousel */
+.carousel-wrap{position:relative;margin-bottom:8px;user-select:none}
+.carousel-track-outer{overflow:hidden;border-radius:12px;background:#fff;border:1px solid #ddd;touch-action:pan-y}
+.carousel-track{display:flex;transition:transform .32s cubic-bezier(.4,0,.2,1);will-change:transform}
+.carousel-item{min-width:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:14px 0 12px;gap:6px;position:relative;cursor:grab}
+.carousel-item img{border-radius:8px;object-fit:contain;display:block;max-width:calc(100% - 80px)}
+.carousel-item.used{opacity:0.22}
+.used-badge{position:absolute;top:8px;right:14px;font-size:10px;color:#bbb;background:#f0f0ec;border-radius:10px;padding:1px 7px;display:none}
+.car-btn{position:absolute;top:50%;transform:translateY(-50%);width:32px;height:32px;border-radius:50%;border:1px solid #ddd;background:#fff;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:10;box-shadow:0 1px 4px rgba(0,0,0,0.1);line-height:1}
+.car-btn:disabled{opacity:0.25}
+#car-prev{left:4px}
+#car-next{right:4px}
+.car-dots{display:flex;gap:4px;justify-content:center;margin-top:6px;flex-wrap:wrap}
+.cdot{width:7px;height:7px;border-radius:50%;border:none;background:#ccc;cursor:pointer;padding:0;transition:background .2s}
+.cdot.cur{background:#378ADD}
+.cdot.used{background:#ddd}
+
+/* Ghost */
+#ghost{position:fixed;pointer-events:none;z-index:9999;display:none;align-items:center;justify-content:center;border:1.5px solid #378ADD;border-radius:10px;background:#fff;box-shadow:0 8px 24px rgba(0,0,0,0.22);opacity:0.92;width:90px;height:90px}
+#ghost img{width:80px;height:80px;object-fit:contain;border-radius:8px}
+body.dragging{touch-action:none}
+
+.btn-row{display:flex;gap:8px;margin-top:8px;align-items:center;flex-wrap:wrap}
+.btn{padding:9px 16px;border:1px solid #ccc;border-radius:8px;font-size:13px;cursor:pointer;background:#fff;color:#111}
+.btn.primary{background:#111;color:#fff;border-color:transparent}
+.stxt{font-size:13px;color:#666}
+
+/* Playback */
+#playback{display:none;margin-top:10px;border:1px solid #ddd;border-radius:12px;overflow:hidden}
+#playback.show{display:block}
+.pb-hdr{padding:10px 12px;background:#f0f0ec;border-bottom:1px solid #ddd;display:flex;align-items:center;justify-content:space-between}
+.pb-hdr strong{font-size:13px;font-weight:500}
+.pb-hdr span{font-size:11px;color:#666}
+.pb-stage{min-height:240px;display:flex;align-items:center;justify-content:center;background:#fff;padding:14px}
+.pb-inner{display:flex;flex-direction:column;align-items:center;gap:8px}
+.pb-slotlbl{font-size:11px;color:#888}
+.pb-img-wrap{border-radius:12px;padding:10px;background:#f8f8f6;display:inline-flex}
+.pb-img-wrap.ok{border:2px solid #1D9E75}
+.pb-img-wrap.no{border:2px solid #E24B4A}
+.pb-img-wrap img{width:140px;height:140px;object-fit:contain;border-radius:6px}
+.pb-name{font-size:15px;font-weight:600;color:#111;text-align:center}
+.pb-badge{font-size:12px;padding:3px 12px;border-radius:20px}
+.pb-badge.ok{background:#E1F5EE;color:#0F6E56}
+.pb-badge.no{background:#FCEBEB;color:#A32D2D}
+.pb-hint{font-size:11px;color:#888;text-align:center}
+.pb-cmp{display:flex;align-items:center;gap:8px;margin-top:4px}
+.pb-cmp img{width:70px;height:70px;object-fit:contain;border:2px solid #1D9E75;border-radius:8px}
+.pb-cmp-lbl{font-size:11px;color:#888}
+.pb-nav{display:flex;align-items:center;gap:6px;padding:10px 12px;border-top:1px solid #ddd;background:#f0f0ec}
+.pb-dots{display:flex;gap:5px;flex:1;justify-content:center;flex-wrap:wrap}
+.dot{width:10px;height:10px;border-radius:50%;border:none;cursor:pointer;background:#ccc}
+.dot.ok{background:#1D9E75}.dot.no{background:#E24B4A}
+.dot.cur{outline:2px solid #378ADD;outline-offset:1px}
+.pb-arr{padding:6px 14px;border:1px solid #ccc;border-radius:8px;font-size:14px;cursor:pointer;background:#fff;min-width:40px;text-align:center}
+.pb-arr:disabled{opacity:.3}
+.pb-prog{font-size:11px;color:#888;min-width:34px;text-align:center}
+.pb-auto{font-size:11px;padding:5px 10px;border:1px solid #ccc;border-radius:8px;cursor:pointer;background:#fff;color:#666}
+</style>
+</head>
+<body>
+<div id="ghost"><img id="ghost-img" src="" alt=""></div>
+
+<div class="tabs">
+  <button class="tb active" onclick="switchMode('mitosis')">Mitosis</button>
+  <button class="tb" onclick="switchMode('meiosis')">Meiosis</button>
+</div>
+
+<p class="sec-lbl">Arrange the phases in the correct order • Tap ✕ on a card to return it</p>
+<div class="drop-row" id="drop-row"></div>
+
+<p class="sec-lbl">Swipe left/right to browse • Drag a card into the correct slot</p>
+<div class="carousel-wrap">
+  <button class="car-btn" id="car-prev" onclick="carGo(-1)">‹</button>
+  <div class="carousel-track-outer" id="car-outer">
+    <div class="carousel-track" id="car-track"></div>
+  </div>
+  <button class="car-btn" id="car-next" onclick="carGo(1)">›</button>
+</div>
+<div class="car-dots" id="car-dots"></div>
+
+<div class="btn-row">
+  <button class="btn primary" onclick="checkAnswer()">Check Answer</button>
+  <button class="btn" onclick="resetGame()">Reset</button>
+  <span class="stxt" id="stxt"></span>
+</div>
+
+<div id="playback">
+  <div class="pb-hdr"><strong>Your Answer Review</strong><span id="pb-sc"></span></div>
+  <div class="pb-stage" id="pb-stage"></div>
+  <div class="pb-nav">
+    <button class="pb-arr" id="pb-prev" onclick="pbGo(-1)">◀</button>
+    <div class="pb-dots" id="pb-dots"></div>
+    <span class="pb-prog" id="pb-prog"></span>
+    <button class="pb-auto" id="pb-auto" onclick="toggleAuto()">▶ Auto</button>
+    <button class="pb-arr" id="pb-next" onclick="pbGo(1)">▶</button>
+  </div>
+</div>
+
+<script>
+var PHASES = {
+  mitosis: [
+    { id:'mt0', name:'Interphase',  file:'mitosis_interphase.png' },
+    { id:'mt1', name:'Prophase',    file:'mitosis_prophase.png' },
+    { id:'mt2', name:'Metaphase',   file:'mitosis_metaphase.png' },
+    { id:'mt3', name:'Anaphase',    file:'mitosis_anaphase.png' },
+    { id:'mt4', name:'Telophase',   file:'mitosis_telophase.png' },
+    { id:'mt5', name:'Cytokinesis', file:'mitosis_cytokinesis.png' }
+  ],
+  meiosis: [
+    { id:'me0',  name:'Interphase',           file:'meiosis_interphase.png' },
+    { id:'me1',  name:'Prophase I',           file:'meiosis_prophase_1.png' },
+    { id:'me2',  name:'Metaphase I',          file:'meiosis_metaphase_1.png' },
+    { id:'me3',  name:'Anaphase I',           file:'meiosis_anaphase_1.png' },
+    { id:'me4',  name:'Telophase I',          file:'meiosis_telophase_1.png' },
+    { id:'me5',  name:'Cytokinesis I',        file:'meiosis_cytokinesis_1.png' },
+    { id:'me6',  name:'Prophase II',          file:'meiosis_prophase_2.png' },
+    { id:'me7',  name:'Metaphase II',         file:'meiosis_metaphase_2.png' },
+    { id:'me8',  name:'Anaphase II',          file:'meiosis_anaphase_2.png' },
+    { id:'me9',  name:'Telophase II',         file:'meiosis_telophase_2.png' },
+    { id:'me10', name:'Cytokinesis II',       file:'meiosis_cytokinesis_2.png' },
+    { id:'me11', name:'Cell Differentiation', file:'meiosis_celldifferentiation.png' }
+  ]
+};
+
+function imgPath(file){ return 'images/' + file; }
+
+var mode='mitosis', shuffled=[], slotContent={};
+var pbIdx=0, pbData=[], autoTimer=null, busy=false, carIdx=0;
+var carDragId=null, carTouchSX=0, carTouchSY=0, carSwipeHandled=false;
+var ghostImg=document.getElementById('ghost-img');
+var ghostEl=document.getElementById('ghost');
+
+function switchMode(m){
+  mode=m;
+  document.querySelectorAll('.tb').forEach(function(b,i){
+    b.classList.toggle('active',(i===0&&m==='mitosis')||(i===1&&m==='meiosis'));
+  });
+  resetGame();
+}
+function getPhase(id){
+  return PHASES[mode].find(function(p){return p.id===id;}) ||
+         shuffled.find(function(p){return p.id===id;});
+}
+function isUsed(id){ return Object.values(slotContent).indexOf(id)>=0; }
+
+function resetGame(){
+  clearAuto(); slotContent={}; pbData=[]; pbIdx=0; busy=false; carIdx=0;
+  var phases=PHASES[mode];
+  shuffled=[].concat(phases).sort(function(){return Math.random()-.5;});
+
+  var dr=document.getElementById('drop-row'); dr.innerHTML='';
+  phases.forEach(function(p,i){
+    var slot=document.createElement('div');
+    slot.className='ds'; slot.dataset.idx=i; slot.dataset.cid=p.id;
+
+    var sn=document.createElement('span'); sn.className='sn'; sn.textContent=i+1;
+    slot.appendChild(sn);
+
+    var sl=document.createElement('span'); sl.className='sl'; sl.id='sl-'+i; sl.textContent='Drop here';
+    slot.appendChild(sl);
+
+    // ชื่อระยะ (แสดงตลอด ทั้งก่อนและหลังวาง)
+    var sname=document.createElement('span'); sname.className='slot-name'; sname.textContent=p.name;
+    slot.appendChild(sname);
+
+    // ปุ่มดึงกลับ
+    var rb=document.createElement('button'); rb.className='remove-btn'; rb.textContent='✕';
+    rb.addEventListener('click', (function(idx){ return function(e){ e.stopPropagation(); removeFromSlot(idx); }; })(i));
+    slot.appendChild(rb);
+
+    var ri=document.createElement('span'); ri.className='ri'; ri.id='ri-'+i;
+    slot.appendChild(ri);
+
+    dr.appendChild(slot);
+  });
+
+  var track=document.getElementById('car-track'); track.innerHTML='';
+  var outerW=document.getElementById('car-outer').clientWidth||(window.innerWidth-28);
+  var imgSz=Math.min(outerW-80,200); if(imgSz<100)imgSz=100;
+
+  shuffled.forEach(function(p,i){
+    var item=document.createElement('div');
+    item.className='carousel-item'; item.dataset.cardId=p.id; item.dataset.ci=i;
+    var img=document.createElement('img');
+    img.src=imgPath(p.file); img.width=imgSz; img.height=imgSz;
+    img.alt=p.name; img.draggable=false;
+    item.appendChild(img);
+    var badge=document.createElement('div');
+    badge.className='used-badge'; badge.id='ubadge-'+i; badge.textContent='Used';
+    item.appendChild(badge);
+    item.addEventListener('touchstart',onCarTouchStart,{passive:false});
+    item.addEventListener('touchmove', onCarTouchMove, {passive:false});
+    item.addEventListener('touchend',  onCarTouchEnd,  {passive:false});
+    item.addEventListener('mousedown', onCarMouseDown);
+    track.appendChild(item);
+  });
+
+  buildCarDots(); renderCar();
+  document.getElementById('playback').classList.remove('show');
+  document.getElementById('stxt').textContent='';
+}
+
+// ── ดึงรูปกลับจากช่อง ──
+function removeFromSlot(i){
+  if(!slotContent[i]) return;
+  var cardId=slotContent[i];
+  markUsed(cardId, false);
+  var slot=document.querySelector('.ds[data-idx="'+i+'"]');
+  var pc=slot.querySelector('img.placed'); if(pc) pc.remove();
+  document.getElementById('sl-'+i).style.display='';
+  slot.classList.remove('correct','wrong','has-card');
+  document.getElementById('ri-'+i).textContent='';
+  delete slotContent[i];
+  // เลื่อน carousel ไปหารูปที่เพิ่งดึงกลับ
+  shuffled.forEach(function(p,idx){ if(p.id===cardId){ carIdx=idx; renderCar(); } });
+  document.getElementById('playback').classList.remove('show');
+  document.getElementById('stxt').textContent='';
+}
+
+function renderCar(){
+  var w=document.getElementById('car-outer').clientWidth||(window.innerWidth-28);
+  document.getElementById('car-track').style.transform='translateX(-'+(carIdx*w)+'px)';
+  document.getElementById('car-prev').disabled=carIdx===0;
+  document.getElementById('car-next').disabled=carIdx===shuffled.length-1;
+  buildCarDots();
+}
+function carGo(dir){
+  var n=carIdx+dir; if(n<0||n>=shuffled.length)return;
+  carIdx=n; renderCar();
+}
+function buildCarDots(){
+  var dots=document.getElementById('car-dots'); dots.innerHTML='';
+  shuffled.forEach(function(p,i){
+    var b=document.createElement('button');
+    b.className='cdot'+(i===carIdx?' cur':'')+(isUsed(p.id)?' used':'');
+    b.onclick=function(){carIdx=i;renderCar();};
+    dots.appendChild(b);
+  });
+}
+function markUsed(cardId,used){
+  shuffled.forEach(function(p,i){
+    if(p.id===cardId){
+      var item=document.querySelector('.carousel-item[data-ci="'+i+'"]');
+      if(item) item.classList.toggle('used',used);
+      var badge=document.getElementById('ubadge-'+i);
+      if(badge) badge.style.display=used?'block':'none';
+    }
+  });
+  buildCarDots();
+}
+function advanceCarousel(){
+  for(var i=carIdx+1;i<shuffled.length;i++){ if(!isUsed(shuffled[i].id)){carIdx=i;renderCar();return;} }
+  for(var i=0;i<carIdx;i++){ if(!isUsed(shuffled[i].id)){carIdx=i;renderCar();return;} }
+}
+
+function showGhost(src,cx,cy){ ghostImg.src=src; ghostEl.style.display='flex'; moveGhost(cx,cy); }
+function moveGhost(cx,cy){ ghostEl.style.left=(cx-45)+'px'; ghostEl.style.top=(cy-45)+'px'; }
+function hideGhost(){ ghostEl.style.display='none'; }
+
+function getSlotAt(cx,cy){
+  var slots=document.querySelectorAll('.ds');
+  var best=null, bestDist=999999;
+  for(var i=0;i<slots.length;i++){
+    var r=slots[i].getBoundingClientRect();
+    // center-based distance — ไม่มีขอบตัด
+    var centerX=(r.left+r.right)/2;
+    var centerY=(r.top+r.bottom)/2;
+    var dist=Math.abs(cx-centerX)+Math.abs(cy-centerY);
+    var halfW=(r.width/2)+40;
+    var halfH=(r.height/2)+40;
+    if(Math.abs(cx-centerX)<halfW && Math.abs(cy-centerY)<halfH){
+      if(dist<bestDist){bestDist=dist;best=slots[i];}
+    }
+  }
+  return best;
+}
+function dropOnSlot(slot,cardId){
+  var i=parseInt(slot.dataset.idx);
+  if(slotContent[i]){
+    markUsed(slotContent[i],false);
+    var pc=slot.querySelector('img.placed'); if(pc) pc.remove();
+    document.getElementById('sl-'+i).style.display='';
+    slot.classList.remove('has-card');
+  }
+  slotContent[i]=cardId;
+  markUsed(cardId,true);
+  var ph=getPhase(cardId);
+  if(ph){
+    var img=document.createElement('img');
+    img.src=imgPath(ph.file); img.className='placed'; img.alt=ph.name;
+    document.getElementById('sl-'+i).style.display='none';
+    slot.insertBefore(img, slot.querySelector('.slot-name'));
+  }
+  slot.classList.add('has-card');
+  slot.classList.remove('correct','wrong');
+  document.getElementById('ri-'+i).textContent='';
+  document.getElementById('playback').classList.remove('show');
+  document.getElementById('stxt').textContent='';
+  slot.classList.add('over'); setTimeout(function(){slot.classList.remove('over');},300);
+  advanceCarousel();
+}
+
+// ── Touch ──
+function onCarTouchStart(e){
+  var item=this; if(item.classList.contains('used')) return;
+  carTouchSX=e.touches[0].clientX; carTouchSY=e.touches[0].clientY;
+  carSwipeHandled=false; carDragId=item.dataset.cardId;
+  showGhost(imgPath(getPhase(carDragId).file),carTouchSX,carTouchSY);
+  document.body.classList.add('dragging');
+  // ป้องกัน iOS scroll แย่ง touch ตลอดการลาก
+  document.removeEventListener('touchmove', preventScroll);
+  document.addEventListener('touchmove', preventScroll, {passive:false});
+  e.preventDefault();
+}
+function preventScroll(e){ e.preventDefault(); }
+function onCarTouchMove(e){
+  if(!carDragId){
+    document.removeEventListener('touchmove', preventScroll);
+    document.body.classList.remove('dragging');
+    return;
+  }
+  e.preventDefault();
+  var t=e.touches[0]; var dx=t.clientX-carTouchSX; var dy=t.clientY-carTouchSY;
+  var absDx=Math.abs(dx); var absDy=Math.abs(dy);
+  // ถ้าขยับแนวตั้งก่อน → drag mode ล็อก ไม่ swipe อีก
+  if(!carSwipeHandled && absDy>10 && absDy>absDx){
+    carSwipeHandled=true; // ใช้ flag เพื่อบอกว่า lock เป็น drag แล้ว (ไม่ใช่ swipe)
+    // แต่ยังลาก drag ต่อได้ → ไม่ null carDragId
+  }
+  // swipe: แนวนอนชัดเจน, ยังไม่ lock เป็น drag, และขยับพอ
+  if(!carSwipeHandled && absDx>60 && absDx>absDy*2.5){
+    hideGhost();
+    document.body.classList.remove('dragging');
+    document.removeEventListener('touchmove', preventScroll);
+    if(dx<0) carGo(1); else carGo(-1);
+    carDragId=null; carSwipeHandled=true; return;
+  }
+  moveGhost(t.clientX,t.clientY);
+  document.querySelectorAll('.ds').forEach(function(s){s.classList.remove('over');});
+  var sl=getSlotAt(t.clientX,t.clientY); if(sl) sl.classList.add('over');
+}
+function onCarTouchEnd(e){
+  // ถอด lock scroll ทุกกรณีก่อนเลย
+  document.body.classList.remove('dragging');
+  document.removeEventListener('touchmove', preventScroll);
+  if(!carDragId){ hideGhost(); return; }
+  e.preventDefault();
+  hideGhost();
+  document.querySelectorAll('.ds').forEach(function(s){s.classList.remove('over');});
+  if(!carSwipeHandled){
+    var t=e.changedTouches[0];
+    var sl=getSlotAt(t.clientX,t.clientY); if(sl) dropOnSlot(sl,carDragId);
+  }
+  carDragId=null;
+}
+
+// ── Mouse ──
+function onCarMouseDown(e){
+  var item=this; if(item.classList.contains('used')) return;
+  var cid=item.dataset.cardId; var ph=getPhase(cid); var moved=false;
+  showGhost(imgPath(ph.file),e.clientX,e.clientY);
+  function mv(ev){ moved=true; moveGhost(ev.clientX,ev.clientY); document.querySelectorAll('.ds').forEach(function(s){s.classList.remove('over');}); var sl=getSlotAt(ev.clientX,ev.clientY); if(sl) sl.classList.add('over'); }
+  function up(ev){ hideGhost(); document.querySelectorAll('.ds').forEach(function(s){s.classList.remove('over');}); if(moved){ var sl=getSlotAt(ev.clientX,ev.clientY); if(sl) dropOnSlot(sl,cid); } document.removeEventListener('mousemove',mv); document.removeEventListener('mouseup',up); }
+  document.addEventListener('mousemove',mv);
+  document.addEventListener('mouseup',up);
+}
+
+// ── Playback ──
+function buildInner(d){
+  var inner=document.createElement('div'); inner.className='pb-inner';
+  var slbl=document.createElement('div'); slbl.className='pb-slotlbl'; slbl.textContent='Slot '+d.slotNum; inner.appendChild(slbl);
+  var wrap=document.createElement('div'); wrap.className='pb-img-wrap '+(d.isOk?'ok':'no');
+  var img=document.createElement('img'); img.src=imgPath(d.phase.file); img.alt=d.phase.name;
+  wrap.appendChild(img); inner.appendChild(wrap);
+  var nm=document.createElement('div'); nm.className='pb-name'; nm.textContent=d.phase.name; inner.appendChild(nm);
+  var badge=document.createElement('div'); badge.className='pb-badge '+(d.isOk?'ok':'no');
+  badge.textContent=d.isOk?'✅ correct':'❌ ไม่correct'; inner.appendChild(badge);
+  if(!d.isOk){
+    var hint=document.createElement('div'); hint.className='pb-hint';
+    hint.textContent='This slot should be: '+d.correct.name; inner.appendChild(hint);
+    var cmp=document.createElement('div'); cmp.className='pb-cmp';
+    var ci=document.createElement('img'); ci.src=imgPath(d.correct.file); ci.alt=d.correct.name;
+    var cl=document.createElement('span'); cl.className='pb-cmp-lbl'; cl.textContent='Correct answer';
+    cmp.appendChild(ci); cmp.appendChild(cl); inner.appendChild(cmp);
+  }
+  return inner;
+}
+function checkAnswer(){
+  var phases=PHASES[mode]; var correct=0; pbData=[];
+  phases.forEach(function(p,i){
+    var cid=slotContent[i]; var ri=document.getElementById('ri-'+i);
+    var slot=document.querySelector('.ds[data-idx="'+i+'"]');
+    if(!cid){ slot.classList.remove('correct','wrong'); ri.textContent=''; return; }
+    var isOk=cid===p.id;
+    slot.classList.toggle('correct',isOk); slot.classList.toggle('wrong',!isOk);
+    ri.textContent=isOk?'✅':'❌'; if(isOk) correct++;
+    pbData.push({phase:getPhase(cid),isOk:isOk,correct:p,slotNum:i+1});
+  });
+  pbData=pbData.filter(Boolean);
+  document.getElementById('stxt').textContent='Score: '+correct+'/'+phases.length;
+  if(!pbData.length) return;
+  pbIdx=0; busy=false;
+  document.getElementById('pb-sc').textContent=correct+'/'+phases.length+' correct';
+  buildDots();
+  var stage=document.getElementById('pb-stage'); stage.innerHTML='';
+  var inner=buildInner(pbData[0]); inner.style.opacity='1'; stage.appendChild(inner);
+  updateNav();
+  document.getElementById('playback').classList.add('show');
+  setTimeout(function(){document.getElementById('playback').scrollIntoView({behavior:'smooth',block:'nearest'});},100);
+}
+function goTo(idx){
+  if(busy||idx===pbIdx||idx<0||idx>=pbData.length) return;
+  busy=true; var stage=document.getElementById('pb-stage'); var old=stage.querySelector('.pb-inner'); var op=1;
+  function out(){ op-=0.1; if(op<=0){ stage.innerHTML=''; var ni=buildInner(pbData[idx]); ni.style.opacity='0'; stage.appendChild(ni); pbIdx=idx; updateNav(); var op2=0; function inn(){ op2+=0.1; if(op2>=1){ni.style.opacity='1';busy=false;return;} ni.style.opacity=''+op2; requestAnimationFrame(inn); } requestAnimationFrame(inn); return; } old.style.opacity=''+op; requestAnimationFrame(out); }
+  requestAnimationFrame(out);
+}
+function updateNav(){
+  document.getElementById('pb-prev').disabled=pbIdx===0;
+  document.getElementById('pb-next').disabled=pbIdx===pbData.length-1;
+  document.getElementById('pb-prog').textContent=(pbIdx+1)+'/'+pbData.length;
+  document.querySelectorAll('.dot').forEach(function(el,i){el.classList.toggle('cur',i===pbIdx);});
+}
+function buildDots(){
+  var dots=document.getElementById('pb-dots'); dots.innerHTML='';
+  pbData.forEach(function(d,i){ var b=document.createElement('button'); b.className='dot '+(d.isOk?'ok':'no'); b.onclick=function(){goTo(i);}; dots.appendChild(b); });
+}
+function pbGo(dir){ clearAuto(); goTo(pbIdx+dir); }
+function toggleAuto(){
+  var btn=document.getElementById('pb-auto');
+  if(autoTimer){ clearAuto(); btn.textContent='▶ Auto'; return; }
+  btn.textContent='⏸ Pause';
+  autoTimer=setInterval(function(){ if(pbIdx<pbData.length-1) goTo(pbIdx+1); else{ clearAuto(); btn.textContent='▶ Auto'; } },2200);
+}
+function clearAuto(){ if(autoTimer){ clearInterval(autoTimer); autoTimer=null; } }
+
+window.addEventListener('resize',function(){renderCar();});
+resetGame();
+</script>
+</body>
+</html>

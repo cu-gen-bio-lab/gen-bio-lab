@@ -1,0 +1,1673 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Cell Division 3D Lab v9</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bai+Jamjuree:wght@500;600;700&family=IBM+Plex+Sans+Thai:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one-screen app. Top half = dark "microscope field" 3D viewer, bottom half = scrolling lesson/quiz panel. */
+:root{
+  --bg:#f2f3f8; --surface:#ffffff; --ink:#161a2c; --muted:#596079; --line:#dde0ea;
+  --accent:#4a37a6; --accent-ink:#ffffff; --accent-soft:#ebe8fb;
+  --ok:#17845a; --ok-soft:#e2f4ec; --bad:#c23447; --bad-soft:#fbe7ea;
+  --field:#060a13; --field-ink:#dfe6ff; --field-muted:#8d97b8;
+  --f-display:"Bai Jamjuree","IBM Plex Sans Thai",system-ui,sans-serif;
+  --f-body:"IBM Plex Sans Thai",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+  --r:10px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0d111d; --surface:#151a2a; --ink:#e7e9f3; --muted:#9aa1bb; --line:#262c42;
+  --accent:#b3a5ff; --accent-ink:#151027; --accent-soft:#241f42;
+  --ok:#4fd29b; --ok-soft:#12302a; --bad:#ff7d8c; --bad-soft:#3a1a22; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0d111d; --surface:#151a2a; --ink:#e7e9f3; --muted:#9aa1bb; --line:#262c42;
+  --accent:#b3a5ff; --accent-ink:#151027; --accent-soft:#241f42;
+  --ok:#4fd29b; --ok-soft:#12302a; --bad:#ff7d8c; --bad-soft:#3a1a22; color-scheme:dark}
+html,body{height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.6;overflow:hidden}
+button,select,input{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+#app{height:100%;display:grid;grid-template-rows:minmax(220px,1fr) minmax(240px,1fr)}
+/* ---------- viewer ---------- */
+#viewer{position:relative;background:var(--field);overflow:hidden;touch-action:none;color:var(--field-ink)}
+#gl{display:block;width:100%;height:100%;cursor:grab}
+#gl:active{cursor:grabbing}
+.v-top{position:absolute;top:10px;left:max(12px,env(safe-area-inset-left,0px));right:max(12px,env(safe-area-inset-right,0px));display:flex;justify-content:space-between;align-items:flex-start;gap:8px;pointer-events:none}
+.v-tag{font-family:var(--f-display);font-weight:600;font-size:13px;letter-spacing:.04em;background:rgba(10,16,32,.72);border:1px solid rgba(160,180,255,.18);padding:4px 10px;border-radius:6px;backdrop-filter:blur(4px)}
+.v-tag small{font-family:var(--f-mono);font-weight:400;color:var(--field-muted);margin-left:6px}
+.v-actions{display:flex;gap:6px;pointer-events:auto}
+.vbtn{width:34px;height:34px;border-radius:8px;border:1px solid rgba(160,180,255,.22);background:rgba(10,16,32,.72);color:var(--field-ink);display:grid;place-items:center;cursor:pointer}
+.vbtn svg{width:18px;height:18px}
+.vbtn.wide{width:auto;padding:0 10px;display:inline-flex;gap:6px;font-size:12.5px;white-space:nowrap}
+.vbtn[aria-pressed="true"]{background:rgba(120,100,255,.35);border-color:rgba(190,180,255,.6)}
+.v-legend{position:absolute;left:max(12px,env(safe-area-inset-left,0px));bottom:10px;display:flex;flex-wrap:wrap;gap:4px 12px;font-size:11.5px;color:var(--field-muted);pointer-events:none;max-width:70%}
+.v-legend span{display:inline-flex;align-items:center;gap:5px}
+.v-legend i{display:inline-block;width:14px;height:6px;border-radius:3px}
+.v-hint{position:absolute;right:max(12px,env(safe-area-inset-right,0px));bottom:10px;font-size:11px;color:var(--field-muted);pointer-events:none;text-align:right}
+#labels{position:absolute;inset:0;pointer-events:none}
+.lbl{position:absolute;transform:translate(-50%,-100%);font-size:11.5px;white-space:nowrap;color:#fff;background:rgba(14,20,40,.78);border:1px solid rgba(200,210,255,.3);padding:1px 7px;border-radius:5px;margin-top:-8px}
+.lbl::after{content:"";position:absolute;left:50%;top:100%;width:1px;height:8px;background:rgba(220,230,255,.6)}
+/* ---------- panel ---------- */
+#panel{overflow-y:auto;overscroll-behavior:contain;border-top:1px solid var(--line);background:var(--bg)}
+.bar{position:sticky;top:0;z-index:5;background:var(--surface);border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:10px;padding-block:8px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));flex-wrap:wrap}
+.tabs{display:flex;gap:4px;background:var(--bg);padding:3px;border-radius:9px;border:1px solid var(--line)}
+.tabs button{border:0;background:transparent;padding:5px 12px;border-radius:7px;cursor:pointer;font-family:var(--f-display);font-weight:600;font-size:14px;color:var(--muted)}
+.tabs button[aria-selected="true"]{background:var(--accent);color:var(--accent-ink)}
+.bar-right{display:flex;align-items:center;gap:8px;min-width:0}
+.who{font-size:12.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:46vw}
+.who b{color:var(--ink);font-weight:600}
+.lang{border:1px solid var(--line);background:var(--surface);border-radius:7px;padding:3px 9px;font-family:var(--f-mono);font-size:12px;cursor:pointer}
+.wrap{padding-block:14px 28px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));max-width:1080px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+.controls{display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px}
+.transport{display:flex;gap:6px}
+.tbtn{height:38px;min-width:38px;padding:0 10px;border-radius:9px;border:1px solid var(--line);background:var(--surface);display:inline-flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;font-size:13.5px}
+.tbtn svg{width:16px;height:16px;fill:currentColor}
+.tbtn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);min-width:54px}
+.tbtn:disabled{opacity:.4;cursor:default}
+.scrub{flex:1 1 180px;display:flex;align-items:center;gap:8px;min-width:0}
+.scrub input{flex:1;min-width:0;accent-color:var(--accent)}
+.scrub output{font-family:var(--f-mono);font-size:12px;color:var(--muted);width:3.2em;text-align:right;font-variant-numeric:tabular-nums}
+.opts{display:flex;gap:10px;align-items:center;font-size:13px;color:var(--muted)}
+.opts select{border:1px solid var(--line);background:var(--surface);border-radius:7px;padding:3px 6px}
+.opts label{display:inline-flex;gap:5px;align-items:center;cursor:pointer}
+.steps{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:6px;align-items:flex-end}
+.steps .grp{display:flex;flex-direction:column;gap:3px;border:1px dashed var(--line);border-radius:9px;padding:3px 4px 4px}
+.steps .grp>span{font-size:11px;color:var(--muted);padding-left:4px;font-family:var(--f-display);letter-spacing:.04em}
+.steps .grp>div{display:flex;flex-wrap:wrap;gap:4px}
+.chip{border:1px solid var(--line);background:var(--surface);border-radius:7px;padding:3px 9px;font-size:12.5px;cursor:pointer;display:inline-flex;gap:6px;align-items:baseline;color:var(--muted)}
+.chip b{font-family:var(--f-mono);font-weight:500;font-size:11px}
+.chip[aria-current="step"]{background:var(--accent-soft);border-color:var(--accent);color:var(--ink)}
+.chip.done{color:var(--ink)}
+.stage{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px 18px;display:flex;flex-direction:column;gap:10px}
+.eyebrow{font-family:var(--f-mono);font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
+.stage h2{margin:0;font-family:var(--f-display);font-weight:700;font-size:clamp(24px,4.2vw,34px);line-height:1.15;text-wrap:balance}
+.stage h2 small{display:block;font-family:var(--f-mono);font-weight:400;font-size:13px;color:var(--muted);letter-spacing:.02em;margin-top:2px}
+.sub{margin:0;color:var(--muted);font-size:14px}
+.cols{display:grid;grid-template-columns:1.5fr 1fr;gap:18px}
+.cols>*{min-width:0}
+.cols p{margin:0;max-width:66ch}
+.observe{border-left:2px solid var(--accent-soft);padding-left:14px}
+.observe h3,.q-sec h3{margin:0 0 4px;font-family:var(--f-display);font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.observe ul{margin:0;padding-left:18px;font-size:14px;display:flex;flex-direction:column;gap:3px}
+details{border-top:1px solid var(--line);padding-top:8px}
+summary{cursor:pointer;font-family:var(--f-display);font-weight:600;font-size:14px;color:var(--accent)}
+details p{margin:8px 0 0;font-size:14px;color:var(--ink);max-width:72ch}
+.cta{display:flex;justify-content:flex-end}
+.cta button{border:0;background:var(--accent);color:var(--accent-ink);padding:9px 16px;border-radius:9px;font-family:var(--f-display);font-weight:600;cursor:pointer}
+@media (max-width:640px){.cols{grid-template-columns:1fr}.observe{border-left:0;padding-left:0;border-top:1px solid var(--line);padding-top:8px}.stage{padding:14px}.opts{flex-wrap:wrap}.opts label{white-space:nowrap}}
+/* ---------- quiz ---------- */
+.q-head h2{margin:0;font-family:var(--f-display);font-size:26px}
+.q-head p{margin:4px 0 0;color:var(--muted);max-width:70ch}
+.q-sec{display:flex;flex-direction:column;gap:10px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px}
+.q-desc{margin:0;padding:0;list-style:none;display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:6px 14px;font-size:13.5px}
+.q-desc li{display:flex;gap:8px;min-width:0}
+.q-desc b{font-family:var(--f-mono);color:var(--accent);flex:none}
+.q-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px}
+.q-card{border:1px solid var(--line);border-radius:9px;padding:8px;display:flex;flex-direction:column;gap:6px;background:var(--bg);min-width:0}
+.q-card.focus{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-soft)}
+.q-img{position:relative;border:0;padding:0;border-radius:6px;overflow:hidden;cursor:pointer;background:var(--field);aspect-ratio:4/3;max-width:100%}
+.q-img img{width:100%;height:100%;object-fit:cover;display:block}
+.q-img span{position:absolute;left:6px;top:6px;font-family:var(--f-mono);font-size:11px;background:rgba(8,12,24,.8);color:#fff;padding:1px 6px;border-radius:4px}
+.q-card label{display:flex;flex-direction:column;font-size:11.5px;color:var(--muted);gap:2px}
+.q-card select{width:100%;border:1px solid var(--line);background:var(--surface);border-radius:6px;padding:4px 6px;font-size:13px;color:var(--ink)}
+.q-card select.empty{color:var(--muted)}
+.q-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.q-actions button{border:0;background:var(--accent);color:var(--accent-ink);padding:10px 18px;border-radius:9px;font-family:var(--f-display);font-weight:600;cursor:pointer}
+.q-actions button.ghost{background:transparent;color:var(--accent);border:1px solid var(--accent)}
+.q-msg{font-size:13.5px;color:var(--bad)}
+.res-top{display:flex;flex-wrap:wrap;gap:16px;align-items:center;justify-content:space-between;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px}
+.res-who{display:flex;flex-direction:column;gap:2px;font-size:14px}
+.res-who b{font-family:var(--f-display);font-size:18px}
+.res-who span{color:var(--muted);font-family:var(--f-mono);font-size:12.5px}
+.score{display:flex;align-items:baseline;gap:6px;font-family:var(--f-display)}
+.score strong{font-size:44px;line-height:1;color:var(--accent);font-variant-numeric:tabular-nums}
+.score em{font-style:normal;color:var(--muted);font-size:18px}
+.res-split{display:flex;gap:8px;flex-wrap:wrap}
+.pill{font-size:12.5px;border-radius:999px;padding:2px 10px;background:var(--accent-soft);color:var(--ink);font-variant-numeric:tabular-nums}
+.tbl-wrap{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:var(--r)}
+table{border-collapse:collapse;width:100%;font-size:13px;min-width:560px}
+th,td{padding:7px 10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:middle}
+th{font-family:var(--f-display);font-weight:600;color:var(--muted);font-size:12px;letter-spacing:.04em}
+td img{width:64px;height:48px;object-fit:cover;border-radius:4px;display:block;background:var(--field)}
+.ok{color:var(--ok);font-weight:600}
+.bad{color:var(--bad);font-weight:600}
+.cor{display:block;color:var(--muted);font-size:12px}
+/* compact quiz cards on phones: small thumbnail beside the two choices, big view stays in the 3D viewer */
+@media (max-width:640px){
+  .q-grid{grid-template-columns:1fr;gap:8px}
+  .q-card{display:grid;grid-template-columns:92px minmax(0,1fr);column-gap:10px;row-gap:4px;align-items:center;padding:6px}
+  .q-img{grid-row:1 / span 2;width:92px}
+  .q-img span{font-size:10px;left:4px;top:4px;padding:0 4px}
+  .q-card .ql{display:none}
+  .q-card select{padding:3px 6px}
+}
+/* ---------- start screen ---------- */
+.start{position:fixed;inset:0;z-index:50;display:grid;place-items:center;background:rgba(5,8,16,.55);backdrop-filter:blur(3px);padding-block:max(16px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-bottom,0px));padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));overflow-y:auto}
+.start form{width:min(440px,100%);background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:22px;display:flex;flex-direction:column;gap:12px;box-shadow:0 20px 60px rgba(0,0,0,.35)}
+.start h1{margin:0;font-family:var(--f-display);font-size:28px;line-height:1.15;text-wrap:balance}
+.start .lead{margin:0;color:var(--muted);font-size:14px}
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.seg button{border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:8px;cursor:pointer;font-family:var(--f-display);font-weight:600}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.fld{display:flex;flex-direction:column;gap:3px;font-size:13px;color:var(--muted)}
+.fld input{border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:8px 10px;color:var(--ink);font-size:15px}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.start .go{border:0;background:var(--accent);color:var(--accent-ink);border-radius:9px;padding:11px;font-family:var(--f-display);font-weight:700;font-size:16px;cursor:pointer}
+.err{color:var(--bad);font-size:13px;min-height:1.2em;margin:0}
+.kicker{font-family:var(--f-mono);font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--accent)}
+@media (max-width:420px){.row2{grid-template-columns:1fr}}
+@media (max-width:560px){.v-hint{display:none}.v-legend{max-width:none;right:12px}}
+@media (prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}
+</style>
+
+<div id="app">
+  <section id="viewer" aria-label="3D cell viewer">
+    <canvas id="gl"></canvas>
+    <div id="labels"></div>
+    <div class="v-top">
+      <div id="vTag" class="v-tag"></div>
+      <div class="v-actions">
+        <button id="btnLabels" class="vbtn wide" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h10l4 6-4 6H4z"/></svg><span id="lblBtnTxt"></span></button>
+        <button id="btnAuto" class="vbtn" aria-pressed="false" title="Auto-rotate"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 12a8 8 0 1 1-2.3-5.7"/><path d="M20 4v5h-5"/></svg></button>
+        <button id="btnReset" class="vbtn" title="Reset view"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg></button>
+      </div>
+    </div>
+    <div class="v-legend" id="legend"></div>
+    <div class="v-hint" id="hint"></div>
+  </section>
+
+  <section id="panel">
+    <header class="bar">
+      <nav class="tabs" role="tablist">
+        <button role="tab" data-mode="mitosis" id="tabMit"></button>
+        <button role="tab" data-mode="meiosis" id="tabMei"></button>
+        <button role="tab" data-mode="quiz" id="tabQuiz"></button>
+      </nav>
+      <div class="bar-right"><span id="who" class="who"></span><button id="langBtn" class="lang" type="button"></button></div>
+    </header>
+
+    <div id="lesson" class="wrap">
+      <div class="controls">
+        <div class="transport">
+          <button class="tbtn" id="bPrev" type="button"><svg viewBox="0 0 24 24"><path d="M15 5 8 12l7 7z"/><rect x="5" y="5" width="2.5" height="14"/></svg></button>
+          <button class="tbtn primary" id="bPlay" type="button"></button>
+          <button class="tbtn" id="bNext" type="button"><svg viewBox="0 0 24 24"><path d="m9 5 7 7-7 7z"/><rect x="16.5" y="5" width="2.5" height="14"/></svg></button>
+          <button class="tbtn" id="bReplay" type="button"><svg viewBox="0 0 24 24"><path d="M12 5V2L7 6l5 4V7a5 5 0 1 1-5 5H5a7 7 0 1 0 7-7z"/></svg></button>
+        </div>
+        <div class="scrub"><input type="range" id="scrub" min="0" max="1000" value="0" aria-label="Stage progress"><output id="scrubOut">0%</output></div>
+        <div class="opts">
+          <select id="speed" aria-label="Speed"><option value="0.5">0.5×</option><option value="1" selected>1×</option><option value="2">2×</option></select>
+          <label><input type="checkbox" id="autoNext"><span class="autoTxt" id="autoTxt"></span></label>
+          <label><input type="checkbox" id="lblToggle"><span id="lblTxt"></span></label>
+        </div>
+      </div>
+      <ol id="steps" class="steps"></ol>
+      <article class="stage">
+        <div class="eyebrow" id="stEyebrow"></div>
+        <h2 id="stName"></h2>
+        <p class="sub" id="stSub"></p>
+        <div class="cols">
+          <div><p id="stBasic"></p></div>
+          <div class="observe"><h3 id="obsTitle"></h3><ul id="stObs"></ul></div>
+        </div>
+        <details id="advBox"><summary id="advTitle"></summary><p id="stAdv"></p></details>
+        <div class="cta" id="ctaBox" hidden><button id="ctaBtn" type="button"></button></div>
+      </article>
+    </div>
+
+    <div id="quiz" class="wrap" hidden></div>
+  </section>
+</div>
+
+<div id="start" class="start">
+  <form id="startForm" novalidate>
+    <div class="kicker">Mitosis · Meiosis · 3D</div>
+    <h1 id="sTitle"></h1>
+    <p class="lead" id="sLead"></p>
+    <div class="fld"><span id="sLangLbl"></span>
+      <div class="seg"><button type="button" data-lang="th" aria-pressed="true">ไทย</button><button type="button" data-lang="en" aria-pressed="false">English</button></div>
+    </div>
+    <div class="row2">
+      <label class="fld"><span id="sFirst"></span><input id="inFirst" autocomplete="given-name"></label>
+      <label class="fld"><span id="sLast"></span><input id="inLast" autocomplete="family-name"></label>
+    </div>
+    <label class="fld"><span id="sId"></span><input id="inId" inputmode="numeric" autocomplete="off"></label>
+    <p class="err" id="sErr"></p>
+    <button class="go" id="sGo" type="submit"></button>
+  </form>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+// ======================= CONTENT =======================
+const UI = {
+  th: {
+    title: 'ห้องแล็บการแบ่งเซลล์ 3 มิติ', lead: 'สำรวจไมโทซิสและไมโอซิสแบบหมุนดูได้รอบทิศ แล้วทำแบบทดสอบจับคู่ภาพ ชื่อระยะ และคำอธิบาย',
+    langLbl: 'ภาษา', first: 'ชื่อ', last: 'นามสกุล', sid: 'รหัสนิสิต / รหัสนักเรียน', go: 'เริ่มเรียน',
+    errFill: 'กรุณากรอกชื่อ นามสกุล และรหัสให้ครบ',
+    mit: 'ไมโทซิส', mei: 'ไมโอซิส', quiz: 'แบบทดสอบ',
+    play: 'เล่น', pause: 'หยุด', replay: 'เล่นซ้ำ', prev: 'ระยะก่อนหน้า', next: 'ระยะถัดไป', auto: 'เล่นต่อเนื่อง',
+    stageOf: (a, b) => `ระยะที่ ${a} / ${b}`, observe: 'สังเกตในภาพ', adv: 'รายละเอียดเชิงลึก (ระดับมหาวิทยาลัย)',
+    toQuiz: 'ไปทำแบบทดสอบ', toMei: 'ต่อด้วยไมโอซิส',
+    hint: 'ลากเพื่อหมุน · ล้อเมาส์หรือบีบนิ้วเพื่อซูม',
+    legM: 'โครโมโซมจากแม่', legP: 'โครโมโซมจากพ่อ', legK: 'ไคนีโทคอร์', legS: 'เส้นใยสปินเดิล',
+    prophaseI: 'โพรเฟส I', spermio: 'การสร้างอสุจิ (เพศผู้)',
+    qTitle: 'แบบทดสอบ: จับคู่ภาพ ชื่อระยะ และคำอธิบาย',
+    qLead: 'แตะภาพเพื่อหมุนดูแบบ 3 มิติในจอด้านบน แล้วเลือกชื่อระยะและคำอธิบาย (A, B, C …) ให้ตรงกับภาพ ข้อละ 2 คะแนน',
+    sec1: 'ตอนที่ 1 · ไมโทซิส', sec2: 'ตอนที่ 2 · ไมโอซิส', descList: 'คำอธิบาย',
+    img: n => `ภาพ ${n}`, pickName: 'ชื่อระยะ', pickDesc: 'คำอธิบาย', choose: '— เลือก —',
+    submit: 'ส่งคำตอบ', missing: n => `ยังเลือกไม่ครบอีก ${n} ช่อง`,
+    preparing: 'กำลังเตรียมภาพ 3 มิติ…',
+    result: 'สรุปคะแนน', retry: 'ทำแบบทดสอบใหม่', back: 'กลับไปบทเรียน',
+    colImg: 'ภาพ', colName: 'ชื่อระยะที่ตอบ', colDesc: 'คำอธิบายที่ตอบ', correctIs: 'ที่ถูก: ',
+    secScore: (s, a, b) => `${s}: ${a}/${b}`, submittedAt: 'ส่งเมื่อ', studentId: 'รหัส',
+    quizTag: (n, s) => `ภาพ ${n} · ${s}`,
+    lblShow: 'แสดงป้ายชื่อ', lblOn: 'ป้ายชื่อ: เปิด', lblOff: 'ป้ายชื่อ: ปิด',
+    saveSheet: 'บันทึกกระดาษคำตอบ (JPG)', saving: 'กำลังสร้างไฟล์…', saved: 'บันทึกกระดาษคำตอบแล้ว', declined: 'ยกเลิกการบันทึกแล้ว', saveFail: 'บันทึกไฟล์ไม่สำเร็จ ลองใหม่อีกครั้ง',
+    sheetTitle: 'กระดาษคำตอบ · แบบทดสอบการแบ่งเซลล์', sheetName: 'ชื่อ–นามสกุล', score: 'คะแนน', yourAns: 'คำตอบ'
+  },
+  en: {
+    title: 'Cell Division 3D Lab', lead: 'Explore mitosis and meiosis in a model you can turn in any direction, then match images, stage names and descriptions in a quiz.',
+    langLbl: 'Language', first: 'First name', last: 'Last name', sid: 'Student ID', go: 'Start',
+    errFill: 'Please enter your first name, last name and student ID.',
+    mit: 'Mitosis', mei: 'Meiosis', quiz: 'Quiz',
+    play: 'Play', pause: 'Pause', replay: 'Replay', prev: 'Previous stage', next: 'Next stage', auto: 'Play through',
+    stageOf: (a, b) => `Stage ${a} of ${b}`, observe: 'What to look for', adv: 'In depth (university level)',
+    toQuiz: 'Take the quiz', toMei: 'Continue to meiosis',
+    hint: 'Drag to rotate · scroll or pinch to zoom',
+    legM: 'Maternal chromosome', legP: 'Paternal chromosome', legK: 'Kinetochore', legS: 'Spindle fibre',
+    prophaseI: 'Prophase I', spermio: 'Sperm formation (male)',
+    qTitle: 'Quiz: match image, stage and description',
+    qLead: 'Tap an image to turn it in 3D in the viewer above, then choose the stage name and the description (A, B, C …) that match it. Each image is worth 2 points.',
+    sec1: 'Part 1 · Mitosis', sec2: 'Part 2 · Meiosis', descList: 'Descriptions',
+    img: n => `Image ${n}`, pickName: 'Stage', pickDesc: 'Description', choose: '— choose —',
+    submit: 'Submit answers', missing: n => `${n} answers are still empty`,
+    preparing: 'Preparing 3D images…',
+    result: 'Score summary', retry: 'Try the quiz again', back: 'Back to the lesson',
+    colImg: 'Image', colName: 'Your stage', colDesc: 'Your description', correctIs: 'Correct: ',
+    secScore: (s, a, b) => `${s}: ${a}/${b}`, submittedAt: 'Submitted', studentId: 'ID',
+    quizTag: (n, s) => `Image ${n} · ${s}`,
+    lblShow: 'Show labels', lblOn: 'Labels: on', lblOff: 'Labels: off',
+    saveSheet: 'Save answer sheet (JPG)', saving: 'Creating the file…', saved: 'Answer sheet saved', declined: 'Save cancelled', saveFail: 'The file could not be saved. Please try again.',
+    sheetTitle: 'Answer sheet · Cell division quiz', sheetName: 'Name', score: 'Score', yourAns: 'Answer'
+  }
+};
+
+const LABELS = {
+  nucleus: ['นิวเคลียส', 'Nucleus'], nucleolus: ['นิวคลีโอลัส', 'Nucleolus'], chromatin: ['โครมาติน', 'Chromatin'],
+  centrosome: ['เซนโทรโซม', 'Centrosome'], chromosome: ['โครโมโซม (2 โครมาทิด)', 'Chromosome (2 chromatids)'],
+  aster: ['แอสเตอร์', 'Aster'], kinetochore: ['ไคนีโทคอร์', 'Kinetochore'], kfiber: ['เส้นใยไคนีโทคอร์', 'Kinetochore fibre'],
+  vesicle: ['ชิ้นเยื่อหุ้มนิวเคลียส', 'Nuclear envelope fragments'], plate: ['แนวเมทาเฟสเพลต', 'Metaphase plate'],
+  pole: ['ขั้วสปินเดิล', 'Spindle pole'], sister: ['ซิสเตอร์โครมาทิด', 'Sister chromatid'], polar: ['เส้นใยโพลาร์', 'Polar fibre'],
+  furrow: ['ร่องแบ่งเซลล์', 'Cleavage furrow'], ring: ['วงแหวนหดตัว', 'Contractile ring'], daughter: ['เซลล์ลูก', 'Daughter cell'],
+  sc: ['ซิแนปโทนีมัลคอมเพล็กซ์', 'Synaptonemal complex'], homolog: ['ฮอมอโลกัสโครโมโซม', 'Homologous chromosome'],
+  crossover: ['ครอสซิงโอเวอร์', 'Crossing over'],
+  acrosome: ['อะโครโซม', 'Acrosome'], golgi: ['กอลจิบอดี', 'Golgi apparatus'], centriole: ['เซนทริโอล (โคนหาง)', 'Centriole (tail base)'],
+  flagellum: ['แฟลเจลลัม (หาง)', 'Flagellum (tail)'], midpiece: ['ส่วนกลาง: ไมโทคอนเดรีย', 'Midpiece: mitochondria'], mito: ['ไมโทคอนเดรีย', 'Mitochondria'],
+  head: ['ส่วนหัว: นิวเคลียส (n)', 'Head: nucleus (n)'], residual: ['ไซโทพลาซึมส่วนเกิน', 'Residual body'], bivalent: ['ไบวาเลนต์ (เทแทรด)', 'Bivalent (tetrad)'], chiasma: ['ไคแอสมา', 'Chiasma']
+};
+
+// Each stage covers the time segment [k, k+1] of its process.
+const STAGES = {
+  mitosis: [
+    { name: ['อินเตอร์เฟส', 'Interphase'], sub: ['G1 → S → G2: จำลอง DNA', 'G1 → S → G2: DNA is copied'],
+      basic: ['เซลล์เติบโตในระยะ G1 แล้วจำลอง DNA ในระยะ S โครมาตินแต่ละเส้นจึงกลายเป็น 2 เส้น เรียกว่า ซิสเตอร์โครมาทิด จากนั้นเข้าสู่ระยะ G2 เพื่อเตรียมแบ่งเซลล์ DNA ยังคลายตัวเป็นเส้นใยโครมาตินยาวบางกระจายอยู่ในนิวเคลียส จึงยังมองไม่เห็นเป็นแท่ง เซนโทรโซมจำลองตัวเองเป็น 2 ชุดอยู่ข้างนิวเคลียส',
+        'The cell grows in G1 and copies its DNA in S phase, so each chromatin thread becomes two, the sister chromatids. In G2 it prepares to divide. The DNA is still loosely packed as long, thin chromatin threads spread through the nucleus, so individual chromosomes cannot be seen. The centrosome duplicates, and the two sit beside the nucleus.'],
+      obs: [['ระยะ S: เส้นโครมาตินแต่ละเส้นค่อย ๆ จำลองเป็น 2 เส้น (เส้นใหม่แสดงเป็นสีอ่อนระหว่างจำลอง)', 'นิวคลีโอลัส (ก้อนสีม่วงเข้ม) ยังเห็นชัด', 'เซนโทรโซม 1 อันกลายเป็น 2 อัน'],
+        ['S phase: each chromatin thread is gradually copied into two (the new strand shows lighter while it is copied)', 'The nucleolus (dark violet body) is clearly visible', 'One centrosome becomes two']],
+      adv: ['วัฏจักรเซลล์ประกอบด้วย G1 → S → G2 → M ด่านตรวจ G1/S (restriction point) ควบคุมโดย cyclin D–CDK4/6 ที่ฟอสโฟริเลตโปรตีน Rb ปลดปล่อย E2F ส่วนการเข้าสู่ระยะ M ต้องอาศัย cyclin B–CDK1 (MPF) โปรตีน cohesin ยึดซิสเตอร์โครมาทิดไว้ตั้งแต่ระยะ S และเซนทริโอลจำลองได้ครั้งเดียวต่อรอบ (ควบคุมโดย PLK4)',
+        'The cell cycle runs G1 → S → G2 → M. The G1/S restriction point is governed by cyclin D–CDK4/6 phosphorylating Rb to release E2F; entry into M requires active cyclin B–CDK1 (MPF). Cohesin holds sister chromatids together from S phase onward, and centrioles are licensed to duplicate exactly once per cycle (PLK4).'],
+      labels: ['nucleus', 'nucleolus', 'chromatin', 'centrosome'] },
+    { name: ['โพรเฟส', 'Prophase'], sub: ['โครโมโซมขดตัวสั้นลง', 'Chromosomes condense'],
+      basic: ['โครมาตินขดตัวแน่นขึ้นจนสั้นและหนา เห็นเป็นโครโมโซมที่มีซิสเตอร์โครมาทิด 2 แท่งติดกันที่เซนโทรเมียร์ นิวคลีโอลัสหายไปตั้งแต่ช่วงต้นระยะ เซนโทรโซมทั้งสองเคลื่อนแยกไปยังขั้วตรงข้ามของเซลล์ พร้อมสร้างไมโครทิวบูลเป็นเส้นใยสปินเดิลและแอสเตอร์ ช่วงปลายระยะเยื่อหุ้มนิวเคลียสเริ่มสลายเป็นชิ้น เปิดทางให้เส้นใยสปินเดิลเข้าไปจับโครโมโซมได้',
+        'Chromatin coils tighter until it forms short, thick chromosomes, each made of two sister chromatids joined at the centromere. The nucleolus disappears early in the stage. The two centrosomes move apart toward opposite sides of the cell, growing microtubules that form the spindle and asters. Late in prophase the nuclear envelope starts to break into fragments, opening the way for spindle fibres to reach the chromosomes.'],
+      obs: [['โครโมโซมสั้นลงและหนาขึ้นเรื่อย ๆ', 'เซนโทรโซมเคลื่อนอ้อมนิวเคลียสไปที่ขั้วเซลล์', 'ปลายระยะ เยื่อหุ้มนิวเคลียสเริ่มแตกเป็นชิ้น'],
+        ['Chromosomes get shorter and thicker', 'Centrosomes travel around the nucleus to the poles', 'Late in the stage the nuclear envelope begins to fragment']],
+      adv: ['condensin II และ condensin I ขด DNA เป็นห่วง (loop extrusion) โดยมี CDK1–cyclin B ฟอสโฟริเลตเป็นตัวกระตุ้น ในสัตว์มีกระดูกสันหลัง cohesin บนแขนส่วนใหญ่ถูกปลดออกผ่าน prophase pathway (PLK1, WAPL) แต่ cohesin ที่เซนโทรเมียร์ถูกปกป้องโดย shugoshin–PP2A มอเตอร์ kinesin-5 (Eg5) ดันไมโครทิวบูลที่ซ้อนสวนกันให้ขั้วแยกออก ช่วงปลายโพรเฟส CDK1 ฟอสโฟริเลต lamin และ nucleoporin ทำให้ lamina สลายและเยื่อหุ้มนิวเคลียสเริ่มแตก (NEBD) หนังสือเรียนที่แบ่งไมโทซิสเป็น 4 ระยะจะนับการสลายของเยื่อหุ้มนิวเคลียสและการจับไคนีโทคอร์รวมไว้ในโพรเฟส ส่วนแบบ 5 ระยะแยกช่วงหลังออกเป็นโพรเมทาเฟส',
+        'Condensin II and then condensin I compact DNA by loop extrusion, driven by CDK1–cyclin B phosphorylation. In vertebrates most arm cohesin is removed by the prophase pathway (PLK1, WAPL), while centromeric cohesin is protected by shugoshin–PP2A. Kinesin-5 (Eg5) slides antiparallel microtubules to push the poles apart. In late prophase CDK1 phosphorylates lamins and nucleoporins, the lamina disassembles and nuclear envelope breakdown (NEBD) begins. Textbooks that use four mitotic stages count envelope breakdown and kinetochore capture as part of prophase; the five-stage scheme splits that later part off as prometaphase.'],
+      labels: ['chromosome', 'centrosome', 'vesicle', 'nucleus'] },
+    { name: ['โพรเมทาเฟส', 'Prometaphase'], sub: ['เยื่อหุ้มนิวเคลียสสลาย สปินเดิลจับไคนีโทคอร์', 'Envelope breaks down, spindle captures kinetochores'],
+      basic: ['เยื่อหุ้มนิวเคลียสที่เริ่มสลายตั้งแต่ปลายโพรเฟสแตกออกเป็นเวสิเคิลเล็ก ๆ จนหมด เส้นใยสปินเดิลจากเซนโทรโซมที่ขั้วเซลล์ยืดเข้ามาหาโครโมโซม แล้วเกาะกับไคนีโทคอร์ ซึ่งเป็นกลุ่มโปรตีนที่ประกอบอยู่บนเซนโทรเมียร์ของซิสเตอร์โครมาทิดแต่ละแท่ง โครมาทิดทั้งสองแท่งเกาะกับเส้นใยจากขั้วตรงข้ามกัน แล้วโครโมโซมเริ่มเคลื่อนเข้าหากึ่งกลางเซลล์',
+        'The nuclear envelope, which began to break down in late prophase, is now fully dispersed into small vesicles. Spindle microtubules grow from the centrosomes at the poles and attach to kinetochores, protein complexes built on the centromere of each sister chromatid. The two sisters attach to fibres from opposite poles, and the chromosomes start moving toward the middle of the cell.'],
+      obs: [['เยื่อหุ้มนิวเคลียสสลายหมด', 'เส้นใยสีเขียวยืดจากขั้วไปเกาะจุดสีเหลือง (ไคนีโทคอร์)', 'โครโมโซมหมุนตัวให้โครมาทิดหันเข้าหาขั้วตรงข้าม'],
+        ['The nuclear envelope is gone', 'Green fibres grow from the poles to the yellow discs (kinetochores)', 'Chromosomes turn so the sisters face opposite poles']],
+      adv: ['ไคนีโทคอร์ชั้นในสร้างบนนิวคลีโอโซมที่มี CENP-A และกลุ่มโปรตีน CCAN ชั้นนอกมี KMN network (Ndc80 จับไมโครทิวบูลโดยตรง) การเกาะแบบ amphitelic (สองขั้ว) เท่านั้นที่ถูกต้อง Aurora B ตรวจแรงตึงและปลดการเกาะที่ผิด ไคนีโทคอร์ที่ยังไม่ถูกจับจะสร้าง mitotic checkpoint complex (Mad2, BubR1, Bub3, Cdc20) ซึ่งยับยั้ง APC/C ไว้',
+        'The inner kinetochore assembles on CENP-A nucleosomes and the CCAN; the outer KMN network (Ndc80) binds microtubules. Only amphitelic (bi-oriented) attachment is correct: Aurora B senses lack of tension and destabilises wrong attachments. Unattached kinetochores generate the mitotic checkpoint complex (Mad2, BubR1, Bub3, Cdc20), which keeps APC/C inactive.'],
+      labels: ['kinetochore', 'kfiber', 'vesicle', 'pole'] },
+    { name: ['เมทาเฟส', 'Metaphase'], sub: ['โครโมโซมเรียงที่แนวกึ่งกลางเซลล์', 'Chromosomes align at the equator'],
+      basic: ['โครโมโซมทุกแท่งมาเรียงตัวอยู่ในแนวเมทาเฟสเพลต (ระนาบสมมติกึ่งกลางเซลล์) ไคนีโทคอร์ของซิสเตอร์โครมาทิดแต่ละคู่เกาะกับเส้นใยสปินเดิลจากขั้วตรงข้าม แรงดึงสองข้างสมดุลกัน โครโมโซมหดสั้นที่สุดในระยะนี้ จึงเหมาะสำหรับนับจำนวนและทำคาริโอไทป์',
+        'All chromosomes line up on the metaphase plate, an imaginary plane across the middle of the cell. The kinetochores of each sister pair are attached to spindle fibres from opposite poles, and the pulling forces balance. Chromosomes are at their most condensed, which makes this the best stage for counting them and making a karyotype.'],
+      obs: [['โครโมโซมเรียงเป็นแนวเดียวที่ระนาบกลาง', 'ซิสเตอร์โครมาทิดหันไปคนละขั้ว', 'เส้นใยจากทั้งสองขั้วตึงเท่ากัน'],
+        ['Chromosomes form a single line on the central plane', 'Sister chromatids face opposite poles', 'Fibres from both poles pull equally']],
+      adv: ['เมื่อไคนีโทคอร์ทุกตัวถูกเกาะและมีแรงตึง spindle assembly checkpoint จะหยุดส่งสัญญาณ APC/C–Cdc20 จึงทำงาน ติด ubiquitin ให้ securin และ cyclin B ถูกย่อยสลาย โครโมโซมแกว่งไปมาเล็กน้อยรอบแนวกลาง สาร colchicine ยับยั้งการสร้างไมโครทิวบูล จึงใช้หยุดเซลล์ไว้ที่ระยะนี้เพื่อทำคาริโอไทป์',
+        'Once every kinetochore is attached and under tension, the spindle assembly checkpoint is silenced and APC/C–Cdc20 ubiquitinates securin and cyclin B for destruction. Chromosomes oscillate slightly around the plate. Colchicine blocks microtubule assembly and is used to arrest cells here for karyotyping.'],
+      labels: ['plate', 'kinetochore', 'pole', 'chromosome'] },
+    { name: ['แอนาเฟส', 'Anaphase'], sub: ['ซิสเตอร์โครมาทิดแยกจากกัน', 'Sister chromatids separate'],
+      basic: ['เอนไซม์ separase ตัดโปรตีน cohesin ที่ยึดซิสเตอร์โครมาทิด โครมาทิดจึงแยกออกจากกันกลายเป็นโครโมโซมลูก เส้นใยสปินเดิลที่เกาะไคนีโทคอร์หดสั้นลงดึงโครมาทิดไปยังขั้วเซลล์ โดยเซนโทรเมียร์นำหน้าและแขนลากตามเป็นรูปตัว V ขณะเดียวกันเส้นใยโพลาร์ดันขั้วให้ห่างกัน เซลล์จึงยืดยาวขึ้น',
+        'The enzyme separase cuts the cohesin holding sister chromatids together, so they separate and become daughter chromosomes. Kinetochore fibres shorten and pull each chromatid to a pole, centromere first with the arms trailing in a V shape. Meanwhile polar fibres push the poles apart and the cell elongates.'],
+      obs: [['โครมาทิดแยกเป็นสองกลุ่มเท่ากัน', 'แขนโครมาทิดลากตามเป็นรูปตัว V', 'เซลล์ยืดยาวออกตามแนวขั้ว'],
+        ['Chromatids split into two equal groups', 'Chromatid arms trail behind in a V', 'The cell stretches along the pole-to-pole axis']],
+      adv: ['แอนาเฟส A: ไคนีโทคอร์ไมโครทิวบูลสลายตัวที่ปลาย plus (Pac-Man) ร่วมกับ poleward flux ที่ขั้ว แอนาเฟส B: kinesin-5 เลื่อนไมโครทิวบูลโพลาร์ที่ซ้อนสวนกันออกจากกัน และ dynein ที่เปลือกเซลล์ดึงแอสเตอร์ การสลาย cyclin B ทำให้กิจกรรม CDK1 ลดลง เซลล์จึงออกจากไมโทซิส',
+        'Anaphase A: kinetochore microtubules depolymerise at their plus ends (Pac-Man) together with poleward flux. Anaphase B: kinesin-5 slides overlapping polar microtubules apart and cortical dynein pulls on astral microtubules. Destruction of cyclin B lowers CDK1 activity, driving mitotic exit.'],
+      labels: ['sister', 'kfiber', 'polar', 'pole'] },
+    { name: ['เทโลเฟส', 'Telophase'], sub: ['สร้างนิวเคลียสใหม่ 2 นิวเคลียส', 'Two new nuclei form'],
+      basic: ['โครมาทิดไปถึงขั้วเซลล์แล้วเริ่มคลายตัวกลับเป็นโครมาติน เยื่อหุ้มนิวเคลียสสร้างใหม่ล้อมโครโมโซมแต่ละกลุ่ม นิวคลีโอลัสกลับมาปรากฏ เส้นใยสปินเดิลสลายตัว และเยื่อหุ้มเซลล์ตรงกลางเริ่มคอดเข้าเป็นร่องแบ่งเซลล์ (cleavage furrow)',
+        'The chromatids reach the poles and begin to uncoil back into chromatin. A new nuclear envelope forms around each group, nucleoli reappear, the spindle breaks down, and the membrane at the middle begins to pinch in as the cleavage furrow.'],
+      obs: [['นิวเคลียสใหม่ 2 อันก่อตัวที่สองขั้ว', 'โครโมโซมคลายตัวบางลง', 'เยื่อหุ้มเซลล์เริ่มคอดตรงกลาง'],
+        ['Two new nuclei form at the poles', 'Chromosomes uncoil and thin out', 'The membrane starts to pinch in at the middle']],
+      adv: ['ฟอสฟาเทส PP1 และ PP2A–B55 ย้อนการฟอสโฟริเลตของ lamin และ nucleoporin ESCRT-III ช่วยปิดรอยต่อเยื่อหุ้มนิวเคลียส ส่วน central spindle (PRC1, centralspindlin) กำหนดตำแหน่งร่องแบ่งเซลล์โดยกระตุ้น RhoA ผ่าน Ect2',
+        'PP1 and PP2A–B55 reverse the phosphorylation of lamins and nucleoporins, and ESCRT-III seals the reforming nuclear envelope. The central spindle (PRC1, centralspindlin) positions the furrow by activating RhoA through Ect2.'],
+      labels: ['nucleus', 'furrow', 'ring', 'chromatin'] },
+    { name: ['ไซโทไคนีซิส', 'Cytokinesis'], sub: ['แบ่งไซโทพลาซึม', 'The cytoplasm divides'],
+      basic: ['วงแหวนหดตัว (contractile ring) ที่ประกอบด้วยแอกตินและไมโอซิน II ใต้เยื่อหุ้มเซลล์หดรัดเข้าเรื่อย ๆ จนเซลล์ขาดออกเป็นเซลล์ลูก 2 เซลล์ ที่มีจำนวนโครโมโซมเท่าเซลล์แม่ (2n) และเหมือนกันทางพันธุกรรม ในเซลล์พืชจะสร้างเซลล์เพลตกั้นกลางแทนการคอด',
+        'A contractile ring of actin and myosin II beneath the membrane tightens until the cell is cut into two daughter cells. Each has the same chromosome number as the parent (2n) and is genetically identical to it. Plant cells build a cell plate across the middle instead of pinching in.'],
+      obs: [['วงแหวนสีแดงหดรัดตรงกลาง', 'ได้ 2 เซลล์ แต่ละเซลล์มีโครโมโซม 4 แท่ง (2n = 4)', 'สีโครโมโซมในสองเซลล์เหมือนกันทุกประการ'],
+        ['The red ring tightens at the middle', 'Two cells, each with 4 chromosomes (2n = 4)', 'Both cells carry exactly the same set of colours']],
+      adv: ['RhoA กระตุ้น formin ให้สร้างแอกติน และ ROCK กระตุ้นไมโอซิน II สะพานไซโทพลาซึมที่เหลือ (midbody) ถูกตัดขาดด้วย ESCRT-III ในขั้นตอน abscission ในพืช เวสิเคิลจากกอลจิมารวมกันที่ phragmoplast เกิดเป็นเซลล์เพลตแล้วพัฒนาเป็นผนังเซลล์',
+        'RhoA activates formins (actin assembly) and ROCK (myosin II activation). The remaining cytoplasmic bridge (midbody) is severed by ESCRT-III during abscission. In plants, Golgi vesicles fuse at the phragmoplast to form a cell plate that becomes the new wall.'],
+      labels: ['ring', 'daughter', 'nucleus', 'centrosome'] }
+  ],
+  meiosis: [
+    { name: ['อินเตอร์เฟส', 'Interphase'], sub: ['ก่อนไมโอซิส: จำลอง DNA 1 ครั้ง', 'Before meiosis: DNA copied once'],
+      basic: ['เซลล์ต้นกำเนิดเซลล์สืบพันธุ์ (2n) จำลอง DNA เพียงครั้งเดียวก่อนจะแบ่งต่อเนื่องสองรอบ ในแบบจำลองนี้ 2n = 4 คือมีโครโมโซมคู่เหมือน (ฮอมอโลกัส) 2 คู่ สีชมพูมาจากแม่และสีน้ำเงินมาจากพ่อ โดยแต่ละคู่ต่างกันที่ขนาด (ยาวและสั้น)',
+        'A germ-line cell (2n) copies its DNA only once before dividing twice in a row. In this model 2n = 4: two pairs of homologous chromosomes, with pink chromosomes from the mother and blue from the father; the two pairs differ in size (long and short).'],
+      obs: [['ระยะ S: เส้นโครมาตินแต่ละเส้นจำลองเป็น 2 เส้น (เส้นใหม่แสดงเป็นสีอ่อนระหว่างจำลอง)', 'สีชมพูคือโครโมโซมจากแม่ สีน้ำเงินคือจากพ่อ (คู่ยาว 1 คู่ คู่สั้น 1 คู่)', 'เซนโทรโซมจำลองเป็น 2 อัน'],
+        ['S phase: each chromatin thread is copied into two (the new strand shows lighter while it is copied)', 'Pink chromosomes come from the mother, blue from the father (one long pair, one short pair)', 'The centrosome duplicates']],
+      adv: ['ระยะ S ก่อนไมโอซิสยาวกว่าระยะ S ของไมโทซิส และมีการโหลด cohesin ชนิดเฉพาะไมโอซิสคือ Rec8 ซึ่งจะถูกตัดออกเป็นสองจังหวะ ทำให้โครโมโซมแยกได้สองรอบ',
+        'Pre-meiotic S phase is longer than a mitotic S phase, and the meiosis-specific cohesin subunit Rec8 is loaded; its removal in two steps later lets chromosomes separate in two rounds.'],
+      labels: ['nucleus', 'chromatin', 'centrosome'] },
+    { name: ['เลปโททีน', 'Leptotene'], sub: ['โพรเฟส I ระยะย่อยที่ 1: โครโมโซมเริ่มเห็นเป็นเส้นบาง', 'Prophase I, substage 1: thin threads appear'], group: 1,
+      basic: ['โครโมโซมเริ่มขดตัวจนมองเห็นเป็นเส้นยาวบาง แม้ DNA จะจำลองแล้ว แต่ซิสเตอร์โครมาทิดยังแนบกันสนิทจนดูเหมือนเส้นเดียว ปลายโครโมโซม (เทโลเมียร์) เกาะกับเยื่อหุ้มนิวเคลียส',
+        'Chromosomes start to condense and become visible as long thin threads. Although the DNA is already replicated, the sister chromatids lie so close together that each looks like a single thread. Chromosome ends (telomeres) attach to the nuclear envelope.'],
+      obs: [['เส้นโครโมโซมยาวและบาง เริ่มแยกเป็นเส้น ๆ ได้', 'ฮอมอโลกัสยังอยู่ห่างกัน'],
+        ['Long, thin chromosome threads become distinct', 'Homologues are still apart']],
+      adv: ['เกิด axial element ตามแนวซิสเตอร์โครมาทิด เอนไซม์ Spo11 ตัด DNA สายคู่ (double-strand break) อย่างตั้งใจหลายร้อยตำแหน่ง ซึ่งเป็นจุดเริ่มของการรีคอมบิเนชัน ในหลายสิ่งมีชีวิตเทโลเมียร์รวมกลุ่มเป็น bouquet ช่วยให้ฮอมอโลกัสหากันพบ',
+        'Axial elements form along each pair of sisters. Spo11 deliberately makes hundreds of DNA double-strand breaks, which start recombination. In many organisms telomeres cluster in a bouquet that helps homologues find each other.'],
+      labels: ['chromosome', 'nucleus'] },
+    { name: ['ไซโกทีน', 'Zygotene'], sub: ['โพรเฟส I ระยะย่อยที่ 2: ฮอมอโลกัสจับคู่ (ไซแนปซิส)', 'Prophase I, substage 2: homologues pair (synapsis)'], group: 1,
+      basic: ['ฮอมอโลกัสโครโมโซมที่มาจากพ่อและแม่เข้ามาเรียงคู่กันแบบจุดต่อจุด เรียกว่า ไซแนปซิส (synapsis) โดยมีโครงสร้างโปรตีนซิแนปโทนีมัลคอมเพล็กซ์ (synaptonemal complex) รูดยึดทั้งสองแท่งเข้าหากันเหมือนซิป',
+        'Homologous chromosomes from the father and the mother line up side by side, gene for gene. This pairing is synapsis, and a protein scaffold called the synaptonemal complex zips the two together.'],
+      obs: [['โครโมโซมสีชมพูและสีน้ำเงินที่ยาวเท่ากันเคลื่อนมาคู่กัน', 'ขั้นบันไดสีขาวระหว่างคู่คือซิแนปโทนีมัลคอมเพล็กซ์'],
+        ['Pink and blue chromosomes of the same length come together', 'The white ladder rungs between them are the synaptonemal complex']],
+      adv: ['การค้นหาคู่อาศัยปลาย DNA ที่ถูกตัดบุกรุกเข้าหาโครโมโซมคู่เหมือน (strand invasion โดย Dmc1/Rad51) ซิแนปโทนีมัลคอมเพล็กซ์ประกอบด้วย lateral element สองข้าง transverse filament (SYCP1) และ central element',
+        'Pairing relies on broken DNA ends invading the homologue (strand invasion by Dmc1/Rad51). The synaptonemal complex consists of two lateral elements, transverse filaments (SYCP1) and a central element.'],
+      labels: ['sc', 'homolog'] },
+    { name: ['แพคิทีน', 'Pachytene'], sub: ['โพรเฟส I ระยะย่อยที่ 3: ครอสซิงโอเวอร์', 'Prophase I, substage 3: crossing over'], group: 1,
+      basic: ['ไซแนปซิสสมบูรณ์ ฮอมอโลกัสแต่ละคู่เรียกว่า ไบวาเลนต์ หรือ เทแทรด (มี 4 โครมาทิด) โครมาทิดที่ไม่ใช่พี่น้องกัน (non-sister) แลกเปลี่ยนชิ้นส่วนกัน เรียกว่า ครอสซิงโอเวอร์ (crossing over) ทำให้เกิดการรวมตัวใหม่ทางพันธุกรรม',
+        'Synapsis is complete. Each homologous pair is now a bivalent, or tetrad, with four chromatids. Non-sister chromatids exchange segments in crossing over, producing new combinations of alleles.'],
+      obs: [['จุดเรืองแสงคือตำแหน่งที่เกิดครอสซิงโอเวอร์', 'ปลายแขนโครมาทิดสลับสีกันระหว่างโครโมโซมจากพ่อและแม่'],
+        ['The glowing point marks where crossing over happens', 'The arm tips of two chromatids swap colours between the paternal and maternal chromosome']],
+      adv: ['รอยตัด DNA ถูกซ่อมผ่าน double Holliday junction แล้วแยกออกเป็น crossover โดย MutLγ (MLH1–MLH3) มี crossover interference และ crossover assurance (อย่างน้อย 1 จุดต่อไบวาเลนต์) ใต้กล้อง EM เห็นเป็น recombination nodule',
+        'Breaks are repaired via double Holliday junctions that are resolved as crossovers by MutLγ (MLH1–MLH3). Crossover interference and assurance (at least one crossover per bivalent) shape their number and spacing; under EM they appear as recombination nodules.'],
+      labels: ['crossover', 'bivalent', 'sc'] },
+    { name: ['ดิโพลทีน', 'Diplotene'], sub: ['โพรเฟส I ระยะย่อยที่ 4: เห็นไคแอสมา', 'Prophase I, substage 4: chiasmata visible'], group: 1,
+      basic: ['ซิแนปโทนีมัลคอมเพล็กซ์สลายไป ฮอมอโลกัสเริ่มแยกห่างออกจากกัน แต่ยังยึดกันอยู่ตรงจุดที่เกิดครอสซิงโอเวอร์ ซึ่งเห็นเป็นรูปกากบาทเรียกว่า ไคแอสมา (chiasma)',
+        'The synaptonemal complex disassembles and the homologues begin to move apart, but they stay joined where crossing over happened. These cross-shaped connections are chiasmata.'],
+      obs: [['ฮอมอโลกัสถอยห่างออกจากกัน', 'โครมาทิดไขว้กันเป็นรูป X ที่ไคแอสมา'],
+        ['Homologues pull away from each other', 'Chromatids cross in an X at the chiasma']],
+      adv: ['ไคแอสมาร่วมกับ cohesin บนแขนส่วนที่อยู่ถัดจากจุดไขว้ไปทางปลาย ยึดฮอมอโลกัสไว้ด้วยกัน ซึ่งจำเป็นต่อการเกาะสปินเดิลอย่างถูกต้องในเมทาเฟส I โอโอไซต์ปฐมภูมิของมนุษย์หยุดอยู่ที่ระยะนี้ (dictyate) ตั้งแต่ก่อนเกิดจนถึงการตกไข่',
+        'Chiasmata, together with arm cohesin distal to them, hold homologues together, which is essential for correct spindle attachment in metaphase I. Human primary oocytes arrest at this stage (dictyate) from before birth until ovulation.'],
+      labels: ['chiasma', 'homolog'] },
+    { name: ['ไดอะคิเนซิส', 'Diakinesis'], sub: ['โพรเฟส I ระยะย่อยที่ 5: หดสั้นที่สุด เยื่อหุ้มนิวเคลียสสลาย', 'Prophase I, substage 5: maximum condensation, envelope breaks down'], group: 1,
+      basic: ['โครโมโซมขดตัวสั้นและหนาที่สุด ยังเห็นไคแอสมาชัดเจน นิวคลีโอลัสหายไป เยื่อหุ้มนิวเคลียสสลาย เซนโทรโซมถึงขั้วเซลล์และสร้างเส้นใยสปินเดิล',
+        'Chromosomes reach maximum condensation and the chiasmata are still clear. The nucleolus disappears, the nuclear envelope breaks down, and the centrosomes reach the poles and build the spindle.'],
+      obs: [['ไบวาเลนต์หนาและสั้นที่สุด', 'เยื่อหุ้มนิวเคลียสแตกเป็นชิ้น', 'เส้นใยสปินเดิลเริ่มก่อตัว'],
+        ['Bivalents are at their shortest and thickest', 'The nuclear envelope fragments', 'Spindle fibres begin to form']],
+      adv: ['ไคแอสมาดูเหมือนเลื่อนไปทางปลายแขน (terminalization) ซึ่งเป็นผลจากการขดตัวมากขึ้น ไม่ใช่การเคลื่อนที่จริงของจุดแลกเปลี่ยน ช่วงท้ายของไดอะคิเนซิสตรงกับโพรเมทาเฟส I',
+        'Chiasmata appear to slide toward the chromosome ends (terminalization), an effect of further condensation rather than real movement of the exchange point. The end of diakinesis corresponds to prometaphase I.'],
+      labels: ['chiasma', 'vesicle', 'centrosome'] },
+    { name: ['เมทาเฟส I', 'Metaphase I'], sub: ['ฮอมอโลกัสเรียงเป็นคู่', 'Homologues line up in pairs'],
+      basic: ['ไบวาเลนต์เรียงตัวเป็นคู่ ๆ ที่แนวเมทาเฟสเพลต ไคนีโทคอร์ของซิสเตอร์โครมาทิดทั้งสองแท่งในโครโมโซมเดียวกันเกาะกับเส้นใยจากขั้วเดียวกัน ส่วนฮอมอโลกัสอีกแท่งหันไปขั้วตรงข้าม การหันของแต่ละคู่เป็นแบบสุ่ม เรียกว่า การจัดเรียงอย่างอิสระ (independent assortment)',
+        'Bivalents line up in pairs on the metaphase plate. Both sister kinetochores of one homologue attach to fibres from the same pole, and its partner faces the opposite pole. Each pair orients at random, which is independent assortment.'],
+      obs: [['โครโมโซมเรียงเป็นคู่ ไม่ใช่เรียงเดี่ยว', 'คู่ยาว: ของแม่หันซ้าย ส่วนคู่สั้น: ของแม่หันขวา (สุ่ม)', 'ซิสเตอร์โครมาทิดทั้งสองหันไปขั้วเดียวกัน'],
+        ['Chromosomes line up as pairs, not singly', 'Long pair: maternal faces left; short pair: maternal faces right (random)', 'Both sister chromatids face the same pole']],
+      adv: ['ไคนีโทคอร์พี่น้องทำงานเป็นหน่วยเดียว (mono-orientation; monopolin ในยีสต์, MEIKIN ในสัตว์เลี้ยงลูกด้วยนม) แรงตึงเกิดได้เพราะไคแอสมาต้านไว้ จำนวนแบบการจัดเรียงที่เป็นไปได้ = 2ⁿ เช่น มนุษย์ n = 23 ได้ 2²³ ≈ 8.4 ล้านแบบ',
+        'Sister kinetochores act as one unit (mono-orientation; monopolin in yeast, MEIKIN in mammals), and tension is possible only because chiasmata resist the pull. The number of possible orientations is 2ⁿ; for humans (n = 23) that is 2²³ ≈ 8.4 million.'],
+      labels: ['plate', 'bivalent', 'kinetochore'] },
+    { name: ['แอนาเฟส I', 'Anaphase I'], sub: ['ฮอมอโลกัสแยกจากกัน', 'Homologues separate'],
+      basic: ['ฮอมอโลกัสโครโมโซมแต่ละคู่แยกออกจากกันไปยังขั้วตรงข้าม โดยซิสเตอร์โครมาทิดยังติดกันที่เซนโทรเมียร์ จำนวนโครโมโซมต่อขั้วจึงลดลงครึ่งหนึ่ง (2n → n) และเห็นโครมาทิดที่มีสีผสมจากครอสซิงโอเวอร์',
+        'Homologues separate and move to opposite poles while sister chromatids stay joined at the centromere. Each pole receives half the chromosome number (2n → n), and the recombinant chromatids with mixed colours become visible.'],
+      obs: [['แต่ละขั้วได้โครโมโซม 2 แท่ง (แต่ละแท่งยังมี 2 โครมาทิด)', 'ไคแอสมาคลายออก', 'โครมาทิดบางแท่งมีปลายแขนต่างสีจากตัว'],
+        ['Each pole receives 2 chromosomes (each still 2 chromatids)', 'Chiasmata release', 'Some chromatids have arm tips of a different colour']],
+      adv: ['separase ตัด Rec8 เฉพาะบนแขน ส่วน Rec8 ที่เซนโทรเมียร์ถูกปกป้องโดย shugoshin (SGO2 ในสัตว์เลี้ยงลูกด้วยนม) ร่วมกับ PP2A ความผิดพลาดในขั้นนี้ทำให้เกิด nondisjunction เช่น ทริโซมี 21 ส่วนใหญ่เกิดจากไมโอซิส I ของแม่',
+        'Separase cleaves Rec8 only on the arms; centromeric Rec8 is protected by shugoshin (SGO2 in mammals) with PP2A. Errors here cause nondisjunction; most cases of trisomy 21 arise in maternal meiosis I.'],
+      labels: ['homolog', 'kfiber', 'pole'] },
+    { name: ['เทโลเฟส I และไซโทไคนีซิส', 'Telophase I & cytokinesis'], sub: ['ได้ 2 เซลล์ (n)', 'Two n cells'],
+      basic: ['โครโมโซมไปถึงขั้วเซลล์ ในหลายสิ่งมีชีวิตเยื่อหุ้มนิวเคลียสสร้างขึ้นชั่วคราว ไซโทพลาซึมแบ่งได้ 2 เซลล์ที่มีโครโมโซมชุดเดียว (n) แต่ละแท่งยังมี 2 โครมาทิด จากนั้นเข้าสู่ระยะอินเตอร์ไคนีซิสซึ่งไม่มีการจำลอง DNA',
+        'Chromosomes reach the poles; in many species a nuclear envelope forms briefly. The cytoplasm divides into two cells with one chromosome set (n), each chromosome still made of two chromatids. A short interkinesis follows with no DNA replication.'],
+      obs: [['วงแหวนหดตัวแบ่งเซลล์ออกเป็น 2 เซลล์', 'แต่ละเซลล์มีโครโมโซม 2 แท่ง (n = 2)'],
+        ['The contractile ring splits the cell in two', 'Each cell has 2 chromosomes (n = 2)']],
+      adv: ['ในโอโอไซต์ ไซโทไคนีซิสไม่เท่ากัน ได้โอโอไซต์ทุติยภูมิกับโพลาร์บอดีแรก ไม่มีระยะ S ระหว่างไมโอซิสสองรอบ เพราะกิจกรรม CDK1 ไม่ลดลงจนหมด',
+        'In oocytes cytokinesis is unequal, giving a secondary oocyte and the first polar body. There is no S phase between the two divisions because CDK1 activity does not fall all the way.'],
+      labels: ['ring', 'daughter', 'nucleus'] },
+    { name: ['โพรเฟส II', 'Prophase II'], sub: ['สร้างสปินเดิลชุดใหม่', 'A new spindle forms'],
+      basic: ['ในแต่ละเซลล์ (n) โครโมโซมขดตัวอีกครั้ง เยื่อหุ้มนิวเคลียสสลาย เซนโทรโซมจำลองแล้วแยกไปยังขั้วใหม่ สร้างสปินเดิลชุดใหม่ ซึ่งในแบบจำลองนี้วางตั้งฉากกับการแบ่งครั้งแรก',
+        'In each n cell the chromosomes condense again, the nuclear envelope breaks down, and the centrosomes separate to new poles to build a fresh spindle, set perpendicular to the first division in this model.'],
+      obs: [['ไม่มีการจำลอง DNA ก่อนระยะนี้', 'สปินเดิลชุดใหม่วางแนวบน–ล่าง'],
+        ['No DNA replication happened before this stage', 'The new spindles run top to bottom']],
+      adv: ['ไมโอซิส II มีกลไกคล้ายไมโทซิส แต่เกิดในเซลล์แฮพลอยด์ และซิสเตอร์โครมาทิดไม่เหมือนกันทุกประการอีกต่อไปเพราะครอสซิงโอเวอร์',
+        'Meiosis II works much like mitosis but in haploid cells, and the sister chromatids are no longer identical because of crossing over.'],
+      labels: ['centrosome', 'polar'] },
+    { name: ['เมทาเฟส II', 'Metaphase II'], sub: ['โครโมโซมเรียงแถวเดี่ยว', 'Chromosomes line up singly'],
+      basic: ['โครโมโซมแต่ละแท่ง (มี 2 โครมาทิด) เรียงตัวเดี่ยว ๆ ที่แนวเมทาเฟสเพลตของแต่ละเซลล์ ไคนีโทคอร์ของซิสเตอร์โครมาทิดเกาะกับเส้นใยจากขั้วตรงข้าม เหมือนในไมโทซิส',
+        'Each chromosome (two chromatids) lines up singly on the metaphase plate of each cell. Sister kinetochores attach to fibres from opposite poles, as in mitosis.'],
+      obs: [['โครโมโซมเรียงเดี่ยว ไม่เป็นคู่', 'เกิดพร้อมกันในทั้งสองเซลล์'],
+        ['Chromosomes line up singly, not in pairs', 'It happens in both cells at once']],
+      adv: ['โอโอไซต์ทุติยภูมิของสัตว์มีกระดูกสันหลังหยุดที่เมทาเฟส II (ด้วย CSF/Emi2) จนกว่าจะมีการปฏิสนธิ',
+        'Vertebrate secondary oocytes arrest at metaphase II (via CSF/Emi2) until fertilisation.'],
+      labels: ['plate', 'kinetochore'] },
+    { name: ['แอนาเฟส II', 'Anaphase II'], sub: ['ซิสเตอร์โครมาทิดแยกจากกัน', 'Sister chromatids separate'],
+      basic: ['cohesin ที่เซนโทรเมียร์ถูกตัด ซิสเตอร์โครมาทิดแยกจากกันและถูกดึงไปยังขั้วตรงข้ามในทั้งสองเซลล์',
+        'Centromeric cohesin is cleaved, and sister chromatids separate and are pulled to opposite poles in both cells.'],
+      obs: [['เซนโทรเมียร์นำหน้า แขนลากตามเป็นรูปตัว V', 'โครมาทิดที่ผ่านครอสซิงโอเวอร์ไปคนละเซลล์กับพี่น้องของมัน'],
+        ['Centromeres lead, arms trail in a V', 'Recombinant chromatids end up in a different cell from their sisters']],
+      adv: ['การป้องกันของ shugoshin หมดไปเมื่อมีแรงตึงจากการเกาะสองขั้ว separase จึงตัด Rec8 ที่เหลือได้',
+        'Shugoshin protection is lost once bi-oriented attachment creates tension, letting separase cleave the remaining Rec8.'],
+      labels: ['sister', 'kfiber'] },
+    { name: ['เทโลเฟส II และไซโทไคนีซิส', 'Telophase II & cytokinesis'], sub: ['ได้ 4 เซลล์ (n) ที่ต่างกัน', 'Four genetically different n cells'],
+      basic: ['เยื่อหุ้มนิวเคลียสสร้างใหม่ โครโมโซมคลายตัว และไซโทพลาซึมแบ่ง ได้เซลล์แฮพลอยด์ (n) 4 เซลล์ ที่มีพันธุกรรมแตกต่างกันจากครอสซิงโอเวอร์และการจัดเรียงอย่างอิสระ ในสัตว์จะพัฒนาเป็นเซลล์สืบพันธุ์ ในพืชเป็นสปอร์',
+        'Nuclear envelopes reform, chromosomes uncoil and the cytoplasm divides, giving four haploid (n) cells that differ genetically because of crossing over and independent assortment. In animals they become gametes; in plants, spores.'],
+      obs: [['ได้ 4 เซลล์ แต่ละเซลล์มีโครโมโซม 2 แท่ง', 'ไม่มีเซลล์ใดที่ชุดสีเหมือนกันทุกแท่ง'],
+        ['Four cells, each with 2 chromosomes', 'No two cells carry the same set of colours']],
+      adv: ['การสร้างอสุจิได้สเปอร์มาทิด 4 เซลล์ ส่วนการสร้างไข่ได้ไข่ 1 ใบกับโพลาร์บอดี และในสัตว์มีกระดูกสันหลังไมโอซิส II จะเสร็จสมบูรณ์เมื่อมีการปฏิสนธิเท่านั้น',
+        'Spermatogenesis yields four spermatids; oogenesis yields one egg plus polar bodies, and in vertebrates meiosis II is completed only after fertilisation.'],
+      labels: ['nucleus', 'daughter'] },
+    { name: ['สเปอร์มาทิด', 'Spermatid'], sub: ['การสร้างอสุจิ 1: เริ่มสร้างอะโครโซมและหาง', 'Spermiogenesis 1: acrosome and tail begin'], group: 2,
+      basic: ['ในเพศผู้ เซลล์ n ทั้ง 4 ที่ได้จากไมโอซิสเรียกว่า สเปอร์มาทิด ซึ่งยังเป็นเซลล์กลม ต่อจากนี้จะไม่แบ่งเซลล์อีก แต่เปลี่ยนรูปร่างเป็นอสุจิ เรียกว่า สเปอร์มิโอเจเนซิส (spermiogenesis) เริ่มจากกอลจิบอดีสร้างถุงอะโครโซมครอบด้านหน้าของนิวเคลียส และเซนทริโอลย้ายไปอยู่ด้านตรงข้ามเพื่อเริ่มสร้างแฟลเจลลัม',
+        'In males the four n cells from meiosis are spermatids, still round cells. They will not divide again; instead they change shape into sperm, a process called spermiogenesis. The Golgi apparatus builds the acrosome, a cap over the front of the nucleus, and a centriole moves to the opposite side and starts growing the flagellum.'],
+      obs: [['กอลจิบอดี (สีเขียว) อยู่เหนือนิวเคลียส', 'ถุงสีเหลืองทองค่อย ๆ ครอบด้านบนของนิวเคลียส (อะโครโซม)', 'หางเส้นสั้น ๆ เริ่มงอกจากเซนทริโอลด้านล่าง'],
+        ['The Golgi apparatus (green) sits above the nucleus', 'A pale gold cap spreads over the top of the nucleus (acrosome)', 'A short tail starts growing from the centriole underneath']],
+      adv: ['สเปอร์มาทิดทั้ง 4 ยังเชื่อมกันด้วยสะพานไซโทพลาซึม (intercellular bridge) เพราะไซโทไคนีซิสไม่สมบูรณ์ จึงแบ่งปันผลิตภัณฑ์ของยีนกันได้ กระบวนการทั้งหมดเกิดในหลอดสร้างอสุจิ (seminiferous tubule) โดยฝังตัวอยู่กับเซลล์เซอร์โทลี อะโครโซมเป็นไลโซโซมชนิดพิเศษที่มีเอนไซม์ เช่น acrosin และ hyaluronidase ส่วนแฟลเจลลัมมีแกนไมโครทิวบูลแบบ 9+2 (axoneme) งอกจากเซนทริโอลส่วนปลาย (distal centriole)',
+        'The four spermatids stay joined by cytoplasmic bridges because cytokinesis is incomplete, so they share gene products. All of this happens inside the seminiferous tubules, embedded in Sertoli cells. The acrosome is a specialised lysosome carrying enzymes such as acrosin and hyaluronidase; the flagellum is a 9+2 microtubule axoneme that grows from the distal centriole.'],
+      labels: ['acrosome', 'golgi', 'centriole'] },
+    { name: ['สเปอร์มิโอเจเนซิส', 'Spermiogenesis'], sub: ['การสร้างอสุจิ 2: นิวเคลียสยืด ไซโทพลาซึมถูกดันออก', 'Spermiogenesis 2: nucleus elongates, cytoplasm is pushed back'], group: 2,
+      basic: ['นิวเคลียสอัดตัวแน่นและยืดเป็นรูปรีกลายเป็นส่วนหัว ไมโทคอนเดรียเคลื่อนมาเรียงพันเป็นเกลียวรอบโคนหางเป็นส่วนกลาง (midpiece) หางยืดยาวขึ้น และไซโทพลาซึมส่วนใหญ่ถูกดันไปทางด้านหาง',
+        'The nucleus condenses and elongates into the head. Mitochondria gather and wind in a spiral around the base of the tail to form the midpiece, the flagellum lengthens, and most of the cytoplasm is pushed back toward the tail.'],
+      obs: [['นิวเคลียสทึบขึ้นและแบนรีเป็นส่วนหัว', 'จุดสีส้ม (ไมโทคอนเดรีย) พันเกลียวรอบโคนหาง', 'หางยาวขึ้นมาก'],
+        ['The nucleus becomes dense and flattens into the head', 'Orange mitochondria spiral around the base of the tail', 'The tail grows much longer']],
+      adv: ['โปรตีนฮิสโตนถูกแทนที่ด้วย transition protein แล้วเป็นโปรตามีน (protamine) ทำให้ DNA อัดแน่นมากและหยุดการถอดรหัส ไมโทคอนเดรียที่ส่วนกลางสร้าง ATP ให้ไดนีอินในแอกโซนีมใช้โบกหาง',
+        'Histones are replaced by transition proteins and then protamines, packing the DNA extremely tightly and shutting down transcription. Midpiece mitochondria supply ATP for the axonemal dynein that beats the tail.'],
+      labels: ['head', 'mito', 'flagellum'] },
+    { name: ['อสุจิ (สเปอร์มาโทซูน)', 'Spermatozoon'], sub: ['การสร้างอสุจิ 3: อสุจิที่สมบูรณ์', 'Spermiogenesis 3: the finished sperm'], group: 2,
+      basic: ['ไซโทพลาซึมส่วนเกิน (residual body) หลุดออกและถูกเซลล์เซอร์โทลีกินทำลาย ได้อสุจิที่มี 3 ส่วน คือ ส่วนหัว (นิวเคลียส n และอะโครโซม) ส่วนกลาง (ไมโทคอนเดรีย) และหาง (แฟลเจลลัม) ซึ่งโบกพัดเพื่อว่ายน้ำ สเปอร์มาโทไซต์ปฐมภูมิ 1 เซลล์จึงให้อสุจิ 4 ตัวที่มีพันธุกรรมต่างกัน',
+        'The excess cytoplasm (residual body) is pinched off and eaten by Sertoli cells. The finished sperm has three parts: the head (n nucleus and acrosome), the midpiece (mitochondria) and the tail (flagellum), which beats to swim. One primary spermatocyte therefore yields four genetically different sperm.'],
+      obs: [['หางโบกเป็นคลื่น', 'ก้อนไซโทพลาซึมส่วนเกินหลุดออกไป', 'ในหัวมีโครโมโซม 2 แท่ง (n) ที่อัดแน่นจนมองไม่เห็น'],
+        ['The tail beats in waves', 'The leftover cytoplasm drops away', 'Each head holds 2 chromosomes (n), packed too tightly to see']],
+      adv: ['ในมนุษย์ การสร้างอสุจิตั้งแต่สเปอร์มาโทโกเนียจนเป็นอสุจิใช้เวลาประมาณ 64–74 วัน อสุจิที่ออกจากหลอดสร้างอสุจิยังว่ายไม่ได้ ต้องเจริญต่อในเอพิดิไดมิส และผ่าน capacitation ในทางเดินระบบสืบพันธุ์เพศหญิงก่อนจึงปฏิสนธิได้',
+        'In humans, spermatogenesis from spermatogonium to sperm takes about 64–74 days. Sperm leaving the seminiferous tubule cannot yet swim; they mature in the epididymis and undergo capacitation in the female tract before they can fertilise an egg.'],
+      labels: ['acrosome', 'head', 'midpiece', 'flagellum', 'residual'] }
+  ]
+};
+
+// Quiz items: snapshot time T on the process timeline, name and a description that does not give the name away.
+const QUIZ = {
+  mitosis: [
+    { T: 0.92, name: ['อินเตอร์เฟส', 'Interphase'], desc: ['DNA จำลองแล้วแต่ยังคลายตัวเป็นเส้นใยโครมาติน เห็นนิวเคลียสและนิวคลีโอลัสชัดเจน', 'DNA is replicated but still loose chromatin; the nucleus and nucleolus are clearly visible'] },
+    { T: 1.9, name: ['โพรเฟส', 'Prophase'], desc: ['โครมาตินขดตัวสั้นลงจนเห็นเป็นแท่ง เซนโทรโซมแยกไปยังขั้วเซลล์ เยื่อหุ้มนิวเคลียสเริ่มสลาย แต่เส้นใยสปินเดิลยังไม่จับโครโมโซม', 'Chromatin condenses into visible rods, the centrosomes move to the poles and the nuclear envelope starts to break up, but no spindle fibres hold the chromosomes yet'] },
+    { T: 2.7, name: ['โพรเมทาเฟส', 'Prometaphase'], desc: ['เยื่อหุ้มนิวเคลียสสลายหมด เส้นใยสปินเดิลยื่นไปเกาะไคนีโทคอร์ โครโมโซมเริ่มเคลื่อนเข้าหากลางเซลล์', 'The nuclear envelope is gone, spindle fibres attach to kinetochores and chromosomes start moving to the middle'] },
+    { T: 3.9, name: ['เมทาเฟส', 'Metaphase'], desc: ['โครโมโซมเรียงแถวเดียวที่แนวกึ่งกลางเซลล์ ซิสเตอร์โครมาทิดเกาะกับเส้นใยจากขั้วตรงข้าม', 'Chromosomes form a single line at the equator, sister chromatids attached to opposite poles'] },
+    { T: 4.6, name: ['แอนาเฟส', 'Anaphase'], desc: ['ซิสเตอร์โครมาทิดแยกจากกันถูกดึงไปยังขั้วเซลล์เป็นรูปตัว V เซลล์ยืดยาวขึ้น', 'Sister chromatids are pulled apart toward the poles in a V shape while the cell lengthens'] },
+    { T: 5.85, name: ['เทโลเฟส', 'Telophase'], desc: ['โครโมโซมถึงขั้วและคลายตัว เยื่อหุ้มนิวเคลียสสร้างใหม่ 2 ชุด ร่องแบ่งเซลล์เริ่มเกิด', 'Chromosomes reach the poles and uncoil, two nuclear envelopes reform and a furrow begins'] },
+    { T: 6.92, name: ['ไซโทไคนีซิส', 'Cytokinesis'], desc: ['วงแหวนแอกติน–ไมโอซินหดรัดจนได้ 2 เซลล์ที่เหมือนกันทางพันธุกรรม', 'An actin–myosin ring pinches the cell into two genetically identical cells'] }
+  ],
+  meiosis: [
+    { T: 4.85, name: ['โพรเฟส I', 'Prophase I'], desc: ['ฮอมอโลกัสโครโมโซมจับคู่เป็นไบวาเลนต์ เกิดครอสซิงโอเวอร์และไคแอสมา ภายในนิวเคลียส', 'Homologues pair as bivalents inside the nucleus, with crossing over and chiasmata'] },
+    { T: 6.95, name: ['เมทาเฟส I', 'Metaphase I'], desc: ['ฮอมอโลกัสเรียงเป็นคู่ ๆ ที่แนวกึ่งกลางเซลล์ แต่ละแท่งในคู่หันไปคนละขั้ว', 'Homologous pairs line up at the equator, the two partners facing opposite poles'] },
+    { T: 7.6, name: ['แอนาเฟส I', 'Anaphase I'], desc: ['ฮอมอโลกัสแยกจากกันไปคนละขั้ว โดยซิสเตอร์โครมาทิดยังติดกันที่เซนโทรเมียร์', 'Homologues move to opposite poles while sister chromatids stay joined at the centromere'] },
+    { T: 8.95, name: ['เทโลเฟส I', 'Telophase I'], desc: ['เซลล์แบ่งเป็น 2 เซลล์ที่มีโครโมโซมชุดเดียว (n) แต่ละแท่งยังมี 2 โครมาทิด', 'The cell splits into two n cells whose chromosomes still have two chromatids'] },
+    { T: 9.95, name: ['โพรเฟส II', 'Prophase II'], desc: ['ในเซลล์ n สองเซลล์ เยื่อหุ้มนิวเคลียสสลายและสปินเดิลชุดใหม่เริ่มก่อตัว โดยไม่มีการจำลอง DNA', 'In two n cells the envelope breaks down and new spindles form, with no DNA replication'] },
+    { T: 10.95, name: ['เมทาเฟส II', 'Metaphase II'], desc: ['โครโมโซมแต่ละแท่ง (ไม่เป็นคู่) เรียงที่แนวกึ่งกลางของทั้งสองเซลล์', 'Single (unpaired) chromosomes line up at the equator of both cells'] },
+    { T: 11.6, name: ['แอนาเฟส II', 'Anaphase II'], desc: ['ซิสเตอร์โครมาทิดแยกออกจากกันไปยังขั้วเซลล์ในทั้งสองเซลล์', 'Sister chromatids separate toward the poles in both cells'] },
+    { T: 12.95, name: ['เทโลเฟส II', 'Telophase II'], desc: ['ได้เซลล์ n จำนวน 4 เซลล์ที่แตกต่างกันทางพันธุกรรม', 'Four genetically different n cells are formed'] }
+  ]
+};
+// ======================= MATH HELPERS =======================
+const D2R = Math.PI / 180;
+const V3 = (x, y, z) => new THREE.Vector3(x, y, z);
+const X = V3(1, 0, 0), Y = V3(0, 1, 0), Z = V3(0, 0, 1);
+const clamp = (x, a, b) => Math.min(b, Math.max(a, x));
+const sm = (a, b, t) => { const x = clamp((t - a) / (b - a), 0, 1); return x * x * (3 - 2 * x); };
+const lerp = (a, b, t) => a + (b - a) * t;
+const lerpV = (a, b, t) => new THREE.Vector3().lerpVectors(a, b, t);
+const nrm = (x, y, z) => V3(x, y, z).normalize();
+function rng(seed) { let s = seed % 2147483647; if (s <= 0) s += 2147483646; return () => { s = (s * 16807) % 2147483647; return (s - 1) / 2147483646; }; }
+const qE = e => new THREE.Quaternion().setFromEuler(new THREE.Euler(e[0], e[1], e[2]));
+function qBasis(x, y) {
+  const xx = x.clone().normalize();
+  const yy = y.clone().sub(xx.clone().multiplyScalar(y.dot(xx))).normalize();
+  const zz = new THREE.Vector3().crossVectors(xx, yy);
+  return new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().makeBasis(xx, yy, zz));
+}
+const memR = (R0, d) => R0 * (1 - 0.21 * sm(0, 0.8 * R0, d));
+const waist = (R0, d) => { const R = memR(R0, d); return d < R ? Math.sqrt(R * R - d * d) : 0; };
+
+function makeSprawl(seed) {
+  const r = rng(seed), f = [], ph = [], a = [];
+  for (let k = 0; k < 9; k++) { f.push(0.8 + r() * 3.2); ph.push(r() * 6.283); a.push(0.35 + r() * 0.45); }
+  return (u, out) => {
+    let x = 0, y = 0, z = 0;
+    for (let k = 0; k < 3; k++) {
+      x += a[k] * Math.sin(f[k] * u * 6.283 + ph[k]);
+      y += a[k + 3] * Math.sin(f[k + 3] * u * 6.283 + ph[k + 3]);
+      z += a[k + 6] * Math.sin(f[k + 6] * u * 6.283 + ph[k + 6]);
+    }
+    x /= 1.6; y /= 1.6; z /= 1.6;
+    const m = Math.hypot(x, y, z), k = m > 1e-6 ? Math.tanh(m) / m : 1; // smooth limit, no kinks
+    return out.set(x * k, y * k, z * k);
+  };
+}
+
+// ======================= CHROMOSOME MODEL =======================
+// 2n = 4: one long pair (index 0,1) and one short pair (2,3). hom -1 = maternal, +1 = paternal.
+const CHR = [
+  { L: 2.5, uc: 0.42, col: 0xff6fae, pair: 0, hom: -1 },
+  { L: 2.5, uc: 0.42, col: 0x4c9dff, pair: 0, hom: 1 },
+  { L: 1.55, uc: 0.3, col: 0xff6fae, pair: 1, hom: -1 },
+  { L: 1.55, uc: 0.3, col: 0x4c9dff, pair: 1, hom: 1 }
+];
+const SPR = CHR.map((c, i) => makeSprawl(11 + i * 7));
+const PAIRWIG = [makeSprawl(101), makeSprawl(203)];
+const GAPC = 0.15, GAPA = 0.34, NPT = 120;
+const ptAt = (c, f) => c.pts[Math.round(f * (NPT - 1))];
+
+function buildChromatid(o) {
+  const pts = new Array(NPT), radii = new Float32Array(NPT), cols = new Float32Array(NPT * 3);
+  const w = o.w, L = o.L * (1 + 1.3 * (1 - o.cond));
+  const th = o.g * 0.95, ct = Math.cos(th), st = Math.sin(th);
+  const tmp = new THREE.Vector3(), spr = new THREE.Vector3();
+  const c1 = new THREE.Color(o.col), c2 = new THREE.Color(o.col2 == null ? o.col : o.col2);
+  const split = o.split == null ? 1 : o.split;
+  for (let i = 0; i < NPT; i++) {
+    const u = i / (NPT - 1), a = (u - o.uc) * L;
+    const gap = o.gapC + (GAPA - o.gapC) * sm(0, 0.12, Math.abs(u - o.uc));
+    const p = o.C.clone()
+      .addScaledVector(o.S, o.sig * (gap - o.gapC) / 2 * split)
+      .addScaledVector(o.A, a * ct)
+      .addScaledVector(o.F, -Math.abs(a) * st);
+    if (o.wig) { o.wig(u, tmp); p.add(tmp); }
+    if (o.extra) { o.extra(u, tmp); p.add(tmp); }
+    if (w < 1) {
+      o.spr(u, spr).multiplyScalar(o.sprR).add(o.sprC);
+      spr.x += o.sig * 0.055 * Math.sin(u * 32); spr.y += o.sig * 0.055 * Math.cos(u * 32);
+      p.lerp(spr, 1 - w);
+    }
+    if (o.clampK > 0) { // keep chromatin inside the nuclear envelope (soft wall)
+      const d = p.clone().sub(o.clampC), x = d.length(), R = Math.max(0.2, o.clampR), knee = 0.72 * R;
+      if (x > knee) { const x2 = knee + (R - knee) * Math.tanh((x - knee) / (R - knee)); p.lerp(o.clampC.clone().addScaledVector(d, x2 / x), o.clampK); }
+    }
+    pts[i] = p;
+    let r = o.thick;
+    const t = Math.min(u, 1 - u) / 0.05;
+    if (t < 1) r *= Math.sqrt(Math.max(0, 1 - (1 - t) * (1 - t)));
+    r *= 1 - 0.42 * w * Math.exp(-Math.pow((u - o.uc) / 0.045, 2));
+    if (o.rep != null && o.rep < 1) r *= o.rep <= 0 ? 0 : sm(o.rep, o.rep - 0.04, u); // S phase: new strand grows along the old one
+    radii[i] = r;
+    let mix = 0;
+    if (o.uX != null && o.xc > 0) mix = o.xc * sm(o.uX - 0.015, o.uX + 0.015, u);
+    const nw = o.newGlow || 0; // newly copied strand shown lighter during S phase
+    cols[i * 3] = lerp(lerp(c1.r, c2.r, mix), 1, nw); cols[i * 3 + 1] = lerp(lerp(c1.g, c2.g, mix), 1, nw); cols[i * 3 + 2] = lerp(lerp(c1.b, c2.b, mix), 1, nw);
+  }
+  const ic = Math.round(o.uc * (NPT - 1));
+  const kp = pts[ic].clone().addScaledVector(o.F, o.thick * 0.72);
+  return { pts, radii, cols, kin: { pos: kp, dir: o.F.clone(), s: sm(0.6, 0.92, w) * (o.kinVis == null ? 1 : o.kinVis) } };
+}
+
+function newState() {
+  return { membranes: [], nuclei: [], vesicles: [], centrosomes: [], chromatids: [], kfib: [], polar: [], astral: [], rungs: [], plates: [], rings: [], sparks: [], anchors: {}, view: 1, kOp: 1, pOp: 1, aOp: 1 };
+}
+
+const ASTER_DIRS = (() => { const r = rng(77), a = []; for (let i = 0; i < 14; i++) { const v = V3(r() * 2 - 1, r() * 2 - 1, r() * 2 - 1); if (v.length() < 0.2) v.set(1, 0, 0); a.push(v.normalize()); } return a; })();
+function addAster(st, c, out, len) {
+  if (len <= 0.01) return;
+  for (const d0 of ASTER_DIRS) {
+    const d = d0.clone(); if (d.dot(out) < 0) d.negate();
+    d.addScaledVector(out, 0.7).normalize();
+    st.astral.push([c.clone(), c.clone().addScaledVector(d, len)]);
+  }
+}
+function perpBasis(dir) {
+  const a = Math.abs(dir.y) < 0.9 ? Y : X;
+  const p1 = new THREE.Vector3().crossVectors(dir, a).normalize();
+  const p2 = new THREE.Vector3().crossVectors(dir, p1).normalize();
+  return [p1, p2];
+}
+function addPolar(st, cA, cB, grow, overlap) {
+  if (grow <= 0.01) return;
+  const mid = lerpV(cA, cB, 0.5), dir = cB.clone().sub(cA).normalize();
+  const [p1, p2] = perpBasis(dir);
+  [[cA, 1], [cB, -1]].forEach(([c, s]) => {
+    for (let j = 0; j < 6; j++) {
+      const an = (j / 6) * 6.283 + (s > 0 ? 0 : 0.5);
+      const tgt = mid.clone().addScaledVector(dir, s * overlap).addScaledVector(p1, Math.cos(an) * 0.85).addScaledVector(p2, Math.sin(an) * 0.85);
+      st.polar.push([c.clone(), lerpV(c, tgt, grow)]);
+    }
+  });
+}
+function addKfib(st, pole, kin, grow) {
+  if (grow <= 0.01) return;
+  const end = lerpV(pole, kin, grow);
+  const dir = kin.clone().sub(pole); if (dir.lengthSq() < 1e-6) return;
+  const [p1] = perpBasis(dir.normalize());
+  st.kfib.push([pole.clone(), end]);
+  st.kfib.push([pole.clone().addScaledVector(p1, 0.12), end.clone().addScaledVector(p1, 0.035)]);
+}
+
+// ======================= MITOSIS =======================
+const MIT_PRO = [
+  { p: V3(-0.7, 0.75, 0.35), e: [0.3, 0.2, 0.9] }, { p: V3(0.85, -0.45, -0.3), e: [1.2, 0.4, -0.6] },
+  { p: V3(0.35, 0.95, -0.85), e: [-0.4, 1.1, 0.3] }, { p: V3(-0.45, -0.95, 0.55), e: [0.9, -0.7, 1.4] }
+];
+const MIT_META = [
+  { C: V3(0, 1.55, 0.3), A: nrm(0, 0.55, 1) }, { C: V3(0, -1.35, -0.2), A: nrm(0, -0.5, 1) },
+  { C: V3(0, 0.3, -1.15), A: nrm(0, 1, 0.4) }, { C: V3(0, -0.2, 1.3), A: nrm(0, 1, -0.3) }
+].map(m => ({ ...m, Q: qBasis(X, m.A) }));
+
+function mitosisState(T) {
+  const st = newState();
+  st.view = 1 + 0.4 * sm(5.0, 6.9, T);
+  const d = 1.3 * sm(4.1, 4.9, T) + 1.6 * sm(5.0, 5.95, T) + 1.6 * sm(6.0, 6.85, T);
+  st.membranes.push({ c: V3(0, 0, 0), axis: X, d, R0: 5 });
+  const pX = 3.7 + 0.6 * sm(4.1, 4.9, T) + 0.4 * sm(5.0, 6.0, T);
+  const Dx = lerp(3.15, 4.5, sm(6.0, 6.9, T));
+  // centrosomes
+  const dup = sm(0.25, 0.75, T), mig = sm(1.05, 2.15, T);
+  const aL = lerp(lerp(100, 107, dup), 180, mig) * D2R, aR = lerp(lerp(100, 93, dup), 0, mig) * D2R;
+  const rr = lerp(3.05, pX, mig), cz = 0.7 * (1 - mig);
+  const cL = V3(rr * Math.cos(aL), rr * Math.sin(aL), cz), cR = V3(rr * Math.cos(aR), rr * Math.sin(aR), cz);
+  const late = sm(5.9, 6.9, T);
+  cL.lerp(V3(-Dx, 1.95, 0.7), late); cR.lerp(V3(Dx, 1.95, 0.7), late);
+  st.centrosomes.push({ p: cL, s: 1 }, { p: cR, s: sm(0.25, 0.45, T) });
+  // nuclei
+  const neA = 1 - sm(1.6, 2.3, T);
+  if (neA > 0.002) st.nuclei.push({ c: V3(0, 0, 0), r: 2.4, a: neA, nl: 1 - sm(1.0, 1.35, T) });
+  const fr = sm(1.6, 2.6, T); if (fr > 0 && fr < 1) st.vesicles.push({ c: V3(0, 0, 0), r: 2.4, f: fr });
+  const na = sm(5.2, 5.9, T);
+  if (na > 0.002) [-1, 1].forEach(s => st.nuclei.push({ c: V3(s * Dx, 0, 0), r: lerp(0.5, 1.55, na), a: na, nl: sm(5.6, 6.3, T) }));
+  // chromosomes
+  const cond = sm(1.0, 1.9, T);
+  const w = cond * (1 - 0.72 * sm(5.2, 6.0, T) - 0.22 * sm(6.0, 6.9, T));
+  const thick = lerp(0.045, 0.17, sm(1.0, 1.95, T)) - 0.12 * sm(5.2, 6.4, T);
+  const kmove = 0.55 * sm(2.45, 2.98, T) + 0.45 * sm(3.0, 3.5, T);
+  const osc = Math.sin(T * 9) * 0.14 * sm(2.5, 2.8, T) * (1 - sm(3.3, 3.7, T));
+  const s = sm(4.05, 4.85, T), g = sm(4.05, 4.3, T) * (1 - 0.6 * sm(5.2, 5.8, T));
+  const kOp = 1 - sm(5.1, 5.7, T); st.kOp = kOp;
+  for (let i = 0; i < 4; i++) {
+    const ch = CHR[i], pr = MIT_PRO[i], me = MIT_META[i], prP = pr.p.clone().multiplyScalar(0.6);
+    const Q = qE(pr.e).slerp(me.Q, kmove);
+    const C = lerpV(prP, me.C, kmove); C.x += osc * (i % 2 ? 1 : -1);
+    const A = Y.clone().applyQuaternion(Q), S = X.clone().applyQuaternion(Q);
+    [-1, 1].forEach(sig => {
+      const F = S.clone().multiplyScalar(sig);
+      const C0 = C.clone().addScaledVector(S, sig * GAPC / 2);
+      const tgt = V3(sig * Dx, me.C.y * 0.4, me.C.z * 0.4);
+      const Cc = C0.lerp(tgt, s);
+      const ci = st.chromatids.length;
+      const cd = buildChromatid({
+        C: Cc, A, S, F, sig, gapC: GAPC, split: 1 - s, L: ch.L, uc: ch.uc, w, cond, thick, g,
+        spr: SPR[i], sprC: T < 4.5 ? V3(0, 0, 0) : V3(sig * Dx, 0, 0), sprR: T < 4.5 ? 2.0 : 1.25, col: ch.col,
+        clampC: T < 4.5 ? V3(0, 0, 0) : V3(sig * Dx, 0, 0), clampR: (T < 4.5 ? 2.4 : lerp(0.5, 1.55, na)) - thick - 0.06, clampK: T < 4.5 ? neA : na, rep: sig > 0 ? sm(0.15, 0.75, T) : 1, newGlow: sig > 0 ? 0.55 * sm(0.1, 0.2, T) * (1 - sm(0.8, 0.98, T)) : 0
+      });
+      st.chromatids.push(cd);
+      const gr = sm(2.12 + 0.06 * ci, 2.55 + 0.06 * ci, T);
+      if (kOp > 0) addKfib(st, sig < 0 ? cL : cR, cd.kin.pos, gr);
+    });
+  }
+  // spindle
+  st.pOp = 1 - sm(5.4, 6.0, T);
+  addPolar(st, cL, cR, sm(1.3, 2.2, T), 0.9 - 0.6 * sm(4.1, 4.9, T));
+  const ag = sm(1.2, 2.0, T) * (1 - 0.6 * sm(5.6, 6.6, T));
+  addAster(st, cL, cL.clone().normalize(), 1.05 * ag); addAster(st, cR, cR.clone().normalize(), 1.05 * ag);
+  // plate & ring
+  const pa = sm(3.1, 3.5, T) * (1 - sm(4.0, 4.25, T));
+  if (pa > 0) st.plates.push({ c: V3(0, 0, 0), n: X, r: 3.3, a: pa });
+  const ra = sm(5.15, 5.5, T) * (1 - sm(6.75, 6.92, T)), rw = waist(5, d);
+  if (ra > 0 && rw > 0.03) st.rings.push({ c: V3(0, 0, 0), n: X, r: rw, a: ra });
+  // anchors
+  const an = st.anchors, c0 = st.chromatids[0];
+  const nu = st.nuclei[0];
+  if (nu) { an.nucleus = nu.c.clone().add(V3(0, nu.r * 0.95, 0)); an.nucleolus = nu.c.clone().add(V3(0.45, 0.35, 0.3).multiplyScalar(nu.r)); }
+  an.chromatin = ptAt(c0, 0.27); an.chromosome = ptAt(c0, 0.14); an.sister = ptAt(st.chromatids[1], 0.14);
+  an.centrosome = cL.clone(); an.pole = cR.clone(); an.aster = cR.clone().addScaledVector(cR.clone().normalize(), 0.9);
+  an.kinetochore = st.chromatids[2].kin.pos;
+  if (st.kfib.length) an.kfiber = lerpV(st.kfib[0][0], st.kfib[0][1], 0.5);
+  if (st.polar.length) an.polar = lerpV(st.polar[3][0], st.polar[3][1], 0.55);
+  an.vesicle = V3(0.6, 2.6, 0.8); an.plate = V3(0, 3.1, 0);
+  an.furrow = V3(0, waist(5, d), 0); an.ring = V3(0, -rw, 0);
+  an.daughter = V3(d + memR(5, d) * 0.55, memR(5, d) * 0.7, 0);
+  return st;
+}
+
+// ======================= MEIOSIS =======================
+const MEI_LEP = [
+  { p: V3(-0.9, 0.8, 0.4), e: [0.4, 0.3, 1.0] }, { p: V3(1.0, -0.5, -0.5), e: [1.0, -0.4, 0.2] },
+  { p: V3(0.5, 1.0, -0.7), e: [-0.5, 0.9, 0.6] }, { p: V3(-0.6, -1.0, 0.6), e: [0.7, 0.6, -1.2] }
+];
+const MEI_BIV = [{ p: V3(-0.25, 0.55, 0.3), e: [0.2, 0.1, 0.5] }, { p: V3(0.4, -0.75, -0.3), e: [-0.3, 0.5, -0.4] }];
+const MEI_MI = [
+  { C: V3(0, 1.2, 0.2), A: nrm(0, 0.4, 1), H: X.clone() },
+  { C: V3(0, -1.3, -0.2), A: nrm(0, 1, 0.45), H: X.clone().negate() }
+].map(m => ({ ...m, Q: qBasis(m.H, m.A) }));
+const MEI_SIDE = [-1, 1, 1, -1];               // which cell each chromosome reaches after anaphase I
+const MEI_UX = [0.74, 0.74, 0.7, 0.7];          // crossover position along the chromatid
+const MEI_MII = [                                // placement on metaphase II plates (relative to cell centre)
+  { o: V3(-0.8, 0, 0.35), A: nrm(0.35, 0, 1) }, { o: V3(0.8, 0, -0.35), A: nrm(-0.3, 0, 1) }
+].map(m => ({ ...m, Q: qBasis(Y, m.A) }));
+const RY90 = new THREE.Quaternion().setFromAxisAngle(Y, -Math.PI / 2);
+// ======================= SPERMIOGENESIS (meiosis stages 13–15) =======================
+const ROW_X = [-6.75, -2.25, 2.25, 6.75];
+const spermJ = (sx, sy) => (sx < 0 ? (sy > 0 ? 0 : 1) : (sy > 0 ? 2 : 3));
+const MITO_START = (() => { const r = rng(909), a = []; for (let i = 0; i < 24; i++) { const v = V3(r() * 2 - 1, r() * 2 - 1, r() * 2 - 1); if (v.length() < 0.3) v.set(0.5, -0.5, 0.4); v.normalize(); a.push({ d: v, k: 0.55 + r() * 0.35, q: qE([r() * 6, r() * 6, r() * 6]) }); } return a; })();
+function spermLayout(T) {
+  const mv = sm(13.0, 13.6, T), hm = sm(14.0, 14.8, T), cy = sm(14.1, 14.9, T), rb = sm(15.0, 15.6, T);
+  return [0, 1, 2, 3].map(j => {
+    const sx = j < 2 ? -1 : 1, sy = j % 2 === 0 ? 1 : -1;
+    const P = lerpV(V3(sx * 4.5, sy * 3.6, 0), V3(ROW_X[j], 2.2, 0), mv);
+    const H = P.clone().add(V3(0, 0.6 * mv, 0));
+    const sc = V3(lerp(1, 0.55, hm), lerp(1, 0.85, hm), lerp(1, 0.32, hm)).multiplyScalar(lerp(1.25, 1.0, mv));
+    const basal = H.clone().add(V3(0, -(sc.y + 0.12), 0));
+    const cellR = lerp(3.12, 2.0, mv);
+    const memC = lerpV(P, basal.clone().add(V3(0, -1.25, 0)), cy).add(V3(1.1, -0.6, 0.7).multiplyScalar(rb));
+    const memR = lerp(cellR, 0.85, cy) * (1 - 0.2 * rb);
+    return { j, sx, sy, P, H, sc, basal, cellR, mv, hm, cy, rb, memC, memR, memA: 1 - sm(15.35, 15.9, T) };
+  });
+}
+function addSperm(st, SP, T, clock) {
+  st.caps = []; st.golgi = []; st.mitos = [];
+  const ac = sm(13.3, 13.95, T), gg = sm(13.05, 13.35, T) * (1 - sm(13.85, 14.2, T));
+  const mm = sm(14.05, 14.75, T), mApp = sm(13.0, 13.3, T);
+  const Lf = 1.6 * sm(13.45, 14.0, T) + 5.4 * sm(14.0, 14.9, T);
+  const beat = sm(15.0, 15.4, T);
+  const tailCol = new THREE.Color(0xdfe6ff);
+  SP.forEach(p => {
+    if (ac > 0.01) st.caps.push({ c: p.H, sc: p.sc.clone().multiplyScalar(lerp(0.8, 1.08, ac)), a: ac });
+    if (gg > 0.01) st.golgi.push({ c: p.H.clone().add(V3(0, p.sc.y + 0.5, 0.25)), s: gg });
+    MITO_START.forEach((m, k) => {
+      const a0 = p.P.clone().addScaledVector(m.d, p.cellR * m.k);
+      if (a0.distanceTo(p.H) < p.sc.x + 0.35) a0.addScaledVector(m.d, 0.6);
+      const ang = k * 2.4, yy = 0.15 + (k / 23) * 1.45;
+      const a1 = p.basal.clone().add(V3(Math.cos(ang) * 0.17, -yy, Math.sin(ang) * 0.17));
+      const q1 = qBasis(V3(Math.cos(ang), 0, Math.sin(ang)), V3(-Math.sin(ang), 0.35, Math.cos(ang)));
+      st.mitos.push({ p: lerpV(a0, a1, mm), q: m.q.clone().slerp(q1, mm), s: V3(0.08, lerp(0.22, 0.13, mm), 0.08).multiplyScalar(mApp) });
+    });
+    if (Lf > 0.03) {
+      const pts = new Array(NPT), radii = new Float32Array(NPT), cols = new Float32Array(NPT * 3);
+      for (let i = 0; i < NPT; i++) {
+        const u = i / (NPT - 1), s = u * Lf;
+        const env = sm(1.4, 2.6, s);
+        // resting: gentle bend; mature: helical (corkscrew) wave that spins around the tail axis
+        const amp = env * beat * (0.1 + 0.06 * s), ph = 1.8 * s - clock * 7 + p.j;
+        const rest = env * 0.18 * Math.sin(1.4 * s + p.j) * (1 - beat);
+        pts[i] = p.basal.clone().add(V3(rest + amp * Math.sin(ph), -s, amp * Math.cos(ph)));
+        let r = s < 1.65 ? 0.09 : lerp(0.07, 0.022, clamp((s - 1.65) / Math.max(0.1, Lf - 1.65), 0, 1));
+        if (u > 0.96) r *= Math.sqrt(Math.max(0, 1 - Math.pow((u - 0.96) / 0.04, 2)));
+        radii[i] = r; cols[i * 3] = tailCol.r; cols[i * 3 + 1] = tailCol.g; cols[i * 3 + 2] = tailCol.b;
+      }
+      st.chromatids.push({ pts, radii, cols, kin: { pos: p.basal, dir: Y, s: 0 } });
+      if (p.j === 1) st.spermFlag = pts;
+    }
+  });
+  const q = SP[1];
+  st.spermAnchors = {
+    acrosome: q.H.clone().add(V3(0, q.sc.y * 1.08 + 0.05, 0)), golgi: q.H.clone().add(V3(0, q.sc.y + 0.6, 0.25)),
+    centriole: q.basal.clone(), head: q.H.clone().add(V3(q.sc.x + 0.05, 0, 0)),
+    mito: st.mitos[24 + 12].p.clone(), midpiece: q.basal.clone().add(V3(0.2, -0.85, 0)),
+    flagellum: Lf > 2.5 ? q.basal.clone().add(V3(0.75, -Lf * 0.6, 0)) : q.basal.clone().add(V3(0.4, -Lf * 0.7, 0)),
+    residual: q.memA > 0.2 ? q.memC.clone().add(V3(0.3, q.memR, 0)) : null
+  };
+}
+
+
+function meiosisState(T, clock = 0) {
+  const st = newState();
+  st.view = 1 + 0.38 * sm(8.0, 8.9, T) + 0.34 * sm(11.0, 12.9, T) - 0.5 * sm(13.3, 14.5, T);
+  st.target = V3(0, -0.9 * sm(13.4, 14.9, T), 0);
+  const SP = T >= 13 ? spermLayout(T) : null;
+  // --- membranes
+  const d1 = 1.3 * sm(7.05, 7.9, T) + 3.2 * sm(8.0, 8.85, T);
+  const R0b = memR(5, 4.5);
+  const d2 = 1.0 * sm(11.05, 11.9, T) + 2.6 * sm(12.0, 12.85, T);
+  if (SP) {
+    SP.forEach(p => { if (p.memA > 0.01) st.membranes.push({ c: p.memC, axis: Y, d: 0, R0: p.memR, a: p.memA }); });
+  } else if (T < 8.9) {
+    st.membranes.push({ c: V3(0, 0, 0), axis: X, d: d1, R0: 5 });
+    const ra = sm(7.9, 8.2, T) * (1 - sm(8.7, 8.88, T)), rw = waist(5, d1);
+    if (ra > 0 && rw > 0.03) st.rings.push({ c: V3(0, 0, 0), n: X, r: rw, a: ra });
+  } else {
+    [-1, 1].forEach(sd => {
+      st.membranes.push({ c: V3(sd * 4.5, 0, 0), axis: Y, d: d2, R0: R0b });
+      const ra = sm(11.9, 12.2, T) * (1 - sm(12.7, 12.88, T)), rw = waist(R0b, d2);
+      if (ra > 0 && rw > 0.03) st.rings.push({ c: V3(sd * 4.5, 0, 0), n: Y, r: rw, a: ra });
+    });
+  }
+  const pX = 3.7 + 0.6 * sm(7.05, 7.9, T);
+  const Dx1 = lerp(3.15, 4.5, sm(8.0, 8.85, T));
+  const Dy2 = lerp(2.1, 3.6, sm(12.0, 12.85, T));
+  const pY = 2.8 + 0.4 * sm(11.05, 11.9, T);
+  // --- centrosomes
+  let cL, cR; const mii = {};
+  if (T < 9) {
+    const dup = sm(0.25, 0.75, T), mig = sm(4.0, 5.8, T);
+    const aL = lerp(lerp(100, 107, dup), 180, mig) * D2R, aR = lerp(lerp(100, 93, dup), 0, mig) * D2R;
+    const rr = lerp(3.05, pX, mig), cz = 0.7 * (1 - mig);
+    cL = V3(rr * Math.cos(aL), rr * Math.sin(aL), cz); cR = V3(rr * Math.cos(aR), rr * Math.sin(aR), cz);
+    const l1 = sm(8.0, 8.9, T);
+    cL.lerp(V3(-4.5, 0, 2.2), l1); cR.lerp(V3(4.5, 0, 2.2), l1);
+    st.centrosomes.push({ p: cL, s: 1 }, { p: cR, s: sm(0.25, 0.45, T) });
+  } else if (SP) {
+    SP.forEach(p => st.centrosomes.push({ p: lerpV(V3(p.sx * 4.5, p.sy * 3.6, 1.5), p.basal, sm(13.0, 13.5, T)), s: lerp(1, 0.7, sm(13.0, 13.5, T)) }));
+  } else {
+    const dup2 = sm(9.0, 9.3, T), m2 = sm(9.2, 9.95, T), l2 = sm(12.0, 12.9, T);
+    [-1, 1].forEach(sd => {
+      const Dc = V3(sd * 4.5, 0, 0), r = lerp(2.2, pY, m2);
+      const au = lerp(lerp(90, 84, dup2), 0, m2) * D2R, ad = lerp(lerp(90, 96, dup2), 180, m2) * D2R;
+      const up = Dc.clone().add(V3(0, r * Math.cos(au), r * Math.sin(au)));
+      const dn = Dc.clone().add(V3(0, r * Math.cos(ad), r * Math.sin(ad)));
+      up.lerp(Dc.clone().add(V3(0, Dy2, 1.5)), l2); dn.lerp(Dc.clone().add(V3(0, -Dy2, 1.5)), l2);
+      mii[sd] = { up, dn, Dc };
+      st.centrosomes.push({ p: up, s: 1 }, { p: dn, s: sm(9.0, 9.2, T) });
+    });
+  }
+  // --- nuclei
+  const neA = 1 - sm(5.3, 5.65, T);
+  if (neA > 0.002) st.nuclei.push({ c: V3(0, 0, 0), r: 2.4, a: neA, nl: 1 - sm(5.0, 5.3, T) });
+  const fr = sm(5.3, 6.1, T); if (fr > 0 && fr < 1) st.vesicles.push({ c: V3(0, 0, 0), r: 2.4, f: fr });
+  const n1 = 0.7 * sm(8.3, 8.9, T) * (1 - sm(9.05, 9.5, T));
+  if (n1 > 0.002) [-1, 1].forEach(sd => st.nuclei.push({ c: V3(sd * Dx1, 0, 0), r: 1.55, a: n1, nl: 0 }));
+  const n2 = sm(12.2, 12.9, T);
+  if (SP) SP.forEach(p => st.nuclei.push({ c: p.H, r: 1, sc: p.sc, a: 1, nl: 1 - sm(13.2, 13.8, T), dense: 0.9 * p.hm }));
+  else if (n2 > 0.002) [-1, 1].forEach(sx => [-1, 1].forEach(sy => st.nuclei.push({ c: V3(sx * 4.5, sy * Dy2, 0), r: lerp(0.4, 1.25, n2), a: n2, nl: sm(12.5, 12.95, T) })));
+  // --- chromosome parameters
+  const pair = sm(2.05, 2.85, T);
+  const hsep = lerp(0.44, 1.05, sm(4.05, 4.8, T));
+  const kMI = sm(6.35, 6.95, T);
+  const s1 = sm(7.05, 7.85, T), s2 = sm(11.05, 11.85, T), k2 = sm(10.25, 10.9, T);
+  let w = 0.5 * sm(1.0, 1.9, T) + 0.47 * sm(2.0, 2.9, T) + 0.03 * sm(3.0, 3.8, T);
+  w *= 1 - 0.2 * sm(8.3, 8.9, T) * (1 - sm(9.0, 9.6, T));
+  w *= 1 - sm(12.2, 12.95, T);
+  const cond = 0.35 * sm(1, 2, T) + 0.35 * sm(2, 3, T) + 0.15 * sm(3, 4, T) + 0.1 * sm(4, 5, T) + 0.05 * sm(5, 6, T);
+  const thick = 0.045 + 0.005 * sm(1, 1.9, T) + 0.025 * sm(2, 2.9, T) + 0.025 * sm(3, 3.9, T) + 0.03 * sm(4, 4.9, T) + 0.035 * sm(5, 5.9, T) - 0.11 * sm(12.2, 12.95, T);
+  const wigAmp = 0.42 * (1 - sm(2.6, 4.6, T));
+  const xc = sm(3.4, 3.75, T), swap = xc * (1 - sm(7.05, 7.35, T));
+  const g1 = sm(7.05, 7.3, T) * (1 - sm(8.3, 9.6, T)), g2 = sm(11.05, 11.3, T) * (1 - 0.6 * sm(12.2, 12.8, T));
+  const fMix = sm(9.0, 9.6, T);
+  const kOp1 = 1 - sm(8.1, 8.5, T), kOp2 = 1 - sm(12.1, 12.6, T);
+  st.kOp = T < 9.5 ? kOp1 : kOp2;
+  const bivC = [], bivA = [], bivH = [];
+  for (let b = 0; b < 2; b++) {
+    const Qbv = qE(MEI_BIV[b].e).slerp(MEI_MI[b].Q, kMI);
+    bivC.push(lerpV(MEI_BIV[b].p, MEI_MI[b].C, kMI)); bivA.push(Y.clone().applyQuaternion(Qbv)); bivH.push(X.clone().applyQuaternion(Qbv));
+    bivH[b].Qbv = Qbv;
+  }
+  for (let i = 0; i < 4; i++) {
+    const ch = CHR[i], b = ch.pair, eta = ch.hom, side = MEI_SIDE[i];
+    const Qbv = bivH[b].Qbv, Cbv = bivC[b], Hb = bivH[b];
+    const Qh = qE(MEI_LEP[i].e).slerp(Qbv, pair);
+    const H = X.clone().applyQuaternion(Qh);
+    let Ch = lerpV(MEI_LEP[i].p.clone().multiplyScalar(0.7), Cbv.clone().addScaledVector(Hb, eta * hsep / 2), pair);
+    Ch.lerp(V3(side * Dx1, Cbv.y * 0.45, Cbv.z * 0.45), s1);
+    let A = Y.clone().applyQuaternion(Qh), S = Z.clone().applyQuaternion(Qh);
+    const Fmi = H.clone().multiplyScalar(eta);
+    let Qcur = Qh, Dc = null;
+    if (T >= 9) {
+      Dc = V3(side * 4.5, 0, 0);
+      const mm = MEI_MII[b];
+      const Qd = Qh.clone().multiply(RY90).slerp(mm.Q, k2);
+      Ch = lerpV(Ch, Dc.clone().add(mm.o), k2);
+      A = Y.clone().applyQuaternion(Qd); S = X.clone().applyQuaternion(Qd); Qcur = Qd;
+    }
+    const wig = (u, out) => { PAIRWIG[b](u, out); out.y = 0; return out.multiplyScalar(wigAmp).applyQuaternion(Qh); };
+    [-1, 1].forEach(sig => {
+      let F = T >= 9 ? Fmi.clone().lerp(S.clone().multiplyScalar(sig), fMix).normalize() : Fmi.clone();
+      let C = Ch.clone().addScaledVector(S, sig * GAPC / 2);
+      let split = 1;
+      if (T >= 9) {
+        const tgt = V3(Dc.x + (Ch.x - Dc.x) * 0.45, sig * Dy2, Ch.z * 0.45);
+        C.lerp(tgt, s2); split = 1 - s2;
+      }
+      const crossed = sig === 1;
+      const partner = CHR[i + (eta < 0 ? 1 : -1)];
+      const opts = {
+        C, A, S, F, sig, gapC: GAPC, split, L: ch.L, uc: ch.uc, w, cond, thick, g: Math.max(g1, g2),
+        spr: SPR[i], col: ch.col, wig: wigAmp > 0.001 ? wig : null, rep: sig > 0 ? sm(0.15, 0.75, T) : 1, newGlow: sig > 0 ? 0.55 * sm(0.1, 0.2, T) * (1 - sm(0.8, 0.98, T)) : 0
+      };
+      if (T < 7.5) { opts.sprC = V3(0, 0, 0); opts.sprR = 2.0; }
+      else if (T < 10.5) { opts.sprC = V3(side * Dx1, 0, 0); opts.sprR = 1.3; }
+      else { opts.sprC = V3(side * 4.5, sig * Dy2, 0); opts.sprR = 1.0; }
+      if (T < 7) { opts.clampC = V3(0, 0, 0); opts.clampR = 2.4 - thick - 0.06; opts.clampK = neA; }
+      else if (T < 10.5) { opts.clampC = V3(side * Dx1, 0, 0); opts.clampR = 1.55 - thick - 0.06; opts.clampK = 0.6 * n1 / 0.7; }
+      else if (T < 13) { opts.clampC = V3(side * 4.5, sig * Dy2, 0); opts.clampR = lerp(0.4, 1.25, n2) - thick - 0.06; opts.clampK = n2; }
+      if (SP) {
+        const p = SP[spermJ(side, sig)];
+        opts.sprC = p.H; opts.sprR = lerp(1.0, 0.28, p.hm); opts.thick = 0.055 * (1 - sm(14.3, 14.7, T)); opts.w = 0; opts.kinVis = 0;
+      }
+      if (crossed) {
+        const uX = MEI_UX[i];
+        opts.uX = uX; opts.xc = xc; opts.col2 = partner.col;
+        if (swap > 0.001) {
+          const sh = H.clone().multiplyScalar(-eta * hsep * swap);
+          opts.extra = (u, out) => out.copy(sh).multiplyScalar(sm(uX - 0.06, uX + 0.06, u));
+        }
+      }
+      const cd = buildChromatid(opts);
+      cd.meta = { i, sig, b, eta };
+      st.chromatids.push(cd);
+      const ci = st.chromatids.length - 1;
+      if (T < 9.5) {
+        if (kOp1 > 0) addKfib(st, side < 0 ? cL : cR, cd.kin.pos, sm(6.0 + 0.05 * ci, 6.45 + 0.05 * ci, T));
+      } else if (kOp2 > 0) {
+        const m = mii[side]; addKfib(st, sig > 0 ? m.up : m.dn, cd.kin.pos, sm(10.0 + 0.04 * ci, 10.4 + 0.04 * ci, T));
+      }
+    });
+  }
+  // synaptonemal complex rungs + crossover spark
+  const zip = sm(2.45, 2.95, T), rOp = 1 - sm(4.0, 4.35, T);
+  const byKey = {}; st.chromatids.forEach(c => byKey[c.meta.i + ':' + c.meta.sig] = c);
+  for (let b = 0; b < 2; b++) {
+    const M = byKey[(2 * b) + ':-1'], P = byKey[(2 * b + 1) + ':-1'];
+    if (pair > 0.85 && rOp > 0) {
+      for (let k = 0; k < 12; k++) {
+        if (zip * rOp <= k / 12) continue;
+        const idx = Math.round((0.06 + (k / 11) * 0.88) * (NPT - 1));
+        const a = M.pts[idx], c = P.pts[idx];
+        st.rungs.push([lerpV(a, c, 0.18), lerpV(a, c, 0.82)]);
+      }
+    }
+    const Mx = byKey[(2 * b) + ':1'], Px = byKey[(2 * b + 1) + ':1'];
+    const ix = Math.round(MEI_UX[2 * b] * (NPT - 1));
+    const xp = lerpV(Mx.pts[ix], Px.pts[ix], 0.5);
+    const si = sm(3.12, 3.35, T) * (1 - sm(3.75, 4.0, T));
+    if (si > 0) st.sparks.push({ p: xp, s: si });
+    if (b === 0) { st.anchors.crossover = xp; st.anchors.chiasma = xp; st.anchors.bivalent = ptAt(M, 0.14); }
+    if (b === 0 && st.rungs.length) st.anchors.sc = lerpV(st.rungs[Math.min(4, st.rungs.length - 1)][0], st.rungs[Math.min(4, st.rungs.length - 1)][1], 0.5);
+  }
+  // spindles
+  if (SP) addSperm(st, SP, T, clock);
+  else if (T < 9) {
+    st.pOp = 1 - sm(8.0, 8.6, T);
+    addPolar(st, cL, cR, sm(4.9, 5.9, T), 0.9 - 0.6 * sm(7.05, 7.9, T));
+    const ag = sm(4.6, 5.6, T) * (1 - 0.7 * sm(8.2, 8.8, T));
+    addAster(st, cL, cL.clone().normalize(), 1.05 * ag); addAster(st, cR, cR.clone().normalize(), 1.05 * ag);
+    const pa = sm(6.5, 6.9, T) * (1 - sm(7.0, 7.25, T));
+    if (pa > 0) st.plates.push({ c: V3(0, 0, 0), n: X, r: 3.3, a: pa });
+  } else {
+    st.pOp = 1 - sm(12.2, 12.7, T);
+    const ag = sm(9.3, 9.9, T) * (1 - 0.6 * sm(12.3, 12.9, T));
+    [-1, 1].forEach(sd => {
+      const m = mii[sd];
+      addPolar(st, m.dn, m.up, sm(9.4, 10.0, T), 0.7 - 0.45 * sm(11.05, 11.9, T));
+      addAster(st, m.up, m.up.clone().sub(m.Dc).normalize(), 0.85 * ag);
+      addAster(st, m.dn, m.dn.clone().sub(m.Dc).normalize(), 0.85 * ag);
+      const pa = sm(10.55, 10.9, T) * (1 - sm(11.0, 11.25, T));
+      if (pa > 0) st.plates.push({ c: m.Dc.clone(), n: Y, r: 2.6, a: pa });
+    });
+  }
+  // anchors
+  const an = st.anchors, nu = st.nuclei[0];
+  if (nu) an.nucleus = nu.c.clone().add(V3(0, nu.r * 0.95, 0));
+  an.chromatin = ptAt(st.chromatids[0], 0.27); an.chromosome = ptAt(st.chromatids[0], 0.12);
+  an.homolog = ptAt(st.chromatids[2], 0.12); an.sister = ptAt(st.chromatids[1], 0.14);
+  an.kinetochore = st.chromatids[3].kin.pos;
+  const c0 = st.centrosomes[0].p; an.centrosome = c0.clone(); an.pole = st.centrosomes[1].p.clone();
+  if (st.kfib.length) an.kfiber = lerpV(st.kfib[0][0], st.kfib[0][1], 0.5);
+  if (st.polar.length) an.polar = lerpV(st.polar[3][0], st.polar[3][1], 0.55);
+  an.vesicle = V3(0.6, 2.5, 0.8);
+  if (SP) Object.assign(an, st.spermAnchors);
+  an.plate = T < 9 ? V3(0, 3.1, 0) : V3(4.5 + 2.4, 0, 0);
+  if (T < 9) { an.ring = V3(0, -waist(5, d1), 0); an.daughter = V3(d1 + memR(5, d1) * 0.55, memR(5, d1) * 0.7, 0); }
+  else { an.ring = V3(4.5 + waist(R0b, d2), 0, 0); an.daughter = V3(4.5 + memR(R0b, d2) * 0.7, d2 + memR(R0b, d2) * 0.55, 0); }
+  return st;
+}
+
+const PROCESSES = { mitosis: mitosisState, meiosis: meiosisState };
+
+// ======================= RENDERER =======================
+function fresnelMat(color, rim, base, rimA) {
+  return new THREE.ShaderMaterial({
+    uniforms: { uColor: { value: new THREE.Color(color) }, uRim: { value: new THREE.Color(rim) }, uBase: { value: base }, uRimA: { value: rimA }, uOpacity: { value: 1 } },
+    vertexShader: 'varying vec3 vN; varying vec3 vV; void main(){ vec4 mv = modelViewMatrix*vec4(position,1.0); vN = normalize(normalMatrix*normal); vV = -mv.xyz; gl_Position = projectionMatrix*mv; }',
+    fragmentShader: 'uniform vec3 uColor; uniform vec3 uRim; uniform float uBase; uniform float uRimA; uniform float uOpacity; varying vec3 vN; varying vec3 vV; void main(){ float f = pow(1.0-abs(dot(normalize(vN),normalize(vV))),2.4); gl_FragColor = vec4(mix(uColor,uRim,f),(uBase+(uRimA-uBase)*f)*uOpacity); }',
+    transparent: true, depthWrite: false, side: THREE.DoubleSide
+  });
+}
+function glowTexture() {
+  const c = document.createElement('canvas'); c.width = c.height = 64;
+  const g = c.getContext('2d'), gr = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+  gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(0.3, 'rgba(255,255,255,.45)'); gr.addColorStop(1, 'rgba(255,255,255,0)');
+  g.fillStyle = gr; g.fillRect(0, 0, 64, 64);
+  return new THREE.CanvasTexture(c);
+}
+
+class Tube {
+  constructor(mat, M, K) {
+    this.M = M; this.K = K;
+    const g = new THREE.BufferGeometry();
+    this.pos = new Float32Array(M * K * 3); this.nor = new Float32Array(M * K * 3); this.col = new Float32Array(M * K * 3);
+    g.setAttribute('position', new THREE.BufferAttribute(this.pos, 3));
+    g.setAttribute('normal', new THREE.BufferAttribute(this.nor, 3));
+    g.setAttribute('color', new THREE.BufferAttribute(this.col, 3));
+    const idx = [];
+    for (let i = 0; i < M - 1; i++) for (let j = 0; j < K; j++) {
+      const a = i * K + j, b = i * K + (j + 1) % K, c = (i + 1) * K + j, d = (i + 1) * K + (j + 1) % K;
+      idx.push(a, b, c, b, d, c);
+    }
+    g.setIndex(idx);
+    this.geo = g; this.mesh = new THREE.Mesh(g, mat); this.mesh.frustumCulled = false;
+    this.T = new THREE.Vector3(); this.N = new THREE.Vector3(); this.B = new THREE.Vector3();
+  }
+  update(pts, radii, cols) {
+    const { M, K } = this, T = this.T, N = this.N, B = this.B, tmp = new THREE.Vector3();
+    T.subVectors(pts[1], pts[0]); if (T.lengthSq() < 1e-10) T.set(0, 1, 0); T.normalize();
+    N.copy(Math.abs(T.y) < 0.9 ? Y : X).cross(T).normalize();
+    for (let i = 0; i < M; i++) {
+      tmp.subVectors(pts[Math.min(i + 1, M - 1)], pts[Math.max(i - 1, 0)]);
+      if (tmp.lengthSq() > 1e-10) T.copy(tmp).normalize();
+      N.addScaledVector(T, -N.dot(T)); if (N.lengthSq() < 1e-8) N.copy(Math.abs(T.y) < 0.9 ? Y : X).cross(T); N.normalize();
+      B.crossVectors(T, N);
+      const p = pts[i], r = radii[i];
+      for (let j = 0; j < K; j++) {
+        const an = (j / K) * 6.2832, ca = Math.cos(an), sa = Math.sin(an);
+        const nx = N.x * ca + B.x * sa, ny = N.y * ca + B.y * sa, nz = N.z * ca + B.z * sa;
+        const o = (i * K + j) * 3;
+        this.pos[o] = p.x + nx * r; this.pos[o + 1] = p.y + ny * r; this.pos[o + 2] = p.z + nz * r;
+        this.nor[o] = nx; this.nor[o + 1] = ny; this.nor[o + 2] = nz;
+        this.col[o] = cols[i * 3]; this.col[o + 1] = cols[i * 3 + 1]; this.col[o + 2] = cols[i * 3 + 2];
+      }
+    }
+    this.geo.attributes.position.needsUpdate = true; this.geo.attributes.normal.needsUpdate = true; this.geo.attributes.color.needsUpdate = true;
+  }
+}
+
+class Membrane {
+  constructor() {
+    this.N = 40; this.K = 72; const P = this.N * 2, K = this.K;
+    const g = new THREE.BufferGeometry();
+    this.pos = new Float32Array(P * K * 3); this.nor = new Float32Array(P * K * 3);
+    g.setAttribute('position', new THREE.BufferAttribute(this.pos, 3));
+    g.setAttribute('normal', new THREE.BufferAttribute(this.nor, 3));
+    const idx = [];
+    for (let i = 0; i < P - 1; i++) for (let j = 0; j < K; j++) {
+      const a = i * K + j, b = i * K + (j + 1) % K, c = (i + 1) * K + j, d = (i + 1) * K + (j + 1) % K;
+      idx.push(a, b, c, b, d, c);
+    }
+    g.setIndex(idx); this.geo = g;
+    this.mat = fresnelMat(0x2a6f8f, 0x9fe8ff, 0.035, 0.55);
+    this.mesh = new THREE.Mesh(g, this.mat); this.mesh.renderOrder = 4; this.mesh.frustumCulled = false;
+  }
+  update(c, axis, d, R0) {
+    const R = memR(R0, d), phiMax = d < R ? Math.acos(-d / R) : Math.PI;
+    const [n1, n2] = perpBasis(axis); const P = this.N * 2, K = this.K;
+    for (let k = 0; k < P; k++) {
+      const lobe = k < this.N ? -1 : 1, j = k < this.N ? k : P - 1 - k;
+      const ph = (j / (this.N - 1)) * phiMax, cp = Math.cos(ph), sp = Math.sin(ph);
+      const x = lobe * (d + R * cp), rho = R * sp;
+      for (let s = 0; s < K; s++) {
+        const an = (s / K) * 6.2832, ca = Math.cos(an), sa = Math.sin(an);
+        const dx = n1.x * ca + n2.x * sa, dy = n1.y * ca + n2.y * sa, dz = n1.z * ca + n2.z * sa;
+        const o = (k * K + s) * 3;
+        this.pos[o] = c.x + axis.x * x + dx * rho; this.pos[o + 1] = c.y + axis.y * x + dy * rho; this.pos[o + 2] = c.z + axis.z * x + dz * rho;
+        this.nor[o] = axis.x * lobe * cp + dx * sp; this.nor[o + 1] = axis.y * lobe * cp + dy * sp; this.nor[o + 2] = axis.z * lobe * cp + dz * sp;
+      }
+    }
+    this.geo.attributes.position.needsUpdate = true; this.geo.attributes.normal.needsUpdate = true;
+  }
+}
+
+class Viewer {
+  constructor(canvas) {
+    this.canvas = canvas;
+    this.r = new THREE.WebGLRenderer({ canvas, antialias: true });
+    this.r.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    this.scene = new THREE.Scene(); this.scene.background = new THREE.Color(0x060a13);
+    this.cam = new THREE.PerspectiveCamera(38, 1, 0.1, 300);
+    this.scene.add(new THREE.HemisphereLight(0xc8dcff, 0x221433, 0.85));
+    const dl = new THREE.DirectionalLight(0xffffff, 1.0); dl.position.set(5, 8, 10); this.scene.add(dl);
+    const dl2 = new THREE.DirectionalLight(0x8aa8ff, 0.45); dl2.position.set(-6, -3, -6); this.scene.add(dl2);
+    this.az = 0.5; this.el = 0.28; this.zoom = 1; this.view = 1; this.auto = false;
+    this.target = V3(0, 0, 0); this.targetGoal = V3(0, 0, 0);
+    this.glow = glowTexture();
+    // materials
+    this.chromMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.42, metalness: 0.05, emissive: 0x111122 });
+    const cyl = new THREE.CylinderGeometry(1, 1, 1, 6, 1, true); cyl.translate(0, 0.5, 0);
+    const inst = (color, op, max) => { const m = new THREE.InstancedMesh(cyl, new THREE.MeshBasicMaterial({ color, transparent: true, opacity: op, depthWrite: false }), max); m.count = 0; m.frustumCulled = false; m.renderOrder = 2; this.scene.add(m); return m; };
+    this.kfibM = inst(0x6dffae, 0.85, 80); this.polarM = inst(0x7fd6ff, 0.5, 80); this.astralM = inst(0xa8c4ff, 0.35, 200);
+    this.rungM = inst(0xf4f2ff, 0.9, 40);
+    this.kinM = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.1, 0.1, 0.07, 14), new THREE.MeshStandardMaterial({ color: 0xf2ff5a, emissive: 0x6b7a00, roughness: 0.4 }), 40);
+    this.kinM.count = 0; this.kinM.frustumCulled = false; this.scene.add(this.kinM);
+    this.vesM = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 8, 6), new THREE.MeshStandardMaterial({ color: 0x9f86ff, transparent: true, opacity: 0.75, roughness: 0.5 }), 200);
+    this.vesM.count = 0; this.vesM.frustumCulled = false; this.scene.add(this.vesM);
+    this.vesDirs = (() => { const r = rng(5), a = []; for (let i = 0; i < 90; i++) { const zz = r() * 2 - 1, t = r() * 6.283, s = Math.sqrt(1 - zz * zz); a.push(V3(s * Math.cos(t), s * Math.sin(t), zz)); } return a; })();
+    this.capsP = []; this.golgiP = [];
+    this.mitoM = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 12, 8), new THREE.MeshStandardMaterial({ color: 0xff7a45, emissive: 0x3a0e00, roughness: 0.45 }), 120);
+    this.mitoM.count = 0; this.mitoM.frustumCulled = false; this.scene.add(this.mitoM);
+    this.tubes = []; this.mems = []; this.nucs = []; this.cens = []; this.ringsP = []; this.platesP = []; this.sparksP = [];
+    this.tmpM = new THREE.Matrix4(); this.tmpQ = new THREE.Quaternion(); this.tmpS = new THREE.Vector3(); this.tmpV = new THREE.Vector3();
+    this.anchors = {};
+    this.bindControls();
+  }
+  bindControls() {
+    const c = this.canvas; const ptrs = new Map(); let pinch0 = 0, zoom0 = 1;
+    c.addEventListener('pointerdown', e => { c.setPointerCapture(e.pointerId); ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY }); if (ptrs.size === 2) { const [a, b] = [...ptrs.values()]; pinch0 = Math.hypot(a.x - b.x, a.y - b.y); zoom0 = this.zoom; } });
+    c.addEventListener('pointermove', e => {
+      if (!ptrs.has(e.pointerId)) return;
+      const p = ptrs.get(e.pointerId), dx = e.clientX - p.x, dy = e.clientY - p.y;
+      p.x = e.clientX; p.y = e.clientY;
+      if (ptrs.size === 1) { this.az -= dx * 0.008; this.el = clamp(this.el + dy * 0.008, -1.45, 1.45); }
+      else if (ptrs.size === 2 && pinch0 > 0) { const [a, b] = [...ptrs.values()]; this.zoom = clamp(zoom0 * pinch0 / Math.max(10, Math.hypot(a.x - b.x, a.y - b.y)), 0.45, 2.2); }
+    });
+    const up = e => { ptrs.delete(e.pointerId); if (ptrs.size < 2) pinch0 = 0; };
+    c.addEventListener('pointerup', up); c.addEventListener('pointercancel', up);
+    c.addEventListener('wheel', e => { e.preventDefault(); this.zoom = clamp(this.zoom * Math.exp(e.deltaY * 0.0012), 0.45, 2.2); }, { passive: false });
+    c.addEventListener('dblclick', () => this.resetView());
+  }
+  resetView() { this.az = 0.5; this.el = 0.28; this.zoom = 1; }
+  resize() {
+    const w = this.canvas.clientWidth, h = this.canvas.clientHeight;
+    if (!w || !h) return;
+    this.r.setSize(w, h, false); this.cam.aspect = w / h; this.cam.updateProjectionMatrix();
+  }
+  updateCamera() {
+    const fitR = 5.6 * this.view, vf = this.cam.fov * D2R, hf = 2 * Math.atan(Math.tan(vf / 2) * this.cam.aspect);
+    const dist = fitR / Math.sin(Math.min(vf, hf) / 2) * this.zoom;
+    const ce = Math.cos(this.el);
+    this.cam.position.set(dist * ce * Math.sin(this.az), dist * Math.sin(this.el), dist * ce * Math.cos(this.az));
+    this.cam.position.add(this.target);
+    this.cam.lookAt(this.target);
+  }
+  pool(arr, make) { return i => { while (arr.length <= i) { const o = make(); arr.push(o); } return arr[i]; }; }
+  setInst(mesh, list, r) {
+    const n = Math.min(list.length, mesh.instanceMatrix.count);
+    for (let i = 0; i < n; i++) {
+      const [a, b] = list[i]; const d = this.tmpV.subVectors(b, a); const len = d.length();
+      if (len < 1e-5) { this.tmpM.makeScale(0, 0, 0); mesh.setMatrixAt(i, this.tmpM); continue; }
+      this.tmpQ.setFromUnitVectors(Y, d.divideScalar(len)); this.tmpS.set(r, len, r);
+      this.tmpM.compose(a, this.tmpQ, this.tmpS); mesh.setMatrixAt(i, this.tmpM);
+    }
+    mesh.count = n; mesh.instanceMatrix.needsUpdate = true;
+  }
+  apply(st) {
+    this.targetView = st.view; this.anchors = st.anchors; this.targetGoal.copy(st.target || V3(0, 0, 0));
+    // chromatids
+    const tube = this.pool(this.tubes, () => { const t = new Tube(this.chromMat, NPT, 10); this.scene.add(t.mesh); return t; });
+    st.chromatids.forEach((c, i) => { const t = tube(i); t.mesh.visible = true; t.update(c.pts, c.radii, c.cols); });
+    for (let i = st.chromatids.length; i < this.tubes.length; i++) this.tubes[i].mesh.visible = false;
+    // kinetochores
+    let kn = 0;
+    st.chromatids.forEach(c => {
+      if (c.kin.s < 0.02) return;
+      this.tmpQ.setFromUnitVectors(Y, c.kin.dir); this.tmpS.setScalar(c.kin.s);
+      this.tmpM.compose(c.kin.pos, this.tmpQ, this.tmpS); this.kinM.setMatrixAt(kn++, this.tmpM);
+    });
+    this.kinM.count = kn; this.kinM.instanceMatrix.needsUpdate = true;
+    // fibres
+    this.setInst(this.kfibM, st.kfib, 0.022); this.kfibM.material.opacity = 0.85 * st.kOp;
+    this.setInst(this.polarM, st.polar, 0.016); this.polarM.material.opacity = 0.5 * st.pOp;
+    this.setInst(this.astralM, st.astral, 0.011);
+    this.setInst(this.rungM, st.rungs, 0.016);
+    // membranes
+    const mem = this.pool(this.mems, () => { const m = new Membrane(); this.scene.add(m.mesh); return m; });
+    st.membranes.forEach((m, i) => { const o = mem(i); o.mesh.visible = true; o.update(m.c, m.axis, m.d, m.R0); o.mat.uniforms.uOpacity.value = m.a == null ? 1 : m.a; });
+    for (let i = st.membranes.length; i < this.mems.length; i++) this.mems[i].mesh.visible = false;
+    // nuclei
+    const nuc = this.pool(this.nucs, () => {
+      const env = new THREE.Mesh(new THREE.SphereGeometry(1, 48, 32), fresnelMat(0x3b2a7a, 0xc7b6ff, 0.06, 0.7)); env.renderOrder = 3;
+      const nl = new THREE.Mesh(new THREE.SphereGeometry(1, 24, 16), new THREE.MeshStandardMaterial({ color: 0x5b3fb8, transparent: true, opacity: 0.85, roughness: 0.6 })); nl.renderOrder = 1;
+      this.scene.add(env); this.scene.add(nl); return { env, nl };
+    });
+    st.nuclei.forEach((n, i) => {
+      const o = nuc(i); o.env.visible = true; o.env.position.copy(n.c); if (n.sc) o.env.scale.copy(n.sc); else o.env.scale.setScalar(n.r); o.env.material.uniforms.uOpacity.value = n.a;
+      o.env.material.uniforms.uBase.value = 0.06 + 0.62 * (n.dense || 0); o.env.material.uniforms.uRimA.value = 0.7 + 0.25 * (n.dense || 0);
+      o.nl.visible = n.nl > 0.02; o.nl.position.copy(n.c).add(V3(0.32, 0.25, -0.15).multiplyScalar(n.r)); o.nl.scale.setScalar(0.3 * (n.sc ? n.sc.x : n.r) * n.nl); o.nl.material.opacity = 0.85 * n.a;
+    });
+    for (let i = st.nuclei.length; i < this.nucs.length; i++) { this.nucs[i].env.visible = false; this.nucs[i].nl.visible = false; }
+    // nuclear envelope vesicles
+    let vn = 0;
+    st.vesicles.forEach(v => {
+      const sc = 0.13 * (v.f < 0.15 ? v.f / 0.15 : 1 - (v.f - 0.15) / 0.85);
+      this.vesDirs.forEach(d => {
+        this.tmpV.copy(d).multiplyScalar(v.r * (1 + 0.4 * v.f)).add(v.c);
+        this.tmpQ.setFromUnitVectors(Z, d); this.tmpS.set(sc * 1.4, sc * 1.4, sc * 0.45);
+        this.tmpM.compose(this.tmpV, this.tmpQ, this.tmpS); this.vesM.setMatrixAt(vn++, this.tmpM);
+      });
+    });
+    this.vesM.count = vn; this.vesM.instanceMatrix.needsUpdate = true;
+    // centrosomes
+    const cen = this.pool(this.cens, () => {
+      const g = new THREE.Group(); const cg = new THREE.CylinderGeometry(0.075, 0.075, 0.34, 12);
+      const cm = new THREE.MeshStandardMaterial({ color: 0xfff1c4, emissive: 0x6b4a12, roughness: 0.35 });
+      const a = new THREE.Mesh(cg, cm), b = new THREE.Mesh(cg, cm); b.rotation.z = Math.PI / 2; b.position.set(0.12, 0.12, 0);
+      const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: this.glow, color: 0xffd27a, transparent: true, opacity: 0.55, depthWrite: false, blending: THREE.AdditiveBlending }));
+      sp.scale.setScalar(1.3); g.add(a, b, sp); this.scene.add(g); return g;
+    });
+    st.centrosomes.forEach((c, i) => { const g = cen(i); g.visible = c.s > 0.02; g.position.copy(c.p); g.scale.setScalar(Math.max(0.001, c.s)); });
+    for (let i = st.centrosomes.length; i < this.cens.length; i++) this.cens[i].visible = false;
+    // rings
+    const ring = this.pool(this.ringsP, () => { const m = new THREE.Mesh(new THREE.TorusGeometry(1, 0.04, 10, 72), new THREE.MeshStandardMaterial({ color: 0xff3b4f, emissive: 0x5a0010, transparent: true })); m.renderOrder = 2; this.scene.add(m); return m; });
+    st.rings.forEach((r, i) => { const m = ring(i); m.visible = true; m.position.copy(r.c); m.quaternion.setFromUnitVectors(Z, r.n); m.scale.setScalar(Math.max(0.05, r.r)); m.material.opacity = r.a; });
+    for (let i = st.rings.length; i < this.ringsP.length; i++) this.ringsP[i].visible = false;
+    // plates
+    const plate = this.pool(this.platesP, () => { const m = new THREE.Mesh(new THREE.CircleGeometry(1, 64), new THREE.MeshBasicMaterial({ color: 0xbfa8ff, transparent: true, opacity: 0.2, side: THREE.DoubleSide, depthWrite: false })); m.renderOrder = 5; this.scene.add(m); return m; });
+    st.plates.forEach((p, i) => { const m = plate(i); m.visible = true; m.position.copy(p.c); m.quaternion.setFromUnitVectors(Z, p.n); m.scale.setScalar(p.r); m.material.opacity = 0.16 * p.a; });
+    for (let i = st.plates.length; i < this.platesP.length; i++) this.platesP[i].visible = false;
+    // sperm parts: acrosome caps, golgi, mitochondria
+    const caps = st.caps || [], golgis = st.golgi || [], mitos = st.mitos || [];
+    const cap = this.pool(this.capsP, () => { const m = new THREE.Mesh(new THREE.SphereGeometry(1, 36, 14, 0, Math.PI * 2, 0, 1.2), new THREE.MeshStandardMaterial({ color: 0xffdf7e, emissive: 0x4a3200, roughness: 0.4, transparent: true, side: THREE.DoubleSide, depthWrite: false })); m.renderOrder = 3; this.scene.add(m); return m; });
+    caps.forEach((c, i) => { const m = cap(i); m.visible = true; m.position.copy(c.c); m.scale.copy(c.sc); m.material.opacity = 0.85 * c.a; });
+    for (let i = caps.length; i < this.capsP.length; i++) this.capsP[i].visible = false;
+    const gol = this.pool(this.golgiP, () => {
+      const g = new THREE.Group(), mat = new THREE.MeshStandardMaterial({ color: 0x86e0a8, emissive: 0x0d3a20, roughness: 0.5 });
+      for (let k = 0; k < 4; k++) { const d = new THREE.Mesh(new THREE.SphereGeometry(1, 20, 10), mat); d.scale.set(0.55 - k * 0.08, 0.05, 0.32 - k * 0.04); d.position.y = k * 0.13; d.rotation.z = (k - 1.5) * 0.05; g.add(d); }
+      this.scene.add(g); return g;
+    });
+    golgis.forEach((c, i) => { const g = gol(i); g.visible = true; g.position.copy(c.c); g.scale.setScalar(Math.max(0.001, c.s)); });
+    for (let i = golgis.length; i < this.golgiP.length; i++) this.golgiP[i].visible = false;
+    mitos.forEach((m, i) => { this.tmpM.compose(m.p, m.q, m.s); this.mitoM.setMatrixAt(i, this.tmpM); });
+    this.mitoM.count = Math.min(mitos.length, 120); this.mitoM.instanceMatrix.needsUpdate = true;
+    // sparks
+    const spark = this.pool(this.sparksP, () => { const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: this.glow, color: 0xffffff, transparent: true, depthWrite: false, depthTest: false, blending: THREE.AdditiveBlending })); s.renderOrder = 9; this.scene.add(s); return s; });
+    st.sparks.forEach((s, i) => { const o = spark(i); o.visible = true; o.position.copy(s.p); o.scale.setScalar(1.4 * s.s); o.material.opacity = s.s; });
+    for (let i = st.sparks.length; i < this.sparksP.length; i++) this.sparksP[i].visible = false;
+  }
+  render(dt, snap) {
+    if (this.targetView != null) this.view = snap ? this.targetView : lerp(this.view, this.targetView, 1 - Math.exp(-dt * 3));
+    if (this.auto && !snap) this.az += dt * 0.25;
+    if (snap) this.target.copy(this.targetGoal); else this.target.lerp(this.targetGoal, 1 - Math.exp(-dt * 3));
+    this.updateCamera();
+    this.r.render(this.scene, this.cam);
+  }
+  project(v) {
+    const p = v.clone().project(this.cam);
+    if (p.z > 1 || p.z < -1) return null;
+    return { x: (p.x * 0.5 + 0.5) * this.canvas.clientWidth, y: (-p.y * 0.5 + 0.5) * this.canvas.clientHeight };
+  }
+  snapshot(st, w, h) {
+    const save = { az: this.az, el: this.el, zoom: this.zoom, view: this.view, tv: this.targetView };
+    this.r.setPixelRatio(1); this.r.setSize(w, h, false); this.cam.aspect = w / h; this.cam.updateProjectionMatrix();
+    this.az = 0.5; this.el = 0.28; this.zoom = 0.92;
+    this.apply(st); this.render(0, true);
+    const url = this.canvas.toDataURL('image/jpeg', 0.86);
+    Object.assign(this, { az: save.az, el: save.el, zoom: save.zoom, view: save.view, targetView: save.tv });
+    this.r.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2)); this.resize();
+    return url;
+  }
+}
+// ======================= APP / UI =======================
+const $ = id => document.getElementById(id);
+const app = { lang: 'th', mode: 'mitosis', proc: 'mitosis', stage: 0, T: 0.6, playing: false, speed: 1, autoNext: false, labels: false, student: null, hold: 0, quiz: null, focus: null, dirty: true };
+const DUR = 7; // seconds per stage at 1x
+const Li = () => (app.lang === 'th' ? 0 : 1);
+const tx = k => UI[app.lang][k];
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const LETTERS = 'ABCDEFGHIJ';
+const ICON_PLAY = '<svg viewBox="0 0 24 24"><path d="M7 4.5v15l12-7.5z"/></svg>';
+const ICON_PAUSE = '<svg viewBox="0 0 24 24"><rect x="6" y="5" width="4" height="14"/><rect x="14" y="5" width="4" height="14"/></svg>';
+
+let viewer = null;
+try { viewer = new Viewer($('gl')); } catch (e) {
+  $('viewer').insertAdjacentHTML('beforeend', '<p style="position:absolute;inset:auto 16px 45% 16px;text-align:center;color:#dfe6ff">WebGL is not available in this browser, so the 3D model cannot be shown.</p>');
+}
+
+// ---------- static text ----------
+function renderStatic() {
+  document.documentElement.lang = app.lang;
+  $('sTitle').textContent = tx('title'); $('sLead').textContent = tx('lead'); $('sLangLbl').textContent = tx('langLbl');
+  $('sFirst').textContent = tx('first'); $('sLast').textContent = tx('last'); $('sId').textContent = tx('sid'); $('sGo').textContent = tx('go');
+  document.querySelectorAll('.seg button').forEach(b => b.setAttribute('aria-pressed', b.dataset.lang === app.lang));
+  $('tabMit').textContent = tx('mit'); $('tabMei').textContent = tx('mei'); $('tabQuiz').textContent = tx('quiz');
+  $('langBtn').textContent = app.lang === 'th' ? 'EN' : 'ไทย';
+  $('hint').textContent = tx('hint'); $('autoTxt').textContent = tx('auto'); $('lblTxt').textContent = tx('lblShow'); syncLabelUI();
+  $('bPrev').title = tx('prev'); $('bNext').title = tx('next'); $('bReplay').title = tx('replay');
+  $('bPrev').setAttribute('aria-label', tx('prev')); $('bNext').setAttribute('aria-label', tx('next')); $('bReplay').setAttribute('aria-label', tx('replay'));
+  $('obsTitle').textContent = tx('observe'); $('advTitle').textContent = tx('adv');
+  $('legend').innerHTML =
+    `<span><i style="background:#ff6fae"></i>${tx('legM')}</span>` +
+    `<span><i style="background:#4c9dff"></i>${tx('legP')}</span>` +
+    `<span><i style="background:#f2ff5a;width:8px;height:8px;border-radius:50%"></i>${tx('legK')}</span>` +
+    `<span><i style="background:#6dffae;height:2px"></i>${tx('legS')}</span>`;
+  if (app.student) $('who').innerHTML = `<b>${esc(app.student.first)} ${esc(app.student.last)}</b> · ${esc(app.student.id)}`;
+  updatePlayBtn();
+}
+
+// ---------- lesson ----------
+function stages() { return STAGES[app.proc]; }
+function renderSteps() {
+  const S = stages(), L = Li();
+  const chip = k => `<button type="button" class="chip${k < app.stage ? ' done' : ''}" data-k="${k}"${k === app.stage ? ' aria-current="step"' : ''}><b>${k + 1}</b>${esc(S[k].name[L])}</button>`;
+  let html = '';
+  for (let k = 0; k < S.length; k++) {
+    if (S[k].group && (k === 0 || S[k - 1].group !== S[k].group)) {
+      let inner = ''; let j = k; const gk = S[k].group;
+      while (j < S.length && S[j].group === gk) inner += chip(j++);
+      html += `<li class="grp"><span>${tx(gk === 1 ? 'prophaseI' : 'spermio')}</span><div>${inner}</div></li>`; k = j - 1;
+    } else html += `<li>${chip(k)}</li>`;
+  }
+  $('steps').innerHTML = html;
+}
+function renderStage() {
+  const S = stages(), s = S[app.stage], L = Li(), N = S.length;
+  const pname = app.proc === 'mitosis' ? tx('mit') : tx('mei');
+  $('stEyebrow').textContent = `${pname} · ${tx('stageOf')(app.stage + 1, N)}`;
+  const grp = s.group === 1 ? `${tx('prophaseI')} · ` : '';
+  $('stName').innerHTML = esc(grp + s.name[L]) + (L === 0 ? `<small>${esc((s.group === 1 ? 'Prophase I · ' : '') + s.name[1])}</small>` : '');
+  $('stSub').textContent = s.sub[L];
+  $('stBasic').textContent = s.basic[L];
+  $('stObs').innerHTML = s.obs[L].map(o => `<li>${esc(o)}</li>`).join('');
+  $('stAdv').textContent = s.adv[L];
+  const last = app.stage === N - 1;
+  $('ctaBox').hidden = !last;
+  if (last) $('ctaBtn').textContent = app.proc === 'mitosis' ? tx('toMei') : tx('toQuiz');
+  $('bPrev').disabled = app.stage === 0; $('bNext').disabled = last;
+  if (app.mode !== 'quiz') $('vTag').innerHTML = `${esc(grp + s.name[L])}<small>${app.stage + 1}/${N}</small>`;
+  renderSteps();
+}
+function updatePlayBtn() {
+  const atEnd = !app.playing && app.T >= app.stage + 1 - 1e-3;
+  const b = $('bPlay');
+  b.innerHTML = (app.playing ? ICON_PAUSE : ICON_PLAY) + `<span>${app.playing ? tx('pause') : atEnd ? tx('replay') : tx('play')}</span>`;
+}
+function updateScrub() {
+  const v = Math.round(clamp(app.T - app.stage, 0, 1) * 1000);
+  $('scrub').value = v; $('scrubOut').textContent = Math.round(v / 10) + '%';
+}
+function goStage(k, play = true) {
+  app.stage = clamp(k, 0, stages().length - 1); app.T = app.stage; app.playing = play; app.hold = 0; app.dirty = true;
+  renderStage(); updateScrub(); updatePlayBtn();
+}
+function setMode(m) {
+  document.querySelectorAll('.tabs button').forEach(b => b.setAttribute('aria-selected', b.dataset.mode === m));
+  if (m === 'quiz') return enterQuiz();
+  app.mode = m; app.proc = m; app.focus = null;
+  $('lesson').hidden = false; $('quiz').hidden = true;
+  goStage(0, true);
+  $('panel').scrollTop = 0;
+}
+
+// ---------- quiz ----------
+function shuffle(a) { const r = a.slice(); for (let i = r.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [r[i], r[j]] = [r[j], r[i]]; } return r; }
+function newQuiz() {
+  app.quiz = {
+    result: null,
+    secs: ['mitosis', 'meiosis'].map(proc => {
+      const idx = [...Array(QUIZ[proc].length).keys()];
+      return { proc, items: shuffle(idx), descOrder: shuffle(idx), nameOrder: shuffle(idx), ans: idx.map(() => ({ name: '', desc: '' })) };
+    })
+  };
+}
+let thumbs = null;
+function ensureThumbs() {
+  if (thumbs || !viewer) return;
+  thumbs = {};
+  for (const proc of ['mitosis', 'meiosis']) thumbs[proc] = QUIZ[proc].map(q => viewer.snapshot(PROCESSES[proc](q.T), 400, 300));
+  app.dirty = true;
+}
+function enterQuiz() {
+  app.mode = 'quiz'; app.playing = false; app.hold = 0;
+  $('lesson').hidden = true; $('quiz').hidden = false;
+  if (!app.quiz) newQuiz();
+  $('quiz').innerHTML = `<p class="sub">${tx('preparing')}</p>`;
+  setTimeout(() => { ensureThumbs(); renderQuiz(); if (!app.quiz.result) focusQuiz(0, 0); else { app.focus = null; app.dirty = true; } }, 30);
+  $('panel').scrollTop = 0;
+}
+function secTitle(si) { return si === 0 ? tx('sec1') : tx('sec2'); }
+function thumb(proc, orig) { return thumbs && thumbs[proc] ? thumbs[proc][orig] : ''; }
+function focusQuiz(si, di) {
+  app.focus = { si, di }; app.dirty = true;
+  document.querySelectorAll('.q-card').forEach(c => c.classList.toggle('focus', +c.dataset.si === si && +c.dataset.di === di));
+  $('vTag').innerHTML = esc(tx('quizTag')(di + 1, secTitle(si)));
+}
+function renderQuiz() {
+  const q = app.quiz; if (!q) return;
+  if (q.result) return renderResult();
+  const L = Li();
+  let html = `<div class="q-head"><h2>${esc(tx('qTitle'))}</h2><p>${esc(tx('qLead'))}</p></div>`;
+  q.secs.forEach((sec, si) => {
+    const data = QUIZ[sec.proc];
+    html += `<section class="q-sec"><h3>${esc(secTitle(si))}</h3>`;
+    html += `<ol class="q-desc">${sec.descOrder.map((o, p) => `<li><b>${LETTERS[p]}</b><span>${esc(data[o].desc[L])}</span></li>`).join('')}</ol>`;
+    html += `<div class="q-grid">`;
+    sec.items.forEach((orig, di) => {
+      const a = sec.ans[di];
+      const nameOpts = sec.nameOrder.map(o => `<option value="${o}"${String(a.name) === String(o) ? ' selected' : ''}>${esc(data[o].name[L])}</option>`).join('');
+      const descOpts = sec.descOrder.map((o, p) => `<option value="${o}"${String(a.desc) === String(o) ? ' selected' : ''}>${LETTERS[p]}</option>`).join('');
+      html += `<article class="q-card" data-si="${si}" data-di="${di}">
+        <button type="button" class="q-img" data-si="${si}" data-di="${di}" aria-label="${esc(tx('img')(di + 1))}"><img alt="" src="${thumb(sec.proc, orig)}"><span>${esc(tx('img')(di + 1))}</span></button>
+        <label><span class="ql">${esc(tx('pickName'))}</span><select aria-label="${esc(tx('pickName'))}" id="qn-${si}-${di}" data-si="${si}" data-di="${di}" data-f="name" class="${a.name === '' ? 'empty' : ''}"><option value="">— ${esc(tx('pickName'))} —</option>${nameOpts}</select></label>
+        <label><span class="ql">${esc(tx('pickDesc'))}</span><select aria-label="${esc(tx('pickDesc'))}" id="qd-${si}-${di}" data-si="${si}" data-di="${di}" data-f="desc" class="${a.desc === '' ? 'empty' : ''}"><option value="">— ${esc(tx('pickDesc'))} —</option>${descOpts}</select></label>
+      </article>`;
+    });
+    html += `</div></section>`;
+  });
+  html += `<div class="q-actions"><button type="button" id="qSubmit">${esc(tx('submit'))}</button><span class="q-msg" id="qMsg" role="status"></span></div>`;
+  $('quiz').innerHTML = html;
+  if (app.focus) focusQuiz(app.focus.si, app.focus.di);
+}
+function submitQuiz() {
+  const q = app.quiz; let empty = 0;
+  q.secs.forEach(s => s.ans.forEach(a => { if (a.name === '') empty++; if (a.desc === '') empty++; }));
+  if (empty) { $('qMsg').textContent = tx('missing')(empty); return; }
+  let total = 0, max = 0; const perSec = [];
+  q.secs.forEach(s => {
+    let got = 0;
+    s.items.forEach((orig, di) => { const a = s.ans[di]; if (+a.name === orig) got++; if (+a.desc === orig) got++; });
+    perSec.push({ got, max: s.items.length * 2 }); total += got; max += s.items.length * 2;
+  });
+  q.result = { at: new Date(), total, max, perSec };
+  app.focus = null; app.dirty = true;
+  renderResult(); $('panel').scrollTop = 0;
+}
+function renderResult() {
+  const q = app.quiz, r = q.result, L = Li(), st = app.student || { first: '', last: '', id: '' };
+  const when = r.at.toLocaleString(app.lang === 'th' ? 'th-TH' : 'en-GB', { dateStyle: 'medium', timeStyle: 'short' });
+  const pct = Math.round(r.total / r.max * 100);
+  let html = `<div class="res-top">
+    <div class="res-who"><span class="kicker">${esc(tx('result'))}</span><b>${esc(st.first)} ${esc(st.last)}</b><span>${esc(tx('studentId'))} ${esc(st.id)} · ${esc(tx('submittedAt'))} ${esc(when)}</span></div>
+    <div><div class="score"><strong>${r.total}</strong><em>/ ${r.max} · ${pct}%</em></div>
+    <div class="res-split">${r.perSec.map((p, si) => `<span class="pill">${esc(tx('secScore')(secTitle(si), p.got, p.max))}</span>`).join('')}</div></div></div>`;
+  q.secs.forEach((s, si) => {
+    const data = QUIZ[s.proc];
+    html += `<section class="q-sec"><h3>${esc(secTitle(si))}</h3><div class="tbl-wrap"><table><thead><tr><th>${esc(tx('colImg'))}</th><th>${esc(tx('colName'))}</th><th>${esc(tx('colDesc'))}</th></tr></thead><tbody>`;
+    s.items.forEach((orig, di) => {
+      const a = s.ans[di], nOk = +a.name === orig, dOk = +a.desc === orig;
+      const myLetter = LETTERS[s.descOrder.indexOf(+a.desc)], okLetter = LETTERS[s.descOrder.indexOf(orig)];
+      html += `<tr><td><button type="button" class="q-img" data-si="${si}" data-di="${di}" style="width:64px;aspect-ratio:4/3"><img alt="${esc(tx('img')(di + 1))}" src="${thumb(s.proc, orig)}"></button></td>
+        <td><span class="${nOk ? 'ok' : 'bad'}">${nOk ? '✓' : '✗'} ${esc(data[+a.name].name[L])}</span>${nOk ? '' : `<span class="cor">${esc(tx('correctIs'))}${esc(data[orig].name[L])}</span>`}</td>
+        <td><span class="${dOk ? 'ok' : 'bad'}">${dOk ? '✓' : '✗'} ${myLetter}. ${esc(data[+a.desc].desc[L])}</span>${dOk ? '' : `<span class="cor">${esc(tx('correctIs'))}${okLetter}. ${esc(data[orig].desc[L])}</span>`}</td></tr>`;
+    });
+    html += `</tbody></table></div></section>`;
+  });
+  html += `<div class="q-actions">${downloadsApi ? `<button type="button" id="qSave">${esc(tx('saveSheet'))}</button>` : ''}<button type="button" class="${downloadsApi ? 'ghost' : ''}" id="qRetry">${esc(tx('retry'))}</button><button type="button" class="ghost" id="qBack">${esc(tx('back'))}</button><span class="q-msg" id="qSaveMsg" role="status"></span></div>`;
+  $('quiz').innerHTML = html;
+  $('vTag').innerHTML = esc(tx('result'));
+}
+
+// ---------- answer sheet export (JPG, no answer key) ----------
+let downloadsApi = null;
+try { if (window.claude && typeof window.claude.use === 'function') window.claude.use('downloads').then(d => { downloadsApi = d; if (d && app.mode === 'quiz' && app.quiz && app.quiz.result) renderResult(); }).catch(() => {}); } catch (e) {}
+function loadImg(src) { return new Promise(res => { if (!src) return res(null); const im = new Image(); im.onload = () => res(im); im.onerror = () => res(null); im.src = src; }); }
+function wrapText(ctx, text, maxW) {
+  const seg = (typeof Intl !== 'undefined' && Intl.Segmenter) ? [...new Intl.Segmenter(app.lang, { granularity: 'word' }).segment(text)].map(s => s.segment) : [...text];
+  const lines = []; let line = '';
+  for (const w of seg) { const t = line + w; if (ctx.measureText(t).width > maxW && line) { lines.push(line.trimEnd()); line = w.trimStart(); } else line = t; }
+  if (line) lines.push(line);
+  return lines;
+}
+async function buildSheet() {
+  const q = app.quiz, r = q.result, L = Li(), st = app.student || { first: '', last: '', id: '' };
+  try { await document.fonts.ready; } catch (e) {}
+  const W = 1240, PAD = 72, F = '"IBM Plex Sans Thai", "Bai Jamjuree", sans-serif', FD = '"Bai Jamjuree", "IBM Plex Sans Thai", sans-serif';
+  const imgs = {}; for (const s of q.secs) imgs[s.proc] = await Promise.all(s.items.map(o => loadImg(thumb(s.proc, o))));
+  const measure = document.createElement('canvas').getContext('2d');
+  measure.font = `22px ${F}`;
+  const rows = q.secs.map(s => s.items.map((orig, di) => { const a = s.ans[di], d = QUIZ[s.proc][+a.desc]; const letter = LETTERS[s.descOrder.indexOf(+a.desc)]; return { di, name: QUIZ[s.proc][+a.name].name[L], desc: wrapText(measure, `${letter}. ${d.desc[L]}`, W - PAD * 2 - 170 - 300) }; }));
+  const rowH = rw => Math.max(108, 30 + rw.desc.length * 32);
+  let H = 420; rows.forEach(rs => { H += 70; rs.forEach(rw => H += rowH(rw)); }); H += 80;
+  const c = document.createElement('canvas'); c.width = W; c.height = H; const g = c.getContext('2d');
+  g.fillStyle = '#ffffff'; g.fillRect(0, 0, W, H);
+  g.fillStyle = '#4a37a6'; g.fillRect(0, 0, W, 14);
+  g.textBaseline = 'top'; g.fillStyle = '#161a2c';
+  g.font = `700 40px ${FD}`; g.fillText(tx('sheetTitle'), PAD, 56);
+  g.font = `24px ${F}`; g.fillStyle = '#596079';
+  const when = r.at.toLocaleString(app.lang === 'th' ? 'th-TH' : 'en-GB', { dateStyle: 'medium', timeStyle: 'short' });
+  g.fillText(`${tx('sheetName')}: `, PAD, 140); g.fillText(`${tx('studentId')}: `, PAD, 182); g.fillText(`${tx('submittedAt')}: `, PAD, 224);
+  g.fillStyle = '#161a2c'; g.font = `600 26px ${F}`;
+  const lx = PAD + 190; g.fillText(`${st.first} ${st.last}`, lx, 138); g.fillText(st.id, lx, 180); g.font = `24px ${F}`; g.fillText(when, lx, 224);
+  // score box
+  const bx = W - PAD - 330, by = 120;
+  g.strokeStyle = '#4a37a6'; g.lineWidth = 3; g.strokeRect(bx, by, 330, 170);
+  g.fillStyle = '#596079'; g.font = `600 22px ${FD}`; g.fillText(tx('score'), bx + 24, by + 18);
+  g.fillStyle = '#4a37a6'; g.font = `700 64px ${FD}`; const sTxt = String(r.total); g.fillText(sTxt, bx + 24, by + 48);
+  const sw = g.measureText(sTxt).width; g.fillStyle = '#596079'; g.font = `500 30px ${FD}`; g.fillText(`/ ${r.max}`, bx + 34 + sw, by + 78);
+  g.font = `20px ${F}`; r.perSec.forEach((p, si) => g.fillText(tx('secScore')(secTitle(si), p.got, p.max), bx + 24, by + 114 + si * 26));
+  g.fillStyle = '#dde0ea'; g.fillRect(PAD, 330, W - PAD * 2, 2);
+  let y = 360;
+  q.secs.forEach((s, si) => {
+    g.fillStyle = '#4a37a6'; g.font = `700 28px ${FD}`; g.fillText(secTitle(si), PAD, y); y += 54;
+    g.fillStyle = '#596079'; g.font = `600 18px ${FD}`;
+    g.fillText(tx('colImg'), PAD, y - 22); g.fillText(tx('pickName'), PAD + 170, y - 22); g.fillText(tx('pickDesc'), PAD + 470, y - 22);
+    rows[si].forEach(rw => {
+      const h = rowH(rw), im = imgs[s.proc][rw.di];
+      g.fillStyle = '#060a13'; g.fillRect(PAD, y + 8, 128, 96);
+      if (im) g.drawImage(im, PAD, y + 8, 128, 96);
+      g.fillStyle = '#ffffff'; g.font = `600 15px ${F}`; g.fillText(tx('img')(rw.di + 1), PAD + 6, y + 12);
+      g.fillStyle = '#161a2c'; g.font = `600 24px ${F}`; g.fillText(rw.name, PAD + 170, y + 18);
+      g.font = `22px ${F}`; rw.desc.forEach((ln, k) => g.fillText(ln, PAD + 470, y + 20 + k * 32));
+      y += h; g.fillStyle = '#eceef4'; g.fillRect(PAD, y - 2, W - PAD * 2, 1);
+    });
+    y += 16;
+  });
+  g.fillStyle = '#9aa1bb'; g.font = `16px ${F}`; g.fillText('Cell Division 3D Lab', PAD, H - 44);
+  return new Promise(res => c.toBlob(b => res(b), 'image/jpeg', 0.92));
+}
+async function saveSheet() {
+  const msg = $('qSaveMsg'), btn = $('qSave'); if (!downloadsApi || !btn) return;
+  btn.disabled = true; msg.style.color = 'var(--muted)'; msg.textContent = tx('saving');
+  try {
+    const blob = await buildSheet();
+    const safeId = (app.student && app.student.id || 'student').replace(/[^\w\-]+/g, '_');
+    await downloadsApi.save({ filename: `answer-sheet_${safeId}.jpg`, data: blob });
+    msg.style.color = 'var(--ok)'; msg.textContent = tx('saved');
+  } catch (e) {
+    const code = e && e.code;
+    if (code === 'declined') { msg.style.color = 'var(--muted)'; msg.textContent = tx('declined'); }
+    else { msg.style.color = 'var(--bad)'; msg.textContent = tx('saveFail'); }
+  } finally { btn.disabled = false; }
+}
+
+// ---------- labels ----------
+const lblPool = [];
+function updateLabels() {
+  let n = 0;
+  if (viewer && app.labels && app.mode !== 'quiz' && $('start').hidden) {
+    for (const k of stages()[app.stage].labels) {
+      const a = viewer.anchors[k]; if (!a) continue;
+      const p = viewer.project(a); if (!p) continue;
+      let el = lblPool[n]; if (!el) { el = document.createElement('div'); el.className = 'lbl'; $('labels').appendChild(el); lblPool.push(el); }
+      el.hidden = false; el.textContent = LABELS[k][Li()]; el.style.left = p.x + 'px'; el.style.top = p.y + 'px'; n++;
+    }
+  }
+  for (let i = n; i < lblPool.length; i++) lblPool[i].hidden = true;
+}
+
+// ---------- main loop ----------
+function currentState() {
+  if (app.mode === 'quiz' && app.focus && app.quiz) {
+    const s = app.quiz.secs[app.focus.si];
+    return PROCESSES[s.proc](QUIZ[s.proc][s.items[app.focus.di]].T);
+  }
+  if (app.mode === 'quiz') return PROCESSES.meiosis(12.95);
+  return PROCESSES[app.proc](app.T, performance.now() / 1000);
+}
+let last = performance.now();
+function frame(now) {
+  const dt = Math.min(0.05, (now - last) / 1000); last = now;
+  if (app.mode !== 'quiz') {
+    if (app.playing) {
+      app.T += dt * app.speed / DUR;
+      if (app.T >= app.stage + 1) {
+        app.T = app.stage + 1; app.playing = false;
+        app.hold = app.autoNext && app.stage < stages().length - 1 ? 1.4 : 0;
+        updatePlayBtn();
+      }
+      app.dirty = true; updateScrub();
+    } else if (app.hold > 0) {
+      app.hold -= dt; if (app.hold <= 0) goStage(app.stage + 1, true);
+    }
+  }
+  if (app.mode !== 'quiz' && app.proc === 'meiosis' && app.T > 14.5) app.dirty = true; // beating tail
+  if (viewer) {
+    if (app.dirty) { viewer.apply(currentState()); app.dirty = false; }
+    viewer.render(dt);
+    updateLabels();
+  }
+  requestAnimationFrame(frame);
+}
+
+// ---------- events ----------
+$('bPrev').onclick = () => goStage(app.stage - 1, true);
+$('bNext').onclick = () => goStage(app.stage + 1, true);
+$('bReplay').onclick = () => goStage(app.stage, true);
+$('bPlay').onclick = () => {
+  if (app.playing) app.playing = false;
+  else if (app.T >= app.stage + 1 - 1e-3) { app.T = app.stage; app.playing = true; }
+  else app.playing = true;
+  app.hold = 0; updatePlayBtn();
+};
+$('scrub').oninput = e => { app.T = app.stage + e.target.value / 1000; app.playing = false; app.hold = 0; app.dirty = true; $('scrubOut').textContent = Math.round(e.target.value / 10) + '%'; updatePlayBtn(); };
+$('speed').onchange = e => { app.speed = +e.target.value; };
+$('autoNext').onchange = e => { app.autoNext = e.target.checked; };
+$('steps').onclick = e => { const b = e.target.closest('.chip'); if (b) goStage(+b.dataset.k, true); };
+$('ctaBtn').onclick = () => setMode(app.proc === 'mitosis' ? 'meiosis' : 'quiz');
+document.querySelectorAll('.tabs button').forEach(b => b.onclick = () => setMode(b.dataset.mode));
+$('langBtn').onclick = () => { app.lang = app.lang === 'th' ? 'en' : 'th'; renderStatic(); renderStage(); if (app.mode === 'quiz') { renderQuiz(); if (app.focus) focusQuiz(app.focus.si, app.focus.di); } };
+function syncLabelUI() { $('btnLabels').setAttribute('aria-pressed', app.labels); $('lblBtnTxt').textContent = app.labels ? tx('lblOn') : tx('lblOff'); $('lblToggle').checked = app.labels; }
+function setLabels(v) { app.labels = v; syncLabelUI(); }
+$('btnLabels').onclick = () => setLabels(!app.labels);
+$('lblToggle').onchange = e => setLabels(e.target.checked);
+$('btnAuto').onclick = e => { if (!viewer) return; viewer.auto = !viewer.auto; e.currentTarget.setAttribute('aria-pressed', viewer.auto); };
+$('btnReset').onclick = () => viewer && viewer.resetView();
+$('quiz').addEventListener('change', e => {
+  const s = e.target.closest('select[data-f]'); if (!s) return;
+  const sec = app.quiz.secs[+s.dataset.si]; sec.ans[+s.dataset.di][s.dataset.f] = s.value;
+  s.classList.toggle('empty', s.value === '');
+  focusQuiz(+s.dataset.si, +s.dataset.di);
+});
+$('quiz').addEventListener('click', e => {
+  const im = e.target.closest('.q-img'); if (im) { focusQuiz(+im.dataset.si, +im.dataset.di); return; }
+  if (e.target.id === 'qSubmit') submitQuiz();
+  if (e.target.id === 'qSave') saveSheet();
+  if (e.target.id === 'qRetry') { newQuiz(); renderQuiz(); focusQuiz(0, 0); $('panel').scrollTop = 0; }
+  if (e.target.id === 'qBack') setMode('mitosis');
+});
+document.addEventListener('keydown', e => {
+  if (!$('start').hidden || app.mode === 'quiz') return;
+  if (/^(INPUT|SELECT|TEXTAREA)$/.test(e.target.tagName)) return;
+  if (e.key === 'ArrowRight') goStage(app.stage + 1, true);
+  else if (e.key === 'ArrowLeft') goStage(app.stage - 1, true);
+  else if (e.key === ' ') { e.preventDefault(); $('bPlay').click(); }
+});
+// move the 3D view to a question as soon as the student starts working on it
+$('quiz').addEventListener('focusin', e => { const s = e.target.closest('select[data-si]'); if (s && app.focus && (app.focus.si !== +s.dataset.si || app.focus.di !== +s.dataset.di)) focusQuiz(+s.dataset.si, +s.dataset.di); });
+$('quiz').addEventListener('pointerdown', e => { const c = e.target.closest('.q-card'); if (c && app.focus && (app.focus.si !== +c.dataset.si || app.focus.di !== +c.dataset.di)) focusQuiz(+c.dataset.si, +c.dataset.di); });
+// start screen
+document.querySelectorAll('.seg button').forEach(b => b.onclick = () => { app.lang = b.dataset.lang; renderStatic(); renderStage(); });
+$('startForm').addEventListener('submit', e => {
+  e.preventDefault();
+  const first = $('inFirst').value.trim(), lastN = $('inLast').value.trim(), id = $('inId').value.trim();
+  if (!first || !lastN || !id) { $('sErr').textContent = tx('errFill'); return; }
+  app.student = { first, last: lastN, id };
+  $('start').hidden = true;
+  if (viewer) { viewer.auto = false; viewer.resetView(); }
+  renderStatic(); setMode('mitosis');
+});
+
+// ---------- boot ----------
+if (viewer) {
+  new ResizeObserver(() => { viewer.resize(); app.dirty = true; }).observe($('viewer'));
+  viewer.resize(); viewer.auto = true;
+}
+document.querySelector('.tabs button[data-mode="mitosis"]').setAttribute('aria-selected', 'true');
+renderStatic(); renderStage(); updateScrub();
+requestAnimationFrame(frame);
+</script>
+
+</body></html>

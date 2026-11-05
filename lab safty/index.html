@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>เกมแต่งกายเข้าห้องปฏิบัติการ</title>
+<link rel="stylesheet" href="styles.css?v=8" />
+</head>
+<body>
+
+  <!-- ============== หน้ากรอกชื่อ-รหัสนิสิต ============== -->
+  <section id="screen-login" class="screen active">
+    <form class="login-card" id="login-form" novalidate>
+      <div class="lang-toggle lang-toggle-login">
+        <button type="button" class="lang-btn selected" data-lang="th">TH</button>
+        <button type="button" class="lang-btn" data-lang="en">EN</button>
+      </div>
+      <h1 data-i18n="login_title">เกมแต่งกายเข้าห้องปฏิบัติการ</h1>
+      <p class="subtitle" data-i18n="login_subtitle">กรอกข้อมูลก่อนเริ่มทำกิจกรรม</p>
+
+      <label for="input-name" data-i18n="label_name">ชื่อ-นามสกุล</label>
+      <input type="text" id="input-name" autocomplete="off" required />
+
+      <label for="input-id" data-i18n="label_id">รหัสนิสิต</label>
+      <input type="text" id="input-id" autocomplete="off" required />
+
+      <div class="login-error" id="login-error"></div>
+      <button type="submit" class="btn-primary" data-i18n="btn_start">เริ่มทำกิจกรรม</button>
+    </form>
+  </section>
+
+  <!-- ============== หน้าเกมหลัก ============== -->
+  <section id="screen-game" class="screen">
+    <div class="topbar">
+      <div class="student-tag" id="student-tag"></div>
+      <div class="bsl-tabs">
+        <button type="button" class="bsl-tab selected" data-bsl="1">BSL-1</button>
+        <button type="button" class="bsl-tab" data-bsl="2">BSL-2</button>
+        <button type="button" class="bsl-tab" data-bsl="3">BSL-3</button>
+      </div>
+      <div class="lang-toggle">
+        <button type="button" class="lang-btn selected" data-lang="th">TH</button>
+        <button type="button" class="lang-btn" data-lang="en">EN</button>
+      </div>
+    </div>
+
+    <div class="game-layout">
+
+      <!-- แผงอุปกรณ์ (รวมเป็นแผงเดียว) -->
+      <div class="side-panel">
+        <button type="button" class="panel-scroll-btn" data-target="panel-items" data-dir="up">▲</button>
+        <div class="panel-items" id="panel-items"></div>
+        <button type="button" class="panel-scroll-btn" data-target="panel-items" data-dir="down">▼</button>
+      </div>
+
+      <!-- ตัวละคร + ของพกติดตัว -->
+      <div class="character-column">
+        <div class="character-stage" id="character-stage"></div>
+        <div class="carry-label" data-i18n="carry_label">ของพกติดตัว</div>
+        <div class="carry-boxes">
+          <div class="carry-box" id="carry-box-1"></div>
+          <div class="carry-box" id="carry-box-2"></div>
+        </div>
+        <div class="equipped-list-wrap">
+          <button type="button" class="panel-scroll-btn small" data-target="equipped-list" data-dir="up">▲</button>
+          <div class="equipped-list" id="equipped-list"></div>
+          <button type="button" class="panel-scroll-btn small" data-target="equipped-list" data-dir="down">▼</button>
+        </div>
+        <div class="check-btn-wrap">
+          <button type="button" class="btn-primary" id="btn-check" data-i18n="btn_check">ตรวจสอบการแต่งกาย</button>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ============== Modal สรุปผล ============== -->
+  <div class="modal-overlay" id="modal-overlay">
+    <div class="modal-card">
+      <div id="result-capture">
+        <div class="result-header">
+          <div class="student-name" id="result-student-name"></div>
+          <div class="student-meta" id="result-student-meta"></div>
+        </div>
+        <div class="result-character" id="result-character"></div>
+        <div class="result-messages" id="result-messages"></div>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn-secondary" id="btn-close-modal" data-i18n="btn_close">ปิด / แก้ไขต่อ</button>
+        <button type="button" class="btn-primary" id="btn-download" data-i18n="btn_download">ดาวน์โหลดภาพ (JPG)</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="items-data.js?v=8"></script>
+  <script src="game.js?v=8"></script>
+</body>
+</html>

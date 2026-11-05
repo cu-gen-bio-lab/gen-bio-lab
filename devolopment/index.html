@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>Developmental Biology</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{overscroll-behavior:none}
+body{font-family:sans-serif;background:#f0f4f8;color:#222;-webkit-tap-highlight-color:transparent;overflow-x:hidden}
+.screen{display:none}.screen.active{display:block}
+.back-btn{width:36px;height:36px;border-radius:50%;border:1.5px solid #ccc;background:#fff;cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.page-wrap{min-height:100vh;padding:20px 16px 40px;max-width:520px;margin:0 auto}
+.page-header{display:flex;align-items:center;gap:10px;margin-bottom:22px}
+.page-header h1{font-size:18px;font-weight:700;color:#1a3a5c}
+.badge{font-size:11px;padding:3px 10px;border-radius:20px;font-weight:600;margin-left:auto;white-space:nowrap}
+.next-btn{display:block;width:100%;padding:14px;border:none;border-radius:12px;background:#1a3a5c;color:#fff;font-size:15px;font-weight:600;cursor:pointer;margin-top:20px;transition:opacity .2s}
+.next-btn:disabled{opacity:.3;cursor:not-allowed}
+
+/* SCREEN 1 */
+.animal-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.animal-card{background:#fff;border-radius:14px;padding:20px 12px 16px;cursor:pointer;text-align:center;border:2.5px solid transparent;box-shadow:0 2px 8px rgba(0,0,0,.06);transition:border-color .18s,transform .12s}
+.animal-card:active{transform:scale(.96)}
+.animal-card .a-icon{font-size:48px;margin-bottom:8px;display:block}
+.animal-card h3{font-size:14px;font-weight:700;color:#1a3a5c;margin-bottom:3px}
+.animal-card p{font-size:11px;color:#999}
+
+/* SCREEN 2 */
+.quiz-question{background:#fff;border-radius:14px;padding:18px 16px;margin-bottom:16px;box-shadow:0 2px 8px rgba(0,0,0,.06)}
+.quiz-question p{font-size:14px;color:#1a3a5c;font-weight:600;line-height:1.5}
+.quiz-animal-row{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.quiz-animal-icon{font-size:36px}
+.quiz-animal-name{font-size:16px;font-weight:700;color:#1a3a5c}
+.egg-options{display:flex;flex-direction:column;gap:10px}
+.egg-opt{background:#fff;border:2px solid #e0e0e0;border-radius:12px;padding:14px 16px;cursor:pointer;transition:border-color .18s,background .18s;display:flex;align-items:flex-start;gap:12px}
+.egg-opt:active{transform:scale(.98)}
+.egg-opt.selected{border-color:#378ADD;background:#f0f7ff}
+.egg-opt.correct{border-color:#1D9E75;background:#f0faf6}
+.egg-opt.wrong{border-color:#E24B4A;background:#fff5f5}
+.egg-opt .opt-icon{font-size:26px;flex-shrink:0;margin-top:1px}
+.egg-opt .opt-text h4{font-size:13px;font-weight:700;color:#1a3a5c;margin-bottom:2px}
+.egg-opt .opt-text p{font-size:11px;color:#888;line-height:1.4}
+.quiz-feedback{border-radius:10px;padding:12px 14px;font-size:13px;font-weight:600;margin-top:14px;display:none}
+.quiz-feedback.show{display:block}
+.quiz-feedback.ok{background:#E1F5EE;color:#0F6E56}
+.quiz-feedback.no{background:#FCEBEB;color:#A32D2D}
+.quiz-check-btn{display:block;width:100%;padding:13px;border:none;border-radius:12px;background:#378ADD;color:#fff;font-size:14px;font-weight:600;cursor:pointer;margin-top:14px;transition:opacity .2s}
+.quiz-check-btn:disabled{opacity:.3;cursor:not-allowed}
+
+/* SCREEN 3 */
+#screen-game{padding:10px;background:#f0f4f8;min-height:100vh}
+.game-topbar{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.game-title-wrap{flex:1;min-width:0}
+.game-title{font-size:13px;font-weight:700;color:#1a3a5c;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.game-sub{font-size:10px;color:#6b7c93}
+.sec-lbl{font-size:11px;color:#888;margin-bottom:5px}
+.stage-group{margin-bottom:10px}
+.stage-group-label{font-size:10px;font-weight:700;color:#fff;padding:3px 10px;border-radius:20px;display:inline-block;margin-bottom:5px}
+.drop-row{display:flex;gap:4px;flex-wrap:wrap}
+
+/* Drop slots */
+.ds{flex:1;min-width:52px;height:96px;border:1.5px dashed #ccc;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;background:#fafafa;transition:border-color .2s,background .2s}
+.ds.over{border-color:#378ADD;background:rgba(55,138,221,0.1)}
+.ds.correct{border-color:#1D9E75;background:rgba(29,158,117,0.07)}
+.ds.wrong{border-color:#E24B4A;background:rgba(226,75,74,0.07)}
+.sn{position:absolute;top:3px;left:5px;font-size:9px;color:#bbb;font-weight:600}
+.sl{font-size:9px;color:#bbb;text-align:center}
+.ri{position:absolute;top:3px;right:4px;font-size:10px;display:none}
+.ds.correct .ri,.ds.wrong .ri{display:block}
+/* card placed in slot — image or emoji fallback, no text */
+.ds .ph-placed{width:60px;height:60px;border-radius:6px;display:flex;align-items:center;justify-content:center;pointer-events:none;flex-shrink:0;overflow:hidden}
+.ds .ph-placed img{width:100%;height:100%;object-fit:cover;border-radius:6px}
+.ds .ph-placed .fb-emoji{font-size:28px;width:60px;height:60px;display:flex;align-items:center;justify-content:center;border-radius:6px}
+.slot-name-lbl{position:absolute;bottom:3px;left:0;right:0;text-align:center;font-size:8px;color:#aaa;line-height:1.2;padding:0 3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:none}
+.ds.has-card .slot-name-lbl{color:#bbb}
+.ds .remove-btn{position:absolute;top:2px;right:2px;width:16px;height:16px;border-radius:50%;border:none;background:rgba(0,0,0,0.18);color:#fff;font-size:10px;line-height:16px;text-align:center;cursor:pointer;display:none;padding:0;z-index:5}
+.ds.has-card .remove-btn{display:block}
+.ds.has-card .ri{display:none}
+.ds.correct.has-card .ri{display:block;top:3px;right:20px}
+.ds.wrong.has-card .ri{display:block;top:3px;right:20px}
+
+/* Carousel */
+.carousel-wrap{position:relative;margin-bottom:8px;user-select:none}
+.carousel-track-outer{overflow:hidden;border-radius:12px;background:#fff;border:1px solid #ddd;touch-action:pan-y}
+.carousel-track{display:flex;transition:transform .32s cubic-bezier(.4,0,.2,1);will-change:transform}
+.carousel-item{min-width:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:14px 0 12px;gap:6px;position:relative;cursor:grab;touch-action:none;user-select:none}
+.carousel-item.used{opacity:0.22}
+.used-badge{position:absolute;top:8px;right:14px;font-size:10px;color:#bbb;background:#f0f0ec;border-radius:10px;padding:1px 7px;display:none}
+.car-btn{position:absolute;top:50%;transform:translateY(-50%);width:32px;height:32px;border-radius:50%;border:1px solid #ddd;background:#fff;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:10;box-shadow:0 1px 4px rgba(0,0,0,0.1)}
+.car-btn:disabled{opacity:0.25}
+#car-prev{left:4px}#car-next{right:4px}
+.car-dots{display:flex;gap:4px;justify-content:center;margin-top:6px;flex-wrap:wrap}
+.cdot{width:7px;height:7px;border-radius:50%;border:none;background:#ccc;cursor:pointer;padding:0;transition:background .2s}
+.cdot.cur{background:#378ADD}.cdot.used{background:#ddd}
+/* carousel card: image fills the box; emoji fallback if no image */
+.car-card{border-radius:12px;overflow:hidden;display:flex;align-items:center;justify-content:center;position:relative}
+.car-card img{width:100%;height:100%;object-fit:cover}
+.car-card .fb-emoji{font-size:56px;display:flex;align-items:center;justify-content:center;width:100%;height:100%}
+
+/* Ghost */
+#ghost{position:fixed;pointer-events:none;z-index:9999;display:none;align-items:center;justify-content:center;border:1.5px solid #378ADD;border-radius:10px;background:#fff;box-shadow:0 8px 24px rgba(0,0,0,0.22);opacity:0.92;width:80px;height:80px}
+#ghost-inner{width:68px;height:68px;border-radius:8px;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:36px}
+#ghost-inner img{width:100%;height:100%;object-fit:cover}
+body.dragging{touch-action:none}
+
+.btn-row{display:flex;gap:8px;margin-top:10px;align-items:center;flex-wrap:wrap}
+.btn{padding:9px 16px;border:1px solid #ccc;border-radius:8px;font-size:13px;cursor:pointer;background:#fff;color:#111}
+.btn.primary{background:#1a3a5c;color:#fff;border-color:transparent}
+.stxt{font-size:13px;color:#666}
+
+/* Playback */
+#playback{display:none;margin-top:10px;border:1px solid #ddd;border-radius:12px;overflow:hidden}
+#playback.show{display:block}
+.pb-hdr{padding:10px 12px;background:#f0f0ec;border-bottom:1px solid #ddd;display:flex;align-items:center;justify-content:space-between}
+.pb-hdr strong{font-size:13px;font-weight:500}
+.pb-hdr span{font-size:11px;color:#666}
+.pb-stage-area{min-height:220px;display:flex;align-items:center;justify-content:center;background:#fff;padding:14px}
+.pb-inner{display:flex;flex-direction:column;align-items:center;gap:8px}
+.pb-slotlbl{font-size:11px;color:#888}
+.pb-img-wrap{border-radius:12px;padding:12px;background:#f8f8f6;display:inline-flex}
+.pb-img-wrap.ok{border:2px solid #1D9E75}.pb-img-wrap.no{border:2px solid #E24B4A}
+.pb-ph{width:120px;height:120px;border-radius:10px;display:flex;align-items:center;justify-content:center;overflow:hidden;background:transparent}
+.pb-cmp .cmp-ph{background:transparent}
+.pb-ph img{width:100%;height:100%;object-fit:cover;border-radius:10px}
+.pb-ph .fb-emoji{font-size:60px;display:flex;align-items:center;justify-content:center;width:100%;height:100%}
+.pb-name{font-size:15px;font-weight:600;color:#111;text-align:center}
+.pb-badge{font-size:12px;padding:3px 12px;border-radius:20px}
+.pb-badge.ok{background:#E1F5EE;color:#0F6E56}.pb-badge.no{background:#FCEBEB;color:#A32D2D}
+.pb-hint{font-size:11px;color:#888;text-align:center}
+.pb-cmp{display:flex;align-items:center;gap:10px;margin-top:4px}
+.pb-cmp .cmp-ph{width:60px;height:60px;border-radius:8px;border:2px solid #1D9E75;overflow:hidden;display:flex;align-items:center;justify-content:center}
+.pb-cmp .cmp-ph img{width:100%;height:100%;object-fit:cover}
+.pb-cmp .cmp-ph .fb-emoji{font-size:28px}
+.pb-cmp-lbl{font-size:11px;color:#888}
+.pb-nav{display:flex;align-items:center;gap:6px;padding:10px 12px;border-top:1px solid #ddd;background:#f0f0ec}
+.pb-dots{display:flex;gap:5px;flex:1;justify-content:center;flex-wrap:wrap}
+.dot{width:10px;height:10px;border-radius:50%;border:none;cursor:pointer;background:#ccc}
+.dot.ok{background:#1D9E75}.dot.no{background:#E24B4A}
+.dot.cur{outline:2px solid #378ADD;outline-offset:1px}
+.pb-arr{padding:6px 14px;border:1px solid #ccc;border-radius:8px;font-size:14px;cursor:pointer;background:#fff;min-width:40px;text-align:center}
+.pb-arr:disabled{opacity:.3}
+.pb-prog{font-size:11px;color:#888;min-width:34px;text-align:center}
+.pb-auto{font-size:11px;padding:5px 10px;border:1px solid #ccc;border-radius:8px;cursor:pointer;background:#fff;color:#666}
+</style>
+</head>
+<body>
+<div id="ghost"><div id="ghost-inner"><span id="ghost-emoji"></span></div></div>
+
+<!-- SCREEN 1: Select Animal -->
+<div id="screen-animal" class="screen active">
+  <div class="page-wrap">
+    <div style="text-align:center;padding:16px 0 18px">
+      <div style="font-size:36px;margin-bottom:8px">🔬</div>
+      <h1 style="font-size:20px;font-weight:700;color:#1a3a5c;margin-bottom:4px">Developmental Biology</h1>
+      <p style="font-size:13px;color:#6b7c93">Select an organism to begin</p>
+    </div>
+    <div class="animal-grid">
+      <div class="animal-card" id="ac-starfish" onclick="selectAnimal('starfish',this)">
+        <span class="a-icon">⭐</span><h3>Starfish</h3><p>Sea Star</p>
+      </div>
+      <div class="animal-card" id="ac-frog" onclick="selectAnimal('frog',this)">
+        <span class="a-icon">🐸</span><h3>Frog</h3><p>Amphibian</p>
+      </div>
+      <div class="animal-card" id="ac-chick" onclick="selectAnimal('chick',this)">
+        <span class="a-icon">🐔</span><h3>Chick</h3><p>Avian</p>
+      </div>
+      <div class="animal-card" id="ac-mouse" onclick="selectAnimal('mouse',this)">
+        <span class="a-icon">🐭</span><h3>Mouse</h3><p>Mammal</p>
+      </div>
+    </div>
+    <button class="next-btn" id="animal-next" disabled onclick="goToEggQuiz()">Next →</button>
+  </div>
+</div>
+
+<!-- SCREEN 2: Egg Type Quiz -->
+<div id="screen-egg" class="screen">
+  <div class="page-wrap">
+    <div class="page-header">
+      <button class="back-btn" onclick="showScreen('animal')">‹</button>
+      <h1>Egg Type</h1>
+    </div>
+    <div class="quiz-question">
+      <div class="quiz-animal-row">
+        <span class="quiz-animal-icon" id="q-icon"></span>
+        <span class="quiz-animal-name" id="q-name"></span>
+      </div>
+      <p>What type of egg does this organism have?</p>
+    </div>
+    <div class="egg-options" id="egg-options"></div>
+    <div class="quiz-feedback" id="quiz-feedback"></div>
+    <button class="quiz-check-btn" id="quiz-check-btn" disabled onclick="checkEgg()">Check Answer</button>
+    <button class="next-btn" id="egg-next" style="display:none" onclick="goToGame()">Start Game ▶</button>
+  </div>
+</div>
+
+<!-- SCREEN 3: Game -->
+<div id="screen-game" class="screen">
+  <div class="game-topbar">
+    <button class="back-btn" onclick="showScreen('egg')">‹</button>
+    <div class="game-title-wrap">
+      <div class="game-title" id="game-title"></div>
+      <div class="game-sub">Arrange images in the correct embryonic order</div>
+    </div>
+    <span class="badge" id="game-badge"></span>
+  </div>
+  <p class="sec-lbl">Drop images into the correct slots • Tap ✕ on a slot to return a card</p>
+  <div id="all-drop-groups"></div>
+  <p class="sec-lbl" style="margin-top:8px">Swipe left/right to browse cards • Drag and drop into a slot</p>
+  <div class="carousel-wrap">
+    <button class="car-btn" id="car-prev" onclick="carGo(-1)">‹</button>
+    <div class="carousel-track-outer" id="car-outer">
+      <div class="carousel-track" id="car-track"></div>
+    </div>
+    <button class="car-btn" id="car-next" onclick="carGo(1)">›</button>
+  </div>
+  <div class="car-dots" id="car-dots"></div>
+  <div class="btn-row">
+    <button class="btn primary" onclick="checkAnswer()">Check Answer</button>
+    <button class="btn" onclick="resetGame()">Reset</button>
+    <span class="stxt" id="stxt"></span>
+  </div>
+  <div id="playback">
+    <div class="pb-hdr"><strong>Results</strong><span id="pb-sc"></span></div>
+    <div class="pb-stage-area" id="pb-stage"></div>
+    <div class="pb-nav">
+      <button class="pb-arr" id="pb-prev" onclick="pbGo(-1)">◀</button>
+      <div class="pb-dots" id="pb-dots"></div>
+      <span class="pb-prog" id="pb-prog"></span>
+      <button class="pb-auto" id="pb-auto" onclick="toggleAuto()">▶ Auto</button>
+      <button class="pb-arr" id="pb-next" onclick="pbGo(1)">▶</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── DATA ──────────────────────────────────────────────────────────
+var ANIMALS={
+  starfish:{name:'Starfish', emoji:'⭐',color:'#2E7D32',bg:'#E8F5E9',egg:'isolecithal'},
+  frog:    {name:'Frog',     emoji:'🐸',color:'#F57F17',bg:'#FFF8E1',egg:'mesolecithal'},
+  chick:   {name:'Chick',    emoji:'🐔',color:'#C62828',bg:'#FCE4EC',egg:'telolecithal'},
+  mouse:   {name:'Mouse',    emoji:'🐭',color:'#6A1B9A',bg:'#F3E5F5',egg:'isolecithal'}
+};
+var EGG_TYPES=[
+  {id:'isolecithal', name:'Isolecithal Egg', icon:'🔵',desc:'Little/no yolk, evenly distributed\nHoloblastic cleavage (equal) — e.g. Starfish, Mouse'},
+  {id:'mesolecithal',name:'Mesolecithal Egg',icon:'🟡',desc:'Moderate yolk\nHoloblastic cleavage (unequal)'},
+  {id:'telolecithal',name:'Telolecithal Egg',icon:'🔴',desc:'Large yolk concentrated at vegetal pole\nMeroblastic / Discoidal cleavage'}
+];
+var STAGES_META=[
+  {id:'cleavage',     name:'Cleavage',     color:'#1565C0'},
+  {id:'blastulation', name:'Blastulation', color:'#2E7D32'},
+  {id:'gastrulation', name:'Gastrulation', color:'#E65100'},
+  {id:'organogenesis',name:'Organogenesis',color:'#6A1B9A'}
+];
+
+// Image filename convention: animalkey_stageslug.png  (all lowercase, spaces→underscore)
+// e.g. starfish_zygote.png, frog_2cell.png, chick_primitive_streak.png
+// If the file is missing the card shows the emoji fallback automatically.
+var PHASES={
+  starfish:{
+    cleavage:[
+      {id:'sf_cl1',name:'Zygote',       file:'starfish_zygote.png',       emoji:'🥚',color:'#1565C0',stage:'cleavage'},
+      {id:'sf_cl2',name:'2-cell',       file:'starfish_2cell.png',        emoji:'⚪',color:'#1976D2',stage:'cleavage'},
+      {id:'sf_cl3',name:'4-cell',       file:'starfish_4cell.png',        emoji:'⬜',color:'#1E88E5',stage:'cleavage'},
+      {id:'sf_cl4',name:'8-cell',       file:'starfish_8cell.png',        emoji:'🔷',color:'#2196F3',stage:'cleavage'},
+      {id:'sf_cl5',name:'Morula',       file:'starfish_morula.png',       emoji:'🫐',color:'#42A5F5',stage:'cleavage'}
+    ],
+    blastulation:[
+      {id:'sf_bl1',name:'Early Blastula',file:'starfish_early_blastula.png',emoji:'💠',color:'#2E7D32',stage:'blastulation'},
+      {id:'sf_bl2',name:'Blastula',      file:'starfish_blastula.png',      emoji:'🟢',color:'#388E3C',stage:'blastulation'}
+    ],
+    gastrulation:[
+      {id:'sf_ga1',name:'Early Gastrula',file:'starfish_early_gastrula.png',emoji:'🔴',color:'#E65100',stage:'gastrulation'},
+      {id:'sf_ga2',name:'Gastrula',      file:'starfish_gastrula.png',      emoji:'🌀',color:'#EF6C00',stage:'gastrulation'}
+    ],
+    organogenesis:[
+      {id:'sf_or1',name:'Neurula',file:'starfish_neurula.png',emoji:'🧠',color:'#6A1B9A',stage:'organogenesis'},
+      {id:'sf_or2',name:'Larva',  file:'starfish_larva.png',  emoji:'🌟',color:'#7B1FA2',stage:'organogenesis'}
+    ]
+  },
+  frog:{
+    cleavage:[
+      {id:'fr_cl1',name:'Zygote', file:'frog_zygote.png', emoji:'🥚',color:'#1565C0',stage:'cleavage'},
+      {id:'fr_cl2',name:'2-cell', file:'frog_2cell.png',  emoji:'⚪',color:'#1976D2',stage:'cleavage'},
+      {id:'fr_cl3',name:'4-cell', file:'frog_4cell.png',  emoji:'⬜',color:'#1E88E5',stage:'cleavage'},
+      {id:'fr_cl4',name:'8-cell', file:'frog_8cell.png',  emoji:'🔶',color:'#2196F3',stage:'cleavage'},
+      {id:'fr_cl5',name:'Morula', file:'frog_morula.png', emoji:'🍇',color:'#42A5F5',stage:'cleavage'}
+    ],
+    blastulation:[
+      {id:'fr_bl1',name:'Blastula',file:'frog_blastula.png',emoji:'🟡',color:'#F57F17',stage:'blastulation'}
+    ],
+    gastrulation:[
+      {id:'fr_ga1',name:'Early Gastrula',file:'frog_early_gastrula.png',emoji:'🔴',color:'#BF360C',stage:'gastrulation'},
+      {id:'fr_ga2',name:'Mid Gastrula',  file:'frog_mid_gastrula.png',  emoji:'🌀',color:'#D84315',stage:'gastrulation'},
+      {id:'fr_ga3',name:'Late Gastrula', file:'frog_late_gastrula.png', emoji:'🟠',color:'#E64A19',stage:'gastrulation'}
+    ],
+    organogenesis:[
+      {id:'fr_or1',name:'Neurula', file:'frog_neurula.png', emoji:'🧠',color:'#1B5E20',stage:'organogenesis'},
+      {id:'fr_or2',name:'Tadpole', file:'frog_tadpole.png', emoji:'🐟',color:'#2E7D32',stage:'organogenesis'}
+    ]
+  },
+  chick:{
+    cleavage:[
+      {id:'ch_cl1',name:'Zygote', file:'chick_zygote.png', emoji:'🥚',color:'#B71C1C',stage:'cleavage'},
+      {id:'ch_cl2',name:'2-cell', file:'chick_2cell.png',  emoji:'⚪',color:'#C62828',stage:'cleavage'},
+      {id:'ch_cl3',name:'4-cell', file:'chick_4cell.png',  emoji:'⬜',color:'#D32F2F',stage:'cleavage'},
+      {id:'ch_cl4',name:'8-cell', file:'chick_8cell.png',  emoji:'🔴',color:'#E53935',stage:'cleavage'},
+      {id:'ch_cl5',name:'16-cell',file:'chick_16cell.png', emoji:'🔸',color:'#F44336',stage:'cleavage'},
+      {id:'ch_cl6',name:'Morula', file:'chick_morula.png', emoji:'🍓',color:'#EF5350',stage:'cleavage'}
+    ],
+    blastulation:[
+      {id:'ch_bl1',name:'Blastoderm',    file:'chick_blastoderm.png',     emoji:'🟥',color:'#C62828',stage:'blastulation'},
+      {id:'ch_bl2',name:'Area Pellucida',file:'chick_area_pellucida.png', emoji:'💛',color:'#E53935',stage:'blastulation'}
+    ],
+    gastrulation:[
+      {id:'ch_ga1',name:'Primitive Streak',file:'chick_primitive_streak.png',emoji:'➖',color:'#BF360C',stage:'gastrulation'},
+      {id:'ch_ga2',name:"Hensen's Node",   file:'chick_hensens_node.png',    emoji:'🔴',color:'#D84315',stage:'gastrulation'},
+      {id:'ch_ga3',name:'Gastrula',         file:'chick_gastrula.png',         emoji:'🌀',color:'#E64A19',stage:'gastrulation'}
+    ],
+    organogenesis:[
+      {id:'ch_or1',name:'Somite Stage',file:'chick_somite_stage.png',emoji:'🔲',color:'#880E4F',stage:'organogenesis'},
+      {id:'ch_or2',name:'Head Fold',   file:'chick_head_fold.png',   emoji:'🐥',color:'#AD1457',stage:'organogenesis'},
+      {id:'ch_or3',name:'Early Embryo',file:'chick_early_embryo.png',emoji:'🐔',color:'#C2185B',stage:'organogenesis'}
+    ]
+  },
+  mouse:{
+    cleavage:[
+      {id:'mo_cl1',name:'Zygote', file:'mouse_zygote.png', emoji:'🥚',color:'#4A148C',stage:'cleavage'},
+      {id:'mo_cl2',name:'2-cell', file:'mouse_2cell.png',  emoji:'⚪',color:'#6A1B9A',stage:'cleavage'},
+      {id:'mo_cl3',name:'4-cell', file:'mouse_4cell.png',  emoji:'⬜',color:'#7B1FA2',stage:'cleavage'},
+      {id:'mo_cl4',name:'8-cell', file:'mouse_8cell.png',  emoji:'🟣',color:'#8E24AA',stage:'cleavage'},
+      {id:'mo_cl5',name:'Morula', file:'mouse_morula.png', emoji:'🫐',color:'#9C27B0',stage:'cleavage'}
+    ],
+    blastulation:[
+      {id:'mo_bl1',name:'Early Blastocyst',    file:'mouse_early_blastocyst.png',    emoji:'⭕',color:'#1A237E',stage:'blastulation'},
+      {id:'mo_bl2',name:'Blastocyst',           file:'mouse_blastocyst.png',           emoji:'🔵',color:'#283593',stage:'blastulation'},
+      {id:'mo_bl3',name:'Expanded Blastocyst',  file:'mouse_expanded_blastocyst.png',  emoji:'💙',color:'#303F9F',stage:'blastulation'}
+    ],
+    gastrulation:[
+      {id:'mo_ga1',name:'Primitive Streak',file:'mouse_primitive_streak.png',emoji:'➖',color:'#BF360C',stage:'gastrulation'},
+      {id:'mo_ga2',name:'Gastrula',         file:'mouse_gastrula.png',         emoji:'🌀',color:'#D84315',stage:'gastrulation'}
+    ],
+    organogenesis:[
+      {id:'mo_or1',name:'Somite Stage',file:'mouse_somite_stage.png',emoji:'🔲',color:'#4A148C',stage:'organogenesis'},
+      {id:'mo_or2',name:'Embryo E8.5', file:'mouse_embryo_e85.png',  emoji:'🐭',color:'#6A1B9A',stage:'organogenesis'}
+    ]
+  }
+};
+
+// ── IMAGE HELPER ───────────────────────────────────────────────────
+// Creates an <img> that falls back to an emoji-coloured div if the file is missing.
+// containerEl: the div to fill  |  p: phase object  |  size: px number
+function fillImgOrEmoji(containerEl, p, size){
+  var img=document.createElement('img');
+  img.src=p.file;
+  img.alt=p.name;
+  img.style.width=size+'px'; img.style.height=size+'px'; img.style.objectFit='cover'; img.style.borderRadius='6px';
+  img.onerror=function(){
+    img.remove();
+    var fb=document.createElement('div'); fb.className='fb-emoji';
+    fb.style.width=size+'px'; fb.style.height=size+'px'; fb.style.background=p.color;
+    fb.style.borderRadius='6px'; fb.style.display='flex'; fb.style.alignItems='center'; fb.style.justifyContent='center';
+    fb.style.fontSize=Math.round(size*0.45)+'px'; fb.textContent=p.emoji;
+    containerEl.appendChild(fb);
+  };
+  containerEl.appendChild(img);
+}
+
+// ── STATE ──────────────────────────────────────────────────────────
+var selectedAnimal=null, eggAnswered=false;
+var allPhases=[], shuffled=[], slotContent={};
+var pbIdx=0, pbData=[], autoTimer=null, busy=false, carIdx=0;
+var carDragId=null, carTouchSX=0, carTouchSY=0, carSwipeHandled=false;
+var ghostEl=document.getElementById('ghost');
+var ghostInner=document.getElementById('ghost-inner');
+var ghostEmojiEl=document.getElementById('ghost-emoji');
+
+// ── SCREEN NAV ─────────────────────────────────────────────────────
+function showScreen(s){
+  document.querySelectorAll('.screen').forEach(function(el){el.classList.remove('active');});
+  document.getElementById('screen-'+s).classList.add('active');
+  window.scrollTo(0,0);
+}
+
+// ── SCREEN 1 ───────────────────────────────────────────────────────
+function selectAnimal(key,el){
+  selectedAnimal=key; eggAnswered=false;
+  document.querySelectorAll('.animal-card').forEach(function(c){c.classList.remove('selected');c.style.borderColor='transparent';});
+  el.classList.add('selected'); el.style.borderColor=ANIMALS[key].color;
+  document.getElementById('animal-next').disabled=false;
+}
+
+// ── SCREEN 2 ───────────────────────────────────────────────────────
+function goToEggQuiz(){
+  var a=ANIMALS[selectedAnimal];
+  document.getElementById('q-icon').textContent=a.emoji;
+  document.getElementById('q-name').textContent=a.name;
+  var opts=[].concat(EGG_TYPES).sort(function(){return Math.random()-.5;});
+  var cont=document.getElementById('egg-options'); cont.innerHTML='';
+  opts.forEach(function(egg){
+    var div=document.createElement('div'); div.className='egg-opt'; div.dataset.egg=egg.id;
+    div.innerHTML='<span class="opt-icon">'+egg.icon+'</span>'
+      +'<div class="opt-text"><h4>'+egg.name+'</h4><p>'+egg.desc.replace('\n','<br>')+'</p></div>';
+    div.onclick=function(){
+      if(eggAnswered) return;
+      document.querySelectorAll('.egg-opt').forEach(function(d){d.classList.remove('selected');});
+      div.classList.add('selected');
+      document.getElementById('quiz-check-btn').disabled=false;
+    };
+    cont.appendChild(div);
+  });
+  document.getElementById('quiz-feedback').className='quiz-feedback';
+  document.getElementById('quiz-feedback').textContent='';
+  document.getElementById('quiz-check-btn').disabled=true;
+  document.getElementById('quiz-check-btn').style.display='block';
+  document.getElementById('egg-next').style.display='none';
+  eggAnswered=false;
+  showScreen('egg');
+}
+
+function checkEgg(){
+  var sel=document.querySelector('.egg-opt.selected'); if(!sel) return;
+  var chosen=sel.dataset.egg, correct=ANIMALS[selectedAnimal].egg;
+  var fb=document.getElementById('quiz-feedback');
+  eggAnswered=true;
+  if(chosen===correct){
+    sel.classList.remove('selected'); sel.classList.add('correct');
+    fb.className='quiz-feedback show ok';
+    fb.textContent='✅ Correct! '+EGG_TYPES.find(function(e){return e.id===correct;}).name+' — '+ANIMALS[selectedAnimal].name;
+    document.getElementById('quiz-check-btn').style.display='none';
+    document.getElementById('egg-next').style.display='block';
+  } else {
+    sel.classList.remove('selected'); sel.classList.add('wrong');
+    fb.className='quiz-feedback show no';
+    fb.textContent='❌ Incorrect — please reconsider and try again.';
+    setTimeout(function(){
+      document.querySelectorAll('.egg-opt').forEach(function(d){d.classList.remove('selected','correct','wrong');});
+      fb.className='quiz-feedback'; document.getElementById('quiz-check-btn').disabled=true; eggAnswered=false;
+    },1800);
+  }
+}
+
+// ── SCREEN 3 ───────────────────────────────────────────────────────
+function goToGame(){
+  var a=ANIMALS[selectedAnimal];
+  document.getElementById('game-title').textContent=a.emoji+' '+a.name;
+  var badge=document.getElementById('game-badge');
+  badge.textContent=EGG_TYPES.find(function(e){return e.id===a.egg;}).name.replace(' Egg','');
+  badge.style.background=a.bg; badge.style.color=a.color;
+  allPhases=[];
+  STAGES_META.forEach(function(sm){(PHASES[selectedAnimal][sm.id]||[]).forEach(function(p){allPhases.push(p);});});
+  resetGame(); showScreen('game');
+}
+
+// ── GAME ───────────────────────────────────────────────────────────
+function resetGame(){
+  clearAuto(); slotContent={}; pbData=[]; pbIdx=0; busy=false; carIdx=0;
+  shuffled=[].concat(allPhases).sort(function(){return Math.random()-.5;});
+
+  // Build drop slots grouped by stage
+  var groupsEl=document.getElementById('all-drop-groups'); groupsEl.innerHTML='';
+  var slotIdx=0;
+  STAGES_META.forEach(function(sm){
+    var phases=PHASES[selectedAnimal][sm.id]||[]; if(!phases.length) return;
+    var group=document.createElement('div'); group.className='stage-group';
+    var lbl=document.createElement('div'); lbl.className='stage-group-label';
+    lbl.style.background=sm.color; lbl.textContent=sm.name; group.appendChild(lbl);
+    var row=document.createElement('div'); row.className='drop-row';
+    phases.forEach(function(p){
+      var i=slotIdx++;
+      var slot=document.createElement('div'); slot.className='ds'; slot.dataset.idx=i; slot.dataset.cid=p.id;
+      var sn=document.createElement('span'); sn.className='sn'; sn.textContent=i+1; slot.appendChild(sn);
+      var sl=document.createElement('span'); sl.className='sl'; sl.id='sl-'+i; sl.textContent='Drop'; slot.appendChild(sl);
+      var snm=document.createElement('span'); snm.className='slot-name-lbl'; snm.textContent=p.name; slot.appendChild(snm);
+      var rb=document.createElement('button'); rb.className='remove-btn'; rb.textContent='✕';
+      rb.addEventListener('click',(function(idx){return function(e){e.stopPropagation();removeFromSlot(idx);};})(i));
+      slot.appendChild(rb);
+      var ri=document.createElement('span'); ri.className='ri'; ri.id='ri-'+i; slot.appendChild(ri);
+      row.appendChild(slot);
+    });
+    group.appendChild(row); groupsEl.appendChild(group);
+  });
+
+  // Build carousel cards (image or emoji fallback, no name label)
+  var track=document.getElementById('car-track'); track.innerHTML='';
+  var outerW=document.getElementById('car-outer').clientWidth||(window.innerWidth-28);
+  var cardSz=Math.min(outerW-80,150); if(cardSz<90)cardSz=90;
+  shuffled.forEach(function(p,i){
+    var item=document.createElement('div'); item.className='carousel-item'; item.dataset.cardId=p.id; item.dataset.ci=i;
+    var card=document.createElement('div'); card.className='car-card';
+    card.style.width=cardSz+'px'; card.style.height=cardSz+'px';
+    fillImgOrEmoji(card, p, cardSz);
+    item.appendChild(card);
+    var b=document.createElement('div'); b.className='used-badge'; b.id='ubadge-'+i; b.textContent='Used'; item.appendChild(b);
+    item.addEventListener('pointerdown', onCarPointerDown);
+    item.addEventListener('pointermove', onCarPointerMove);
+    item.addEventListener('pointerup',   onCarPointerUp);
+    item.addEventListener('pointercancel',onCarPointerUp);
+    track.appendChild(item);
+  });
+  buildCarDots(); renderCar();
+  document.getElementById('playback').classList.remove('show');
+  document.getElementById('stxt').textContent='';
+}
+
+function getPhase(id){return allPhases.find(function(p){return p.id===id;})||shuffled.find(function(p){return p.id===id;});}
+function isUsed(id){return Object.values(slotContent).indexOf(id)>=0;}
+
+function removeFromSlot(i){
+  if(!slotContent[i]) return;
+  var cid=slotContent[i]; markUsed(cid,false);
+  var slot=document.querySelector('.ds[data-idx="'+i+'"]');
+  var pc=slot.querySelector('.ph-placed'); if(pc) pc.remove();
+  document.getElementById('sl-'+i).style.display='';
+  slot.classList.remove('correct','wrong','has-card');
+  document.getElementById('ri-'+i).textContent='';
+  delete slotContent[i];
+  shuffled.forEach(function(p,idx){if(p.id===cid){carIdx=idx;renderCar();}});
+  document.getElementById('playback').classList.remove('show');
+  document.getElementById('stxt').textContent='';
+}
+
+function renderCar(){
+  var w=document.getElementById('car-outer').clientWidth||(window.innerWidth-28);
+  document.getElementById('car-track').style.transform='translateX(-'+(carIdx*w)+'px)';
+  document.getElementById('car-prev').disabled=carIdx===0;
+  document.getElementById('car-next').disabled=carIdx===shuffled.length-1;
+  buildCarDots();
+}
+function carGo(dir){var n=carIdx+dir;if(n<0||n>=shuffled.length)return;carIdx=n;renderCar();}
+function buildCarDots(){
+  var dots=document.getElementById('car-dots'); dots.innerHTML='';
+  shuffled.forEach(function(p,i){
+    var b=document.createElement('button');
+    b.className='cdot'+(i===carIdx?' cur':'')+(isUsed(p.id)?' used':'');
+    b.onclick=function(){carIdx=i;renderCar();}; dots.appendChild(b);
+  });
+}
+function markUsed(cardId,used){
+  shuffled.forEach(function(p,i){
+    if(p.id===cardId){
+      var item=document.querySelector('.carousel-item[data-ci="'+i+'"]');
+      if(item) item.classList.toggle('used',used);
+      var b=document.getElementById('ubadge-'+i); if(b) b.style.display=used?'block':'none';
+    }
+  }); buildCarDots();
+}
+function advanceCarousel(){
+  for(var i=carIdx+1;i<shuffled.length;i++){if(!isUsed(shuffled[i].id)){carIdx=i;renderCar();return;}}
+  for(var i=0;i<carIdx;i++){if(!isUsed(shuffled[i].id)){carIdx=i;renderCar();return;}}
+}
+
+// Ghost shows image or emoji fallback
+function showGhost(p,cx,cy){
+  ghostInner.innerHTML='';
+  ghostInner.style.background='transparent';
+  fillImgOrEmoji(ghostInner, p, 68);
+  ghostEl.style.display='flex'; moveGhost(cx,cy);
+}
+function moveGhost(cx,cy){ghostEl.style.left=(cx-40)+'px';ghostEl.style.top=(cy-40)+'px';}
+function hideGhost(){ghostEl.style.display='none';}
+
+function getSlotAt(cx,cy){
+  var slots=document.querySelectorAll('.ds'),best=null,bestDist=999999;
+  for(var i=0;i<slots.length;i++){
+    var r=slots[i].getBoundingClientRect();
+    var cx2=(r.left+r.right)/2,cy2=(r.top+r.bottom)/2,dist=Math.abs(cx-cx2)+Math.abs(cy-cy2);
+    if(Math.abs(cx-cx2)<(r.width/2)+40&&Math.abs(cy-cy2)<(r.height/2)+40){if(dist<bestDist){bestDist=dist;best=slots[i];}}
+  } return best;
+}
+
+function dropOnSlot(slot,cardId){
+  var i=parseInt(slot.dataset.idx);
+  if(slotContent[i]){
+    markUsed(slotContent[i],false);
+    var old=slot.querySelector('.ph-placed'); if(old) old.remove();
+    document.getElementById('sl-'+i).style.display=''; slot.classList.remove('has-card');
+  }
+  slotContent[i]=cardId; markUsed(cardId,true);
+  var ph=getPhase(cardId);
+  if(ph){
+    var div=document.createElement('div'); div.className='ph-placed';
+    fillImgOrEmoji(div, ph, 60);
+    document.getElementById('sl-'+i).style.display='none';
+    slot.insertBefore(div,slot.querySelector('.remove-btn'));
+  }
+  slot.classList.add('has-card'); slot.classList.remove('correct','wrong');
+  document.getElementById('ri-'+i).textContent='';
+  document.getElementById('playback').classList.remove('show');
+  document.getElementById('stxt').textContent='';
+  slot.classList.add('over'); setTimeout(function(){slot.classList.remove('over');},300);
+  advanceCarousel();
+}
+
+// ── DRAG: Unified Pointer Events (touch + mouse + stylus) ──────────
+var pDragId=null, pStartX=0, pStartY=0, pMoved=false, pSwipeDone=false;
+
+function onCarPointerDown(e){
+  var item=this; if(item.classList.contains('used')) return;
+  // capture pointer so we keep getting events even if finger leaves element
+  item.setPointerCapture(e.pointerId);
+  pDragId=item.dataset.cardId;
+  pStartX=e.clientX; pStartY=e.clientY;
+  pMoved=false; pSwipeDone=false;
+  showGhost(getPhase(pDragId),e.clientX,e.clientY);
+  document.body.classList.add('dragging');
+  e.preventDefault();
+}
+
+function onCarPointerMove(e){
+  if(!pDragId) return;
+  e.preventDefault();
+  var dx=e.clientX-pStartX, dy=e.clientY-pStartY;
+  var ax=Math.abs(dx), ay=Math.abs(dy);
+  if(ax>6||ay>6) pMoved=true;
+
+  // swipe left/right to change card (only if clearly horizontal and not yet dragging vertically)
+  if(!pSwipeDone && pMoved && ax>55 && ax>ay*2){
+    hideGhost(); document.body.classList.remove('dragging');
+    if(dx<0) carGo(1); else carGo(-1);
+    pDragId=null; pSwipeDone=true; return;
+  }
+
+  moveGhost(e.clientX,e.clientY);
+  document.querySelectorAll('.ds').forEach(function(s){s.classList.remove('over');});
+  var sl=getSlotAt(e.clientX,e.clientY); if(sl) sl.classList.add('over');
+}
+
+function onCarPointerUp(e){
+  if(!pDragId){ document.body.classList.remove('dragging'); return; }
+  e.preventDefault();
+  hideGhost();
+  document.body.classList.remove('dragging');
+  document.querySelectorAll('.ds').forEach(function(s){s.classList.remove('over');});
+  if(pMoved && !pSwipeDone){
+    var sl=getSlotAt(e.clientX,e.clientY);
+    if(sl) dropOnSlot(sl,pDragId);
+  }
+  pDragId=null;
+}
+
+// ── CHECK ANSWER + PLAYBACK ────────────────────────────────────────
+function buildPbInner(d){
+  var inner=document.createElement('div');inner.className='pb-inner';
+  var sm=STAGES_META.find(function(s){return s.id===d.phase.stage;});
+  var slbl=document.createElement('div');slbl.className='pb-slotlbl';
+  slbl.textContent=(sm?sm.name:'')+'  •  Slot '+d.slotNum;inner.appendChild(slbl);
+  var wrap=document.createElement('div');wrap.className='pb-img-wrap '+(d.isOk?'ok':'no');
+  var ph=document.createElement('div');ph.className='pb-ph';
+  fillImgOrEmoji(ph,d.phase,120);
+  wrap.appendChild(ph);inner.appendChild(wrap);
+  var pname=document.createElement('div');pname.className='pb-name';pname.textContent=d.phase.name;inner.appendChild(pname);
+  var badge=document.createElement('div');badge.className='pb-badge '+(d.isOk?'ok':'no');
+  badge.textContent=d.isOk?'✅ Correct':'❌ Incorrect';inner.appendChild(badge);
+  if(!d.isOk){
+    var hint=document.createElement('div');hint.className='pb-hint';
+    hint.textContent='This slot should be: '+d.correct.name;inner.appendChild(hint);
+    var cmp=document.createElement('div');cmp.className='pb-cmp';
+    var cph=document.createElement('div');cph.className='cmp-ph';
+    fillImgOrEmoji(cph,d.correct,60);
+    var cl=document.createElement('span');cl.className='pb-cmp-lbl';cl.textContent=d.correct.name;
+    cmp.appendChild(cph);cmp.appendChild(cl);inner.appendChild(cmp);
+  }
+  return inner;
+}
+function checkAnswer(){
+  var correct=0;pbData=[];
+  allPhases.forEach(function(p,i){
+    var cid=slotContent[i];var ri=document.getElementById('ri-'+i);
+    var slot=document.querySelector('.ds[data-idx="'+i+'"]');
+    if(!cid){if(slot){slot.classList.remove('correct','wrong');}if(ri)ri.textContent='';return;}
+    var isOk=cid===p.id;
+    slot.classList.toggle('correct',isOk);slot.classList.toggle('wrong',!isOk);
+    ri.textContent=isOk?'✅':'❌';if(isOk)correct++;
+    pbData.push({phase:getPhase(cid),isOk:isOk,correct:p,slotNum:i+1});
+  });
+  pbData=pbData.filter(Boolean);
+  document.getElementById('stxt').textContent='Score: '+correct+'/'+allPhases.length;
+  if(!pbData.length)return;
+  pbIdx=0;busy=false;
+  document.getElementById('pb-sc').textContent=correct+'/'+allPhases.length+' correct';
+  buildDots();
+  var stg=document.getElementById('pb-stage');stg.innerHTML='';
+  var inner=buildPbInner(pbData[0]);inner.style.opacity='1';stg.appendChild(inner);
+  updateNav();document.getElementById('playback').classList.add('show');
+  setTimeout(function(){document.getElementById('playback').scrollIntoView({behavior:'smooth',block:'nearest'});},100);
+}
+function goToPb(idx){
+  if(busy||idx===pbIdx||idx<0||idx>=pbData.length)return;
+  busy=true;var stg=document.getElementById('pb-stage');var old=stg.querySelector('.pb-inner');var op=1;
+  function out(){op-=0.1;if(op<=0){stg.innerHTML='';var ni=buildPbInner(pbData[idx]);ni.style.opacity='0';stg.appendChild(ni);pbIdx=idx;updateNav();var op2=0;function inn(){op2+=0.1;if(op2>=1){ni.style.opacity='1';busy=false;return;}ni.style.opacity=''+op2;requestAnimationFrame(inn);}requestAnimationFrame(inn);return;}old.style.opacity=''+op;requestAnimationFrame(out);}
+  requestAnimationFrame(out);
+}
+function updateNav(){
+  document.getElementById('pb-prev').disabled=pbIdx===0;
+  document.getElementById('pb-next').disabled=pbIdx===pbData.length-1;
+  document.getElementById('pb-prog').textContent=(pbIdx+1)+'/'+pbData.length;
+  document.querySelectorAll('.dot').forEach(function(el,i){el.classList.toggle('cur',i===pbIdx);});
+}
+function buildDots(){
+  var dots=document.getElementById('pb-dots');dots.innerHTML='';
+  pbData.forEach(function(d,i){var b=document.createElement('button');b.className='dot '+(d.isOk?'ok':'no');b.onclick=function(){goToPb(i);};dots.appendChild(b);});
+}
+function pbGo(dir){clearAuto();goToPb(pbIdx+dir);}
+function toggleAuto(){
+  var btn=document.getElementById('pb-auto');
+  if(autoTimer){clearAuto();btn.textContent='▶ Auto';return;}
+  btn.textContent='⏸ Pause';
+  autoTimer=setInterval(function(){if(pbIdx<pbData.length-1)goToPb(pbIdx+1);else{clearAuto();btn.textContent='▶ Auto';}},2200);
+}
+function clearAuto(){if(autoTimer){clearInterval(autoTimer);autoTimer=null;}}
+window.addEventListener('resize',function(){if(document.getElementById('screen-game').classList.contains('active'))renderCar();});
+</script>
+</body>
+</html>

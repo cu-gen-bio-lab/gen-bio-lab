@@ -1,0 +1,711 @@
+<!doctype html><html lang="th"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><style>body{margin:0}[hidden]{display:none!important}</style></head><body>
+<title>สายใยอาหาร สระน้ำอุทยาน 100 ปี</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anuphan:wght@400;500;600&family=Mitr:wght@400;500&display=swap">
+<style>
+/* Layout: sticky organism tray on the left, the worksheet (6 trophic bands) on the right; stacks on phones. */
+:root{
+  --bg:#e9f1ee; --surface:#fbfdfc; --ink:#14282b; --muted:#587170; --line:#c8d8d3;
+  --accent:#0b7a70; --accent-ink:#ffffff; --hot:#d3efe9; --arrow:#22383b; --danger:#b4363a; --on-danger:#ffffff;
+  --paper:#ffffff; --paper-edge:#9fb3ae; --paper-line:#d3dfdb;
+  --t0:#f6f3fc; --t1:#fcf3f6; --t2:#fdf5ef; --t3:#fdf9ec; --t4:#f6faec; --t5:#eef8f1;
+  --ns0:#6a4fb0; --nf0:#ece6f9; --ns1:#b0385c; --nf1:#fae3ea; --ns2:#c2581a; --nf2:#fde6d6;
+  --ns3:#9c6f00; --nf3:#faeec8; --ns4:#5a8512; --nf4:#e9f3d4; --ns5:#1d8547; --nf5:#d9f0e1;
+  --dets:#7a5532; --detf:#f1e6d9; --shadow:0 6px 18px rgba(20,40,43,.16);
+  --f-display:"Mitr","Anuphan","Noto Sans Thai",sans-serif;
+  --f-body:"Anuphan","Noto Sans Thai","Leelawadee UI",system-ui,sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0d1718; --surface:#142224; --ink:#e2eeec; --muted:#93aaa7; --line:#284043;
+  --accent:#3cc0b2; --accent-ink:#06211e; --hot:#173f3b; --arrow:#cfe0dd; --danger:#e0676b; --on-danger:#1a0607;
+  --paper:#111d1f; --paper-edge:#3a5255; --paper-line:#253a3c;
+  --t0:#17152a; --t1:#211520; --t2:#22191a; --t3:#201d14; --t4:#18200f; --t5:#0f2218;
+  --ns0:#a990f0; --nf0:#2a2346; --ns1:#ef7f9f; --nf1:#3d1b27; --ns2:#f59a63; --nf2:#3e2414;
+  --ns3:#e2b54a; --nf3:#3a2e0e; --ns4:#a6d35b; --nf4:#26340f; --ns5:#5fd28f; --nf5:#123522;
+  --dets:#c79c72; --detf:#33261a; --shadow:0 6px 18px rgba(0,0,0,.45); color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#0d1718; --surface:#142224; --ink:#e2eeec; --muted:#93aaa7; --line:#284043;
+  --accent:#3cc0b2; --accent-ink:#06211e; --hot:#173f3b; --arrow:#cfe0dd; --danger:#e0676b; --on-danger:#1a0607;
+  --paper:#111d1f; --paper-edge:#3a5255; --paper-line:#253a3c;
+  --t0:#17152a; --t1:#211520; --t2:#22191a; --t3:#201d14; --t4:#18200f; --t5:#0f2218;
+  --ns0:#a990f0; --nf0:#2a2346; --ns1:#ef7f9f; --nf1:#3d1b27; --ns2:#f59a63; --nf2:#3e2414;
+  --ns3:#e2b54a; --nf3:#3a2e0e; --ns4:#a6d35b; --nf4:#26340f; --ns5:#5fd28f; --nf5:#123522;
+  --dets:#c79c72; --detf:#33261a; --shadow:0 6px 18px rgba(0,0,0,.45); color-scheme:dark;
+}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.55}
+.app{display:grid;grid-template-columns:310px minmax(0,1fr);gap:22px;max-width:1300px;margin:0 auto;
+  padding-block:20px 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.side{position:sticky;top:max(14px,env(safe-area-inset-top,0px));align-self:start;max-height:calc(100vh - 28px);overflow:auto;
+  display:flex;flex-direction:column;gap:18px;padding-right:4px}
+.side h1{font-family:var(--f-display);font-weight:500;font-size:22px;line-height:1.3;margin:0;text-wrap:balance}
+.eyebrow{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--accent);font-weight:600;margin:0 0 4px}
+.steps{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:8px;counter-reset:s}
+.steps li{display:grid;grid-template-columns:24px 1fr;gap:8px;color:var(--muted);font-size:14px}
+.steps li::before{counter-increment:s;content:counter(s);width:22px;height:22px;border-radius:50%;background:var(--accent);color:var(--accent-ink);
+  font-size:12px;font-weight:600;display:grid;place-items:center;margin-top:1px}
+.steps b{color:var(--ink);font-weight:600}
+label.f{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--muted)}
+input[type=text]{font:inherit;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:8px 11px;min-width:0}
+input[type=text]:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.tray-h{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.tray-h h2{font-family:var(--f-display);font-weight:500;font-size:16px;margin:0}
+.tray-h span{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.tray{display:flex;flex-wrap:wrap;gap:7px}
+.chip{font:inherit;font-size:15px;font-weight:500;color:var(--ink);background:var(--surface);border:1.5px solid var(--line);border-radius:999px;
+  padding:5px 13px;cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none;transition:border-color .12s,background .12s}
+.chip:hover{border-color:var(--accent)}
+.chip.used{color:var(--muted);border-style:dashed;cursor:default;background:transparent}
+.chip.used::after{content:" ✓";color:var(--accent)}
+.chip.armed{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.addrow{display:flex;gap:6px}
+.addrow input{flex:1}
+.note{font-size:13px;color:var(--muted);margin:0}
+.btn{font:inherit;font-size:14px;font-weight:500;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:10px;
+  padding:7px 12px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.btn:hover:not(:disabled){border-color:var(--accent)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn.warn{color:var(--danger)}
+.btn.confirm{background:var(--danger);color:var(--on-danger);border-color:var(--danger)}
+.main{min-width:0;display:flex;flex-direction:column;gap:12px}
+.toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between}
+.tgroup{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--surface)}
+.seg button{font:inherit;font-size:14px;font-weight:500;border:0;background:transparent;color:var(--muted);padding:7px 12px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+.status{font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums;min-height:20px}
+.status b{color:var(--accent);font-weight:600}
+.board-wrap{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:8px}
+#board{display:block;width:100%;height:auto;user-select:none;-webkit-user-select:none;touch-action:pan-y pinch-zoom}
+#board.armed{cursor:copy}
+/* worksheet */
+.paper{fill:var(--paper);stroke:var(--paper-edge);stroke-width:2}
+.band{transition:fill .12s}
+.band.b0{fill:var(--t0)}.band.b1{fill:var(--t1)}.band.b2{fill:var(--t2)}.band.b3{fill:var(--t3)}.band.b4{fill:var(--t4)}.band.b5{fill:var(--t5)}
+.band.hot{fill:var(--hot)}
+.sep{stroke:var(--paper-line);stroke-width:1.4}
+.title{font-family:var(--f-display);font-size:26px;font-weight:500;fill:var(--ink);text-anchor:middle}
+.sub{font-size:16px;font-style:italic;fill:var(--muted)}
+.author{font-size:16px;font-weight:500;fill:var(--ink);text-anchor:end}
+.lv-en{font-family:var(--f-display);font-size:18px;fill:var(--ink)}
+.lv-th{font-size:15px;font-weight:500}
+.lv-th.l0{fill:var(--ns0)}.lv-th.l1{fill:var(--ns1)}.lv-th.l2{fill:var(--ns2)}.lv-th.l3{fill:var(--ns3)}.lv-th.l4{fill:var(--ns4)}.lv-th.l5{fill:var(--ns5)}
+.hint{fill:var(--muted);font-size:19px;text-anchor:middle}
+.node{cursor:grab;touch-action:none}
+.node rect{stroke-width:2}
+.node text{font-family:var(--f-body);font-size:19px;font-weight:500;fill:var(--ink);text-anchor:middle;dominant-baseline:central;pointer-events:none}
+.node.lv0 rect{fill:var(--nf0);stroke:var(--ns0)}.node.lv1 rect{fill:var(--nf1);stroke:var(--ns1)}.node.lv2 rect{fill:var(--nf2);stroke:var(--ns2)}
+.node.lv3 rect{fill:var(--nf3);stroke:var(--ns3)}.node.lv4 rect{fill:var(--nf4);stroke:var(--ns4)}.node.lv5 rect{fill:var(--nf5);stroke:var(--ns5)}
+.node.det{cursor:default}
+.node.det rect{fill:var(--detf);stroke:var(--dets);stroke-dasharray:7 4}
+.node.sel rect{stroke:var(--accent);stroke-width:3.5}
+.node.target rect{stroke:var(--accent);stroke-width:4;fill:var(--hot)}
+#board.mode-arrow .node{cursor:crosshair}
+.handle{cursor:crosshair}
+.handle .hz{fill:transparent}
+.handle circle.dot{fill:var(--accent)}
+.handle path,.del path{fill:none;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;pointer-events:none}
+.handle path{stroke:var(--accent-ink)}
+.del{cursor:pointer}
+.del circle{fill:var(--danger)}
+.del path{stroke:var(--on-danger)}
+.arrow .hit{stroke:transparent;stroke-width:16;fill:none;pointer-events:stroke;cursor:pointer}
+.arrow .line{stroke:var(--arrow);stroke-width:2.2;fill:none;pointer-events:none}
+.arrow.sel .line{stroke:var(--accent);stroke-width:3.2}
+.temp{stroke:var(--accent);stroke-width:2.4;stroke-dasharray:7 5;fill:none;pointer-events:none}
+.ah{fill:var(--arrow)}.ahs{fill:var(--accent)}
+.ghost{position:fixed;left:0;top:0;z-index:60;pointer-events:none;font-weight:500;font-size:15px;color:var(--accent-ink);background:var(--accent);
+  border-radius:999px;padding:5px 13px;box-shadow:var(--shadow);transform:translate(-50%,-50%)}
+.toast{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom,0px));transform:translateX(-50%) translateY(10px);z-index:70;
+  background:var(--ink);color:var(--bg);padding:9px 16px;border-radius:12px;font-size:14px;box-shadow:var(--shadow);opacity:0;pointer-events:none;
+  transition:opacity .18s,transform .18s;max-width:calc(100vw - 32px);text-align:center}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+@media (max-width:880px){
+  .app{grid-template-columns:1fr}
+  .side{position:static;max-height:none;overflow:visible;padding-right:0}
+}
+@media (prefers-reduced-motion: reduce){*{transition:none!important}}
+</style>
+
+<div class="app">
+  <aside class="side">
+    <div>
+      <p class="eyebrow">ปฏิบัติการระบบนิเวศ</p>
+      <h1>สายใยอาหารในระบบนิเวศสระน้ำในอุทยาน 100 ปี</h1>
+    </div>
+    <ol class="steps">
+      <li><span><b>ลากชื่อสิ่งมีชีวิต</b> ไปวางในลำดับขั้นที่เหมาะสม (หรือแตะชื่อ แล้วแตะบนแผ่นงาน)</span></li>
+      <li><span><b>ลากจุด ➜ ที่ขอบกล่อง</b> จากสิ่งที่ถูกกินไปยังผู้กิน ลูกศรชี้ทางที่พลังงานถ่ายทอด</span></li>
+      <li><span><b>ส่งออกเป็น PDF หรือ JPG</b> แล้วอัปโหลดส่งใน myCourseVille</span></li>
+    </ol>
+    <label class="f" for="author">ชื่อผู้จัดทำ / เลขประจำตัว / กลุ่ม
+      <input type="text" id="author" maxlength="70" placeholder="เช่น สมชาย ใจดี 6730000021 กลุ่ม 3" autocomplete="off">
+    </label>
+    <div>
+      <div class="tray-h"><h2>สิ่งมีชีวิตในสระ</h2><span id="trayCount"></span></div>
+    </div>
+    <div class="tray" id="tray" aria-label="รายชื่อสิ่งมีชีวิต"></div>
+    <form class="addrow" id="addForm">
+      <input type="text" id="addName" maxlength="30" placeholder="เพิ่มสิ่งมีชีวิตอื่น" autocomplete="off" aria-label="ชื่อสิ่งมีชีวิตที่ต้องการเพิ่ม">
+      <button class="btn" type="submit" id="addBtn">เพิ่ม</button>
+    </form>
+    <p class="note">กล่องจะเปลี่ยนสีตามลำดับขั้นที่วาง ใช้ “ซากอินทรีย์” มุมล่างขวาเพื่อแสดงการย่อยสลาย งานจะถูกเก็บไว้ในเบราว์เซอร์นี้อัตโนมัติ</p>
+  </aside>
+
+  <main class="main">
+    <div class="toolbar">
+      <div class="tgroup">
+        <div class="seg" role="group" aria-label="โหมดการลาก">
+          <button type="button" id="modeMove" aria-pressed="true">ย้ายกล่อง</button>
+          <button type="button" id="modeArrow" aria-pressed="false">วาดลูกศร</button>
+        </div>
+        <button class="btn" type="button" id="undoBtn" title="Ctrl+Z">↶ ย้อนกลับ</button>
+        <button class="btn warn" type="button" id="delBtn" disabled>ลบที่เลือก</button>
+        <button class="btn warn" type="button" id="clearBtn">ล้างทั้งหมด</button>
+      </div>
+      <div class="tgroup">
+        <button class="btn primary" type="button" id="pdfBtn">ส่งออก PDF</button>
+        <button class="btn primary" type="button" id="jpgBtn">ส่งออก JPG</button>
+      </div>
+    </div>
+    <div class="status" id="status"></div>
+    <div class="board-wrap">
+      <svg id="board" viewBox="0 0 1000 1304" role="img" aria-label="แผ่นงานสายใยอาหาร">
+        <defs>
+          <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto"><path class="ah" d="M0,0 L10,5 L0,10 z"/></marker>
+          <marker id="ahSel" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path class="ahs" d="M0,0 L10,5 L0,10 z"/></marker>
+        </defs>
+        <g id="static"></g>
+        <g id="layer"></g>
+      </svg>
+    </div>
+  </main>
+</div>
+<div class="ghost" id="ghost" hidden></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(() => {
+const W = 1000, H = 1304, HEAD = 96, BAND = 200, LABEL_W = 170, NH = 40;
+const LEVELS = [
+  { en1: 'Quinary', en2: 'Consumer(s) (ถ้ามี)', th: 'ผู้บริโภคลำดับที่ 5' },
+  { en1: 'Quaternary', en2: 'Consumer(s)', th: 'ผู้บริโภคลำดับที่ 4' },
+  { en1: 'Tertiary', en2: 'Consumer(s)', th: 'ผู้บริโภคลำดับที่ 3' },
+  { en1: 'Secondary', en2: 'Consumer(s)', th: 'ผู้บริโภคลำดับที่ 2' },
+  { en1: 'Primary', en2: 'Consumer(s)', th: 'ผู้บริโภคลำดับที่ 1' },
+  { en1: 'Producer(s)', en2: '', th: 'ผู้ผลิต' }
+];
+const ORGS = ['แพลงก์ตอนพืช','สาหร่ายหางกระรอก','ตะไคร่น้ำ','แพลงก์ตอนสัตว์','หอยโข่ง',
+  'หอยเชอรี่','กุ้งฝอย','ลูกน้ำยุง','ด้วงดิ่ง','มวนกรรเชียง',
+  'ปลานิล','ปลาหางนกยูง','ปลาสอด','ปลาดุก','ปลาเข็ม',
+  'ลูกอ๊อดกบบัว','เขียดน้ำนอง','เต่านา','เต่าแก้มแดง','ตะพาบ','นกยางกรอก'];
+const TITLE = 'สายใยอาหารในระบบนิเวศสระน้ำในอุทยาน 100 ปี';
+const SUB = 'ระบุชื่อสิ่งมีชีวิตและเขียนลูกศร';
+const DET_ID = 'detritus', DET_NAME = 'ซากอินทรีย์';
+const NODE_FONT = '500 19px Anuphan, "Noto Sans Thai", sans-serif';
+const KEY = 'foodweb-pond100-v1';
+// fixed light palette for exported files
+const EX = {
+  paper:'#ffffff', edge:'#8fa5a0', sep:'#cfdcd8', ink:'#14282b', muted:'#587170', arrow:'#22383b',
+  band:['#f6f3fc','#fcf3f6','#fdf5ef','#fdf9ec','#f6faec','#eef8f1'],
+  ns:['#6a4fb0','#b0385c','#c2581a','#9c6f00','#5a8512','#1d8547'],
+  nf:['#ece6f9','#fae3ea','#fde6d6','#faeec8','#e9f3d4','#d9f0e1'],
+  dets:'#7a5532', detf:'#f1e6d9'
+};
+
+const $ = id => document.getElementById(id);
+const svg = $('board'), layer = $('layer'), tray = $('tray'), ghost = $('ghost');
+
+let state = { nodes: [], arrows: [], custom: [], author: '' };
+let hist = [], sel = null, mode = 'move', armed = null, drag = null, pdrag = null, suppressClick = false, seq = 1;
+
+const bandTop = i => HEAD + i * BAND;
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const levelAt = y => clamp(Math.floor((y - HEAD) / BAND), 0, 5);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const uid = p => p + Date.now().toString(36) + (seq++);
+
+const mctx = document.createElement('canvas').getContext('2d');
+const wcache = new Map();
+function nodeW(name) {
+  if (!wcache.has(name)) { mctx.font = NODE_FONT; wcache.set(name, Math.ceil(mctx.measureText(name).width) + 32); }
+  return wcache.get(name);
+}
+function detNode() {
+  const w = nodeW(DET_NAME);
+  return { id: DET_ID, name: DET_NAME, fixed: true, x: W - 30 - w / 2, y: bandTop(5) + BAND - 36 };
+}
+const allNodes = () => [...state.nodes, detNode()];
+const byId = id => id === DET_ID ? detNode() : state.nodes.find(n => n.id === id);
+
+/* ---------- history & persistence ---------- */
+const snapshot = () => JSON.stringify({ nodes: state.nodes, arrows: state.arrows, custom: state.custom });
+function pushHist(s) { hist.push(s || snapshot()); if (hist.length > 80) hist.shift(); }
+function save() { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} }
+function load() {
+  try {
+    const s = JSON.parse(localStorage.getItem(KEY) || 'null');
+    if (s && Array.isArray(s.nodes)) {
+      state.nodes = s.nodes.filter(n => n && typeof n.name === 'string' && isFinite(n.x) && isFinite(n.y));
+      state.custom = Array.isArray(s.custom) ? s.custom.filter(x => typeof x === 'string') : [];
+      state.author = typeof s.author === 'string' ? s.author : '';
+      const ids = new Set(state.nodes.map(n => n.id).concat(DET_ID));
+      state.arrows = (Array.isArray(s.arrows) ? s.arrows : []).filter(a => a && ids.has(a.from) && ids.has(a.to) && a.from !== a.to);
+    }
+  } catch (e) {}
+}
+
+/* ---------- geometry ---------- */
+function clampFree(n) {
+  const w = nodeW(n.name);
+  n.x = clamp(n.x, LABEL_W + w / 2, W - 22 - w / 2);
+  n.y = clamp(n.y, HEAD + NH / 2 + 6, bandTop(6) - NH / 2 - 6);
+}
+function snapToBand(n) {
+  clampFree(n);
+  const t = bandTop(levelAt(n.y));
+  n.y = clamp(n.y, t + NH / 2 + 8, t + BAND - NH / 2 - 8);
+}
+function clipRect(n, to, pad = 5) {
+  const dx = to.x - n.x, dy = to.y - n.y;
+  const hw = nodeW(n.name) / 2 + pad, hh = NH / 2 + pad;
+  const t = Math.min(dx ? hw / Math.abs(dx) : Infinity, dy ? hh / Math.abs(dy) : Infinity);
+  if (!isFinite(t) || t >= 1) return { x: n.x, y: n.y };
+  return { x: n.x + dx * t, y: n.y + dy * t };
+}
+function arrowGeom(a) {
+  const A = byId(a.from), B = byId(a.to);
+  if (!A || !B) return null;
+  const reverse = state.arrows.some(o => o.from === a.to && o.to === a.from);
+  let c = null;
+  if (reverse) {
+    const dx = B.x - A.x, dy = B.y - A.y, L = Math.hypot(dx, dy) || 1, k = Math.min(42, L * 0.22);
+    c = { x: (A.x + B.x) / 2 - dy / L * k, y: (A.y + B.y) / 2 + dx / L * k };
+  }
+  const p1 = clipRect(A, c || B), p2 = clipRect(B, c || A, 7);
+  return { p1, p2, c };
+}
+const f1 = v => Math.round(v * 10) / 10;
+const pathD = g => g.c ? `M${f1(g.p1.x)} ${f1(g.p1.y)} Q${f1(g.c.x)} ${f1(g.c.y)} ${f1(g.p2.x)} ${f1(g.p2.y)}` : `M${f1(g.p1.x)} ${f1(g.p1.y)} L${f1(g.p2.x)} ${f1(g.p2.y)}`;
+function toSvg(e) {
+  const p = svg.createSVGPoint(); p.x = e.clientX; p.y = e.clientY;
+  return p.matrixTransform(svg.getScreenCTM().inverse());
+}
+function overBoard(e) {
+  const r = svg.getBoundingClientRect();
+  return e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom;
+}
+function nodeAt(x, y) {
+  const el = document.elementFromPoint(x, y);
+  const g = el && el.closest ? el.closest('[data-node]') : null;
+  return g ? g.dataset.node : null;
+}
+const authorLine = () => 'ผู้จัดทำ: ' + (state.author.trim() || '..............................................');
+
+/* ---------- rendering ---------- */
+function buildStatic() {
+  let s = `<clipPath id="pclip"><rect x="4" y="4" width="${W - 8}" height="${H - 8}" rx="22"/></clipPath>`;
+  s += `<rect class="paper" x="4" y="4" width="${W - 8}" height="${H - 8}" rx="22"/>`;
+  s += `<g clip-path="url(#pclip)">`;
+  LEVELS.forEach((L, i) => {
+    const t = bandTop(i);
+    s += `<rect class="band b${i}" id="band${i}" x="0" y="${t}" width="${W}" height="${BAND}"/>`;
+    s += `<line class="sep" x1="14" x2="${W - 14}" y1="${t}" y2="${t}"/>`;
+  });
+  s += `</g><rect x="4" y="4" width="${W - 8}" height="${H - 8}" rx="22" fill="none" class="paper" style="fill:none"/>`;
+  s += `<text class="title" x="${W / 2}" y="42" dominant-baseline="central">${TITLE}</text>`;
+  s += `<text class="sub" x="26" y="76" dominant-baseline="central">${SUB}</text>`;
+  s += `<text class="author" id="authorText" x="${W - 26}" y="76" dominant-baseline="central"></text>`;
+  LEVELS.forEach((L, i) => {
+    const t = bandTop(i);
+    s += `<text class="lv-en" x="26" y="${t + 32}" dominant-baseline="central">${L.en1}</text>`;
+    if (L.en2) s += `<text class="lv-en" x="26" y="${t + 56}" dominant-baseline="central">${esc(L.en2)}</text>`;
+    s += `<text class="lv-th l${i}" x="26" y="${t + (L.en2 ? 82 : 58)}" dominant-baseline="central">${L.th}</text>`;
+  });
+  $('static').innerHTML = s;
+  updateAuthor();
+}
+function updateAuthor() { const t = $('authorText'); if (t) t.textContent = authorLine(); }
+
+function nodeSVG(n) {
+  const w = nodeW(n.name), h = NH;
+  const isSel = sel && sel.type === 'node' && sel.id === n.id;
+  const isTgt = drag && drag.kind === 'arrow' && drag.target === n.id;
+  const cls = 'node ' + (n.fixed ? 'det' : 'lv' + levelAt(n.y)) + (isSel ? ' sel' : '') + (isTgt ? ' target' : '');
+  let s = `<g data-node="${n.id}" class="${cls}" transform="translate(${f1(n.x)},${f1(n.y)})">`;
+  s += `<rect x="${-w / 2}" y="${-h / 2}" width="${w}" height="${h}" rx="${n.fixed ? 9 : 20}"/>`;
+  s += `<text y="1">${esc(n.name)}</text>`;
+  s += `<g data-handle="${n.id}" class="handle" transform="translate(${w / 2},0)"><title>ลากเพื่อสร้างลูกศร</title><circle class="hz" r="17"/><circle class="dot" r="10.5"/><path d="M-4.5 0 H4.5 M1 -3.6 L4.6 0 L1 3.6"/></g>`;
+  if (isSel && !n.fixed) s += `<g data-del="${n.id}" class="del" transform="translate(${-w / 2 + 2},${-h / 2 + 1})"><title>นำออก</title><circle r="10.5"/><path d="M-3.6 -3.6 L3.6 3.6 M3.6 -3.6 L-3.6 3.6"/></g>`;
+  return s + '</g>';
+}
+function render() {
+  let s = '';
+  for (const a of state.arrows) {
+    const g = arrowGeom(a); if (!g) continue;
+    const isSel = sel && sel.type === 'arrow' && sel.id === a.id, d = pathD(g);
+    s += `<g data-arrow="${a.id}" class="arrow${isSel ? ' sel' : ''}"><path class="hit" d="${d}"/><path class="line" d="${d}" marker-end="url(#${isSel ? 'ahSel' : 'ah'})"/></g>`;
+  }
+  if (drag && drag.kind === 'arrow' && drag.cur) {
+    const A = byId(drag.from), p1 = clipRect(A, drag.cur);
+    s += `<path class="temp" d="M${f1(p1.x)} ${f1(p1.y)} L${f1(drag.cur.x)} ${f1(drag.cur.y)}" marker-end="url(#ahSel)"/>`;
+  }
+  if (!state.nodes.length) {
+    const cx = (LABEL_W + W) / 2;
+    s += `<text class="hint" x="${cx}" y="${bandTop(2) + 100}">ลากชื่อสิ่งมีชีวิตจากรายการมาวางในลำดับขั้นที่เหมาะสม</text>`;
+    s += `<text class="hint" x="${cx}" y="${bandTop(2) + 134}">จากนั้นลากจุด ➜ ที่ขอบกล่องไปยังผู้กิน เพื่อสร้างลูกศร</text>`;
+  }
+  for (const n of allNodes()) s += nodeSVG(n);
+  layer.innerHTML = s;
+  svg.classList.toggle('mode-arrow', mode === 'arrow');
+  svg.classList.toggle('armed', !!armed);
+  $('delBtn').disabled = !(sel && !(sel.type === 'node' && sel.id === DET_ID));
+}
+function renderTray() {
+  const names = [...ORGS, ...state.custom];
+  const used = new Set(state.nodes.map(n => n.name));
+  tray.innerHTML = names.map(n => `<button type="button" class="chip${used.has(n) ? ' used' : ''}${armed === n ? ' armed' : ''}" data-name="${esc(n)}"${used.has(n) ? ' aria-disabled="true" title="วางบนแผ่นงานแล้ว"' : ''}>${esc(n)}</button>`).join('');
+  $('trayCount').textContent = `วางแล้ว ${state.nodes.length}/${names.length}`;
+  updateStatus();
+}
+function updateStatus(msg) {
+  const st = $('status');
+  if (armed) { st.innerHTML = `เลือก <b>${esc(armed)}</b> แล้ว แตะบนแผ่นงานในลำดับขั้นที่ต้องการเพื่อวาง (กด Esc เพื่อยกเลิก)`; return; }
+  if (sel && sel.type === 'arrow') {
+    const a = state.arrows.find(x => x.id === sel.id);
+    if (a) { st.innerHTML = `ลูกศรที่เลือก: <b>${esc(byId(a.from).name)} → ${esc(byId(a.to).name)}</b> กด “ลบที่เลือก” หรือปุ่ม Delete เพื่อลบ`; return; }
+  }
+  st.textContent = `สิ่งมีชีวิต ${state.nodes.length} ชนิด · ลูกศร ${state.arrows.length} เส้น` + (mode === 'arrow' ? ' · โหมดวาดลูกศร: ลากจากกล่องหนึ่งไปอีกกล่อง' : '');
+}
+function hot(i) { for (let k = 0; k < 6; k++) { const b = $('band' + k); if (b) b.classList.toggle('hot', k === i); } }
+function commit() { save(); render(); renderTray(); }
+
+let toastT;
+function toast(msg) {
+  const t = $('toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('show'), 2600);
+}
+
+/* ---------- actions ---------- */
+function addNode(name, p) {
+  if (state.nodes.some(n => n.name === name)) { toast(`“${name}” อยู่บนแผ่นงานแล้ว`); return; }
+  pushHist();
+  const n = { id: uid('n'), name, x: p.x, y: p.y };
+  snapToBand(n);
+  state.nodes.push(n);
+  armed = null; sel = { type: 'node', id: n.id };
+  commit();
+  toast(`วาง “${name}” ที่${LEVELS[levelAt(n.y)].th}`);
+}
+function removeNode(id) {
+  if (id === DET_ID) return;
+  const n = byId(id); if (!n) return;
+  pushHist();
+  state.nodes = state.nodes.filter(x => x.id !== id);
+  state.arrows = state.arrows.filter(a => a.from !== id && a.to !== id);
+  sel = null; commit(); toast(`นำ “${n.name}” กลับไปที่รายการ`);
+}
+function addArrow(from, to) {
+  if (state.arrows.some(a => a.from === from && a.to === to)) { toast('มีลูกศรเส้นนี้อยู่แล้ว'); render(); return; }
+  pushHist();
+  state.arrows.push({ id: uid('a'), from, to });
+  sel = null; commit();
+  toast(`${byId(from).name} → ${byId(to).name}`);
+}
+function deleteSelected() {
+  if (!sel) return;
+  if (sel.type === 'node') return removeNode(sel.id);
+  pushHist();
+  state.arrows = state.arrows.filter(a => a.id !== sel.id);
+  sel = null; commit(); toast('ลบลูกศรแล้ว');
+}
+function undo() {
+  if (!hist.length) { toast('ไม่มีขั้นตอนให้ย้อนกลับ'); return; }
+  const s = JSON.parse(hist.pop());
+  state.nodes = s.nodes; state.arrows = s.arrows; state.custom = s.custom || [];
+  sel = null; armed = null; commit();
+}
+function setMode(m) {
+  mode = m;
+  $('modeMove').setAttribute('aria-pressed', m === 'move');
+  $('modeArrow').setAttribute('aria-pressed', m === 'arrow');
+  render(); updateStatus();
+}
+
+/* ---------- board pointer handling ---------- */
+svg.addEventListener('pointerdown', e => {
+  if (e.button > 0) return;
+  const t = e.target, p = toSvg(e);
+  const del = t.closest('[data-del]');
+  if (del) { e.preventDefault(); removeNode(del.dataset.del); return; }
+  const h = t.closest('[data-handle]'), nEl = t.closest('[data-node]'), aEl = t.closest('[data-arrow]');
+  if (armed && !nEl) { e.preventDefault(); addNode(armed, p); return; }
+  if (h || (nEl && mode === 'arrow')) {
+    const id = h ? h.dataset.handle : nEl.dataset.node;
+    drag = { kind: 'arrow', from: id, start: p, cur: null, target: null };
+    sel = { type: 'node', id };
+    svg.setPointerCapture(e.pointerId); e.preventDefault(); render(); updateStatus(); return;
+  }
+  if (nEl) {
+    const id = nEl.dataset.node, n = byId(id);
+    sel = { type: 'node', id };
+    if (!n.fixed) { drag = { kind: 'move', id, dx: p.x - n.x, dy: p.y - n.y, start: p, moved: false, snap: snapshot() }; svg.setPointerCapture(e.pointerId); }
+    e.preventDefault(); render(); updateStatus(); return;
+  }
+  if (aEl) { sel = { type: 'arrow', id: aEl.dataset.arrow }; render(); updateStatus(); return; }
+  if (sel) { sel = null; render(); updateStatus(); }
+});
+svg.addEventListener('pointermove', e => {
+  if (!drag) return;
+  const p = toSvg(e);
+  if (drag.kind === 'move') {
+    if (!drag.moved && Math.hypot(p.x - drag.start.x, p.y - drag.start.y) < 3) return;
+    drag.moved = true;
+    const n = byId(drag.id);
+    n.x = p.x - drag.dx; n.y = p.y - drag.dy; clampFree(n);
+    hot(levelAt(n.y)); render();
+  } else {
+    drag.cur = p;
+    const tg = nodeAt(e.clientX, e.clientY);
+    drag.target = tg && tg !== drag.from ? tg : null;
+    render();
+  }
+});
+function endDrag(e) {
+  if (!drag) return;
+  const d = drag; drag = null; hot(-1);
+  if (d.kind === 'move') {
+    if (d.moved) { snapToBand(byId(d.id)); pushHist(d.snap); commit(); } else render();
+  } else {
+    const tg = e.type === 'pointerup' ? nodeAt(e.clientX, e.clientY) : null;
+    if (tg && tg !== d.from) addArrow(d.from, tg);
+    else { render(); if (d.cur && Math.hypot(d.cur.x - d.start.x, d.cur.y - d.start.y) > 20) toast('ปล่อยลูกศรบนกล่องของผู้กิน'); }
+  }
+}
+svg.addEventListener('pointerup', endDrag);
+svg.addEventListener('pointercancel', endDrag);
+
+/* ---------- tray (palette) handling ---------- */
+tray.addEventListener('pointerdown', e => {
+  const chip = e.target.closest('.chip');
+  if (!chip || chip.classList.contains('used') || e.button > 0) return;
+  pdrag = { name: chip.dataset.name, sx: e.clientX, sy: e.clientY, active: false };
+  chip.setPointerCapture(e.pointerId);
+});
+tray.addEventListener('pointermove', e => {
+  if (!pdrag) return;
+  if (!pdrag.active) {
+    if (Math.hypot(e.clientX - pdrag.sx, e.clientY - pdrag.sy) < 6) return;
+    pdrag.active = true; ghost.textContent = pdrag.name; ghost.hidden = false;
+  }
+  ghost.style.left = e.clientX + 'px'; ghost.style.top = e.clientY + 'px';
+  hot(overBoard(e) ? levelAt(toSvg(e).y) : -1);
+});
+function endPdrag(e) {
+  if (!pdrag) return;
+  const d = pdrag; pdrag = null; ghost.hidden = true; hot(-1);
+  if (d.active) {
+    suppressClick = true; setTimeout(() => suppressClick = false, 0);
+    if (e.type === 'pointerup' && overBoard(e)) addNode(d.name, toSvg(e));
+  }
+}
+tray.addEventListener('pointerup', endPdrag);
+tray.addEventListener('pointercancel', endPdrag);
+tray.addEventListener('click', e => {
+  const chip = e.target.closest('.chip');
+  if (!chip || suppressClick) return;
+  if (chip.classList.contains('used')) {
+    const n = state.nodes.find(x => x.name === chip.dataset.name);
+    if (n) { sel = { type: 'node', id: n.id }; render(); updateStatus(); }
+    return;
+  }
+  armed = armed === chip.dataset.name ? null : chip.dataset.name;
+  sel = null; render(); renderTray();
+});
+
+/* ---------- controls ---------- */
+$('modeMove').onclick = () => setMode('move');
+$('modeArrow').onclick = () => setMode('arrow');
+$('undoBtn').onclick = undo;
+$('delBtn').onclick = deleteSelected;
+let clearT;
+$('clearBtn').onclick = () => {
+  const b = $('clearBtn');
+  if (!b.classList.contains('confirm')) {
+    b.classList.add('confirm'); b.textContent = 'กดอีกครั้งเพื่อยืนยัน';
+    clearT = setTimeout(() => { b.classList.remove('confirm'); b.textContent = 'ล้างทั้งหมด'; }, 3200);
+    return;
+  }
+  clearTimeout(clearT); b.classList.remove('confirm'); b.textContent = 'ล้างทั้งหมด';
+  pushHist(); state.nodes = []; state.arrows = []; sel = null; armed = null; commit();
+  toast('ล้างแผ่นงานแล้ว กด “ย้อนกลับ” ได้ถ้าต้องการคืนค่า');
+};
+$('author').value = state.author;
+$('author').addEventListener('input', e => { state.author = e.target.value; updateAuthor(); save(); });
+$('addForm').addEventListener('submit', e => {
+  e.preventDefault();
+  const inp = $('addName'), name = inp.value.trim().replace(/\s+/g, ' ');
+  if (!name) return;
+  if (ORGS.includes(name) || state.custom.includes(name) || name === DET_NAME) { toast(`มี “${name}” ในรายการแล้ว`); return; }
+  pushHist(); state.custom.push(name); inp.value = ''; commit(); toast(`เพิ่ม “${name}” ในรายการแล้ว`);
+});
+document.addEventListener('keydown', e => {
+  const typing = /INPUT|TEXTAREA/.test(document.activeElement && document.activeElement.tagName);
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z' && !typing) { e.preventDefault(); undo(); return; }
+  if (typing) return;
+  if (e.key === 'Delete' || e.key === 'Backspace') { if (sel) { e.preventDefault(); deleteSelected(); } }
+  else if (e.key === 'Escape') { armed = null; sel = null; render(); renderTray(); }
+});
+
+/* ---------- export ---------- */
+async function ensureFonts() {
+  if (!document.fonts) return;
+  try {
+    await Promise.all([
+      document.fonts.load(NODE_FONT, 'กขคสาหร่ายอ๊'),
+      document.fonts.load('500 26px Mitr', 'สายใยอาหาร Quinary'),
+      document.fonts.load('400 18px Mitr', 'Consumer'),
+      document.fonts.load('400 16px Anuphan', 'ระบุชื่อ'),
+      document.fonts.load('italic 400 16px Anuphan', 'ระบุชื่อ')
+    ]);
+  } catch (e) {}
+}
+function rr(x, X, Y, w, h, r) {
+  x.beginPath(); x.moveTo(X + r, Y); x.arcTo(X + w, Y, X + w, Y + h, r); x.arcTo(X + w, Y + h, X, Y + h, r);
+  x.arcTo(X, Y + h, X, Y, r); x.arcTo(X, Y, X + w, Y, r); x.closePath();
+}
+async function drawExport(scale) {
+  await ensureFonts();
+  const c = document.createElement('canvas'); c.width = W * scale; c.height = H * scale;
+  const x = c.getContext('2d'); x.scale(scale, scale);
+  x.fillStyle = '#ffffff'; x.fillRect(0, 0, W, H);
+  x.save(); rr(x, 4, 4, W - 8, H - 8, 22); x.clip();
+  LEVELS.forEach((L, i) => {
+    const t = bandTop(i);
+    x.fillStyle = EX.band[i]; x.fillRect(0, t, W, BAND);
+    x.strokeStyle = EX.sep; x.lineWidth = 1.4; x.beginPath(); x.moveTo(14, t); x.lineTo(W - 14, t); x.stroke();
+  });
+  x.restore();
+  rr(x, 4, 4, W - 8, H - 8, 22); x.strokeStyle = EX.edge; x.lineWidth = 2; x.stroke();
+  x.textBaseline = 'middle';
+  x.fillStyle = EX.ink; x.textAlign = 'center'; x.font = '500 26px Mitr, Anuphan, sans-serif'; x.fillText(TITLE, W / 2, 42);
+  x.textAlign = 'left'; x.fillStyle = EX.muted; x.font = 'italic 400 16px Anuphan, sans-serif'; x.fillText(SUB, 26, 76);
+  x.textAlign = 'right'; x.fillStyle = EX.ink; x.font = '500 16px Anuphan, sans-serif'; x.fillText(authorLine(), W - 26, 76);
+  x.textAlign = 'left';
+  LEVELS.forEach((L, i) => {
+    const t = bandTop(i);
+    x.fillStyle = EX.ink; x.font = '400 18px Mitr, Anuphan, sans-serif';
+    x.fillText(L.en1, 26, t + 32); if (L.en2) x.fillText(L.en2, 26, t + 56);
+    x.fillStyle = EX.ns[i]; x.font = '500 15px Anuphan, sans-serif'; x.fillText(L.th, 26, t + (L.en2 ? 82 : 58));
+  });
+  // arrows
+  x.strokeStyle = EX.arrow; x.fillStyle = EX.arrow; x.lineWidth = 2.2; x.lineCap = 'round';
+  for (const a of state.arrows) {
+    const g = arrowGeom(a); if (!g) continue;
+    const from = g.c || g.p1, ang = Math.atan2(g.p2.y - from.y, g.p2.x - from.x);
+    const tip = { x: g.p2.x + Math.cos(ang) * 4, y: g.p2.y + Math.sin(ang) * 4 };
+    const end = { x: tip.x - Math.cos(ang) * 10, y: tip.y - Math.sin(ang) * 10 };
+    x.beginPath(); x.moveTo(g.p1.x, g.p1.y);
+    if (g.c) x.quadraticCurveTo(g.c.x, g.c.y, end.x, end.y); else x.lineTo(end.x, end.y);
+    x.stroke();
+    const L = 15, s = 0.42;
+    x.beginPath(); x.moveTo(tip.x, tip.y);
+    x.lineTo(tip.x - L * Math.cos(ang - s), tip.y - L * Math.sin(ang - s));
+    x.lineTo(tip.x - L * Math.cos(ang + s), tip.y - L * Math.sin(ang + s));
+    x.closePath(); x.fill();
+  }
+  // nodes
+  x.textAlign = 'center';
+  for (const n of allNodes()) {
+    const w = nodeW(n.name), lv = levelAt(n.y);
+    rr(x, n.x - w / 2, n.y - NH / 2, w, NH, n.fixed ? 9 : 20);
+    x.fillStyle = n.fixed ? EX.detf : EX.nf[lv]; x.fill();
+    x.lineWidth = 2; x.strokeStyle = n.fixed ? EX.dets : EX.ns[lv];
+    if (n.fixed) x.setLineDash([7, 4]);
+    x.stroke(); x.setLineDash([]);
+    x.fillStyle = EX.ink; x.font = NODE_FONT; x.fillText(n.name, n.x, n.y + 1);
+  }
+  return c;
+}
+const toBlob = (c, q) => new Promise(r => c.toBlob(r, 'image/jpeg', q));
+function makePDF(jpg, wPx, hPx) {
+  const pw = 595.28, ph = 841.89, m = 22;
+  let iw = pw - 2 * m, ih = iw * hPx / wPx;
+  if (ih > ph - 2 * m) { ih = ph - 2 * m; iw = ih * wPx / hPx; }
+  const ix = (pw - iw) / 2, iy = (ph - ih) / 2;
+  const enc = new TextEncoder(), parts = [], offs = [];
+  let off = 0;
+  const push = v => { const b = typeof v === 'string' ? enc.encode(v) : v; parts.push(b); off += b.length; };
+  const obj = (n, body) => { offs[n] = off; push(`${n} 0 obj\n${body}\nendobj\n`); };
+  push('%PDF-1.4\n%âãÏÓ\n');
+  obj(1, '<< /Type /Catalog /Pages 2 0 R >>');
+  obj(2, '<< /Type /Pages /Kids [3 0 R] /Count 1 >>');
+  obj(3, `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${pw} ${ph}] /Resources << /XObject << /Im0 4 0 R >> >> /Contents 5 0 R >>`);
+  offs[4] = off;
+  push(`4 0 obj\n<< /Type /XObject /Subtype /Image /Width ${wPx} /Height ${hPx} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${jpg.length} >>\nstream\n`);
+  push(jpg); push('\nendstream\nendobj\n');
+  const content = `q ${iw.toFixed(2)} 0 0 ${ih.toFixed(2)} ${ix.toFixed(2)} ${iy.toFixed(2)} cm /Im0 Do Q`;
+  obj(5, `<< /Length ${content.length} >>\nstream\n${content}\nendstream`);
+  const xref = off;
+  let t = 'xref\n0 6\n0000000000 65535 f \n';
+  for (let i = 1; i <= 5; i++) t += String(offs[i]).padStart(10, '0') + ' 00000 n \n';
+  t += `trailer\n<< /Size 6 /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF\n`;
+  push(t);
+  return new Blob(parts, { type: 'application/pdf' });
+}
+function baseName() {
+  const a = state.author.trim().replace(/[\\/:*?"<>|]+/g, '').replace(/\s+/g, '_').slice(0, 50);
+  return 'foodweb_สระน้ำ100ปี' + (a ? '_' + a : '');
+}
+let dlP = null;
+function getDownloads() {
+  if (!window.claude || typeof window.claude.use !== 'function') return Promise.resolve(undefined);
+  if (!dlP) dlP = Promise.resolve(window.claude.use('downloads')).catch(() => null);
+  return dlP;
+}
+async function offer(filename, blob) {
+  const dl = await getDownloads();
+  if (dl === undefined) {
+    const url = URL.createObjectURL(blob), a = document.createElement('a');
+    a.href = url; a.download = filename; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 4000);
+    toast('ดาวน์โหลดแล้ว นำไฟล์ไปส่งใน myCourseVille ได้เลย'); return;
+  }
+  if (!dl) { toast('มุมมองนี้บันทึกไฟล์ไม่ได้ ลองเปิดหน้านี้ใน claude.ai บนเบราว์เซอร์'); return; }
+  try { await dl.save({ filename, data: blob }); toast('บันทึกไฟล์แล้ว นำไปส่งใน myCourseVille ได้เลย'); }
+  catch (err) {
+    const c = err && err.code;
+    if (c === 'declined') toast('ยกเลิกการบันทึก');
+    else if (c === 'rate_limited') toast('มีหน้าต่างบันทึกเปิดอยู่ รอสักครู่แล้วลองใหม่');
+    else toast('บันทึกไม่สำเร็จ ลองอีกครั้ง');
+  }
+}
+async function exportAs(kind, btn) {
+  if (!state.nodes.length) { toast('ยังไม่มีสิ่งมีชีวิตบนแผ่นงาน'); return; }
+  const label = btn.textContent; btn.disabled = true; btn.textContent = 'กำลังสร้างไฟล์…';
+  try {
+    const c = await drawExport(2);
+    const jpg = await toBlob(c, 0.92);
+    if (kind === 'jpg') await offer(baseName() + '.jpg', jpg);
+    else await offer(baseName() + '.pdf', makePDF(new Uint8Array(await jpg.arrayBuffer()), c.width, c.height));
+  } catch (e) { toast('สร้างไฟล์ไม่สำเร็จ ลองอีกครั้ง'); }
+  btn.disabled = false; btn.textContent = label;
+}
+$('jpgBtn').onclick = () => exportAs('jpg', $('jpgBtn'));
+$('pdfBtn').onclick = () => exportAs('pdf', $('pdfBtn'));
+
+/* ---------- boot ---------- */
+load();
+$('author').value = state.author;
+buildStatic(); render(); renderTray();
+if (document.fonts) {
+  ensureFonts().then(() => { wcache.clear(); state.nodes.forEach(snapToBand); render(); });
+}
+setTimeout(getDownloads, 50);
+})();
+</script>
+
+</body></html>

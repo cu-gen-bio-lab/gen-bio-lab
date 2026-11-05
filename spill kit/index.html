@@ -1,0 +1,2031 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>เกมฝึกเก็บกวาดสารเคมี/เชื้อหก</title>
+<style>
+  :root{
+    --chem-color: #6ec6c6;
+    --chem-dark: #3f9a9a;
+    --bio-color: #8b1420;
+    --bio-dark: #5c0d15;
+    --border: #2b2b2b;
+    --accent: #2f6f4f;
+    --danger: #c0392b;
+    --warn: #d68910;
+
+    /* ===== RESPONSIVE SIZE TOKENS (ค่าเริ่มต้น = แล็ปท็อป/จอทั่วไป) ===== */
+    --app-h: 100vh;
+    --gap: 8px;
+    --tb-w: 98px;        /* ความกว้างแถบอุปกรณ์ซ้าย */
+    --tb-item-h: 92px;   /* ความสูงแต่ละช่องอุปกรณ์ */
+    --tb-ic: 44px;       /* ขนาดไอคอนอุปกรณ์ */
+    --tb-lb: 10px;       /* ขนาดตัวอักษรใต้ไอคอน */
+    --cl-w: 192px;       /* ความกว้างแผง "สิ่งที่ทำไปแล้ว" */
+    --cl-fs: 12px;
+    --cl-ic: 20px;
+    --bin-img: 48px;     /* ขนาดรูปถังขยะ */
+    --bin-w: 96px;
+    --bin-lbl: 9.5px;
+    --ppe: 70px;         /* กล่อง PPE มุมซ้ายบน */
+    --ppe-ic: 22px;
+    --top-fs: 15px;
+    --btn-fs: 13px;
+    --btn-pad: 6px 10px;
+    --toast-fs: 18px;
+    --modal-fs: 14px;
+    --safe-l: env(safe-area-inset-left, 0px);
+    --safe-r: env(safe-area-inset-right, 0px);
+    --safe-b: env(safe-area-inset-bottom, 0px);
+  }
+  *{box-sizing:border-box;}
+  html,body{
+    margin:0; padding:0; height:100%;
+    font-family:"Sarabun","Segoe UI",sans-serif;
+    background:#e9e6df; color:#222;
+    -webkit-user-select:none; user-select:none;
+    overscroll-behavior:none;
+  }
+  #app{position:relative; width:100%; height:100vh; height:100dvh; height:var(--app-h); overflow:hidden;}
+  .screen{position:absolute; inset:0; display:none; padding:16px; padding-left:max(16px, var(--safe-l)); padding-right:max(16px, var(--safe-r)); overflow-y:auto; -webkit-overflow-scrolling:touch;}
+  .screen.active{display:flex; flex-direction:column;}
+
+  #screen-select{align-items:center; justify-content:safe center; gap:clamp(8px, 3vmin, 24px);}
+  #screen-lang, #screen-studentinfo{align-items:center; justify-content:safe center; gap:clamp(8px, 3vmin, 24px);}
+  #screen-lang h1, #screen-studentinfo h1{font-size:clamp(20px,3vw,32px); text-align:center; margin:0;}
+  #screen-select h1{margin-top:0;}
+  #screen-select h1{font-size:clamp(20px,3vw,32px); margin-bottom:4px; text-align:center;}
+  #screen-select p.sub{color:#555; margin-top:0; text-align:center; max-width:520px;}
+  .scenario-cards{display:flex; gap:clamp(12px, 3vmin, 32px); flex-wrap:wrap; justify-content:center;}
+  .scenario-card{
+    width:clamp(180px, 26vw, 300px); border:3px solid #2b2b2b; border-radius:16px; background:#fff;
+    padding:18px; text-align:center; cursor:pointer;
+    box-shadow:4px 4px 0 rgba(0,0,0,0.15); transition:transform .12s ease;
+  }
+  .scenario-card:active{transform:scale(0.97);}
+  .scenario-card .emoji{font-size:clamp(36px, 7vmin, 72px); display:block; margin-bottom:8px;}
+  .scenario-card h3{margin:6px 0 4px;}
+  .scenario-card p{font-size:clamp(12px, 1.6vmin + 4px, 16px); color:#666; margin:0;}
+  .scenario-card.chem{border-color:#3f9a9a;}
+  .scenario-card.bio{border-color:#5c0d15;}
+
+  #screen-game{flex-direction:column; padding:var(--gap); padding-left:max(var(--gap), var(--safe-l)); padding-right:max(var(--gap), var(--safe-r)); padding-bottom:max(var(--gap), var(--safe-b)); overflow:hidden;}
+  #topbar{
+    display:flex; align-items:center; justify-content:space-between; gap:8px;
+    padding:6px 10px; background:#fff; border:2px solid #2b2b2b; border-radius:10px;
+    margin-bottom:var(--gap); flex-shrink:0; flex-wrap:nowrap; min-width:0;
+  }
+  #topbar .title{font-weight:700; font-size:var(--top-fs); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0;}
+  #topbar .actionCountBox{white-space:nowrap; font-size:var(--btn-fs); font-weight:700; color:#555;}
+  #topbar .btnGroup{display:flex; gap:8px; flex-shrink:0;}
+  #topbar button{
+    border:2px solid #2b2b2b; background:#fff; border-radius:8px; padding:var(--btn-pad);
+    font-size:var(--btn-fs); cursor:pointer; white-space:nowrap; font-family:inherit;
+  }
+  #topbar .btn-finish{background:#2f6f4f; color:#fff; border-color:#2f6f4f;}
+
+  #gameArea{display:flex; gap:var(--gap); flex:1; min-height:0;}
+
+  #toolbar{
+    width:var(--tb-w); flex-shrink:0; border:2px solid #2b2b2b; border-radius:10px;
+    background:#fff; display:flex; flex-direction:column; overflow:hidden;
+  }
+  .tb-scroll-btn{
+    height:26px; display:flex; align-items:center; justify-content:center;
+    background:#f1f1f1; border-bottom:2px solid #2b2b2b; cursor:pointer; font-size:12px;
+  }
+  .tb-scroll-btn:last-child{border-bottom:none; border-top:2px solid #2b2b2b;}
+  #toolbarList{flex:1; overflow-y:auto; display:flex; flex-direction:column; -webkit-overflow-scrolling:touch; scrollbar-width:none;}
+  #toolbarList::-webkit-scrollbar{display:none;}
+  .tb-item{
+    min-height:var(--tb-item-h); flex-shrink:0; border-bottom:2px solid #2b2b2b;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    cursor:pointer; position:relative; background:#fff; padding:6px 3px;
+  }
+  .tb-item:last-child{border-bottom:none;}
+  .tb-item:active{background:#f2f2f2;}
+  .tb-item .ic{font-size:var(--tb-ic); line-height:1; flex-shrink:0;}
+  .tb-item .ic img{width:var(--tb-ic); height:var(--tb-ic); object-fit:contain; display:block;}
+  .tb-item .lb{font-size:var(--tb-lb); margin-top:3px; text-align:center; padding:0 2px; color:#444; line-height:1.25;}
+  .tb-item .usedBadge{
+    position:absolute; top:2px; right:2px; font-size:9px; font-weight:900; color:#fff;
+    background:#2f6f4f; border-radius:8px; padding:0 4px; line-height:1.5; min-width:14px; text-align:center;
+  }
+  .tb-item.armed{animation:armPulse .9s infinite; background:#fff6cc;}
+  @keyframes armPulse{0%,100%{box-shadow:inset 0 0 0 2px #d68910;} 50%{box-shadow:inset 0 0 0 2px transparent;}}
+
+  #stage{
+    flex:1; border:2px solid #2b2b2b; border-radius:10px; background:#fbfbf9;
+    position:relative; overflow:hidden; min-width:0;
+  }
+  #ppeAvatar{
+    position:absolute; top:8px; left:8px; width:var(--ppe); height:var(--ppe); z-index:5;
+    border:2px dashed #999; border-radius:10px; background:#fff;
+    display:flex; align-items:center; justify-content:center; flex-wrap:wrap; font-size:30px; gap:1px;
+  }
+  #ppeAvatar .slot{opacity:0.15; transition:opacity .25s ease; font-size:var(--ppe-ic);}
+  #ppeAvatar .slot.on{opacity:1;}
+
+  #spillWrap{
+    position:absolute; left:44%; top:50%; transform:translate(-50%,-50%);
+    width:330px; height:225px; z-index:1; /* ขนาด/ตำแหน่งจริงคำนวณใน layoutStage() */
+  }
+  #spillSvg{width:100%; height:100%; overflow:visible;}
+  .spillBlob{fill:#6ec6c6; stroke:#3f9a9a; stroke-width:3; transition:fill .3s, opacity .5s;}
+  .scenario-bio .spillBlob{fill:#8b1420; stroke:#5c0d15;}
+  .steamLine{stroke:#999; stroke-width:2; fill:none; opacity:0.55; stroke-linecap:round;}
+  .bubble{fill:#fff; opacity:0.5;}
+  .bacteria{display:none; transition:opacity .6s ease;}
+  .scenario-bio .bacteria{display:block;}
+  .bact{transition:opacity .5s ease;}
+  #spillWrap.faded .spillBlob, #spillWrap.faded #spillImg{opacity:0.8;}
+  #spillWrap.cleaned .spillBlob, #spillWrap.cleaned #spillImg{opacity:0.12;}
+  #spillWrap.cleaned .bubble, #spillWrap.cleaned .steamLine{opacity:0.05;}
+  #coverOverlayCanvas{position:absolute; inset:0; width:100%; height:100%; pointer-events:none; z-index:3;}
+
+  @keyframes steamRise{0%{transform:translateY(0); opacity:.6;} 100%{transform:translateY(-14px); opacity:0;}}
+  .steamLine{animation:steamRise 2.4s ease-in-out infinite;}
+  .steamLine:nth-child(2){animation-delay:.4s;}
+  .steamLine:nth-child(3){animation-delay:.8s;}
+  @keyframes bubblePulse{0%,100%{opacity:.35;}50%{opacity:.75;}}
+  .bubble{animation:bubblePulse 1.8s ease-in-out infinite;}
+
+  .shardPiece{
+    position:absolute; width:17%; height:auto; aspect-ratio:1/1; cursor:pointer; z-index:10;
+    touch-action:manipulation; -webkit-tap-highlight-color:transparent;
+    transition:opacity .35s, transform .35s;
+  }
+  .shardPiece.collected{opacity:0; transform:scale(0.2) rotate(90deg); pointer-events:none;}
+  .shardPiece.flying{
+    transition:transform .6s ease-in, opacity .6s ease-in;
+    transform:translate(160px,-130px) scale(0.3) rotate(140deg);
+    opacity:0;
+  }
+  .shardPiece svg{width:100%; height:100%; display:block;}
+  .shardPiece.ready svg, .shardPiece.ready img{animation:shardGlow .8s infinite;}
+  @keyframes shardGlow{0%,100%{filter:drop-shadow(0 0 0px #5a8fa0);}50%{filter:drop-shadow(0 0 7px #5a8fa0);}}
+
+  #wipeFx{position:absolute; font-size:calc(var(--ppe) * 0.5); top:50%; left:-40px; opacity:0; pointer-events:none; z-index:12;}
+  #wipeFx.play{animation:wipeMove 1s ease-in-out forwards;}
+  @keyframes wipeMove{0%{left:-10%; opacity:1;} 90%{left:85%; opacity:1;} 100%{left:95%; opacity:0;}}
+
+  #binArea{position:absolute; right:10px; bottom:10px; width:90px; text-align:center;}
+  #binArea .binIc{font-size:46px; transition:transform .2s;}
+  #binArea.pulse .binIc{animation:binPulse .5s ease;}
+  @keyframes binPulse{0%{transform:scale(1);}50%{transform:scale(1.3);}100%{transform:scale(1);}}
+  #binArea .binLbl{font-size:10px; color:#444; background:#fff; border:1px solid #999; border-radius:6px; padding:2px 4px;}
+
+   #binColumn{
+    position:absolute; right:6px; bottom:6px; top:6px; z-index:15;
+    display:flex; flex-direction:column; justify-content:flex-end; gap:6px; pointer-events:none;
+  }
+  .binWrap2{position:relative; width:var(--bin-w); text-align:center; touch-action:manipulation; -webkit-tap-highlight-color:rgba(214,137,16,0.3); pointer-events:auto;}
+  #binSharps, #binChemBox{order:1;}
+  #binBag, #binChemBag{order:2;}
+  .binWrap2 img{width:var(--bin-img) !important; height:calc(var(--bin-img) * 1.3) !important; object-fit:contain; display:block; margin:0 auto;}
+  .binWrap2 svg{transition:transform .2s; display:block; margin:0 auto;}
+  .binWrap2.pulse svg{animation:binPulse .5s ease;}
+  .binWrap2 .binLbl2{
+    font-size:var(--bin-lbl); color:#444; background:#fff; border:1px solid #999; border-radius:6px;
+    padding:2px 4px; margin-top:2px; line-height:1.3;
+  }
+  .binWrap2{cursor:pointer; border-radius:14px; padding:clamp(4px, 1vmin, 10px);}
+  .binWrap2.awaiting{animation:binAwaitGlow .9s infinite;}
+  @keyframes binAwaitGlow{
+    0%,100%{box-shadow:0 0 0px 0px #d68910; background:transparent;}
+    50%{box-shadow:0 0 14px 6px #d68910; background:rgba(214,137,16,0.15);}
+  }
+
+  #flyItem{position:absolute; font-size:calc(var(--ppe) * 0.4); opacity:0; pointer-events:none; z-index:12;}
+  #flyItem.play{animation:flyToBin .7s ease-in forwards;}
+  @keyframes flyToBin{0%{opacity:1;} 100%{transform:translate(140px,-40px) scale(.4); opacity:0;}}
+
+  #toast{
+    position:absolute; left:50%; top:50%; transform:translate(-50%,-50%) scale(0.9);
+    background:#2b2b2b; color:#fff; padding:16px 26px; border-radius:16px; font-size:var(--toast-fs); font-weight:700;
+    opacity:0; transition:opacity .25s, transform .25s; pointer-events:none; z-index:45;
+    max-width:80%; text-align:center; line-height:1.4; box-shadow:0 6px 20px rgba(0,0,0,0.35);
+  }
+  #toast.show{opacity:1; transform:translate(-50%,-50%) scale(1);}
+
+  #checklistPanel{
+    width:var(--cl-w); flex-shrink:0; border:2px solid #2b2b2b; border-radius:10px;
+    background:#fff; display:flex; flex-direction:column; overflow:hidden;
+  }
+  #checklistPanel h4{margin:8px 10px 4px; font-size:calc(var(--cl-fs) + 2px);}
+  #checklistList{flex:1; overflow-y:auto; padding:0 8px 8px; display:flex; flex-direction:column-reverse;}
+  #checklistEmpty{color:#999; font-size:var(--cl-fs); padding:10px 4px; text-align:center;}
+  .log-item{
+    display:flex; align-items:center; gap:8px; padding:7px 6px; border-bottom:1px solid #eee; font-size:var(--cl-fs);
+    background:#fafafa; border-radius:6px; margin-top:6px;
+  }
+  .log-item .ic{font-size:var(--cl-ic);}
+  .log-item .ic img{width:var(--cl-ic) !important; height:var(--cl-ic) !important; display:block;}
+  .log-item .txt{flex:1;}
+  .log-item .n{font-size:10px; color:#999;}
+
+  .modal{
+    position:absolute; inset:0; background:rgba(0,0,0,0.55); display:none;
+    align-items:center; justify-content:safe center; z-index:50; padding:12px; overflow-y:auto;
+  }
+  .modal.show{display:flex;}
+  .modal-box{
+    background:#fff; border-radius:14px; border:3px solid #2b2b2b; padding:18px;
+    max-width:min(560px, 94vw); width:100%; max-height:96%; overflow-y:auto; text-align:center;
+    font-size:var(--modal-fs);
+  }
+  .modal-box h3{margin-top:0;}
+  .modal-box-h{
+    max-width:min(820px, 94vw); display:flex; flex-direction:row; gap:16px; align-items:stretch;
+  }
+  .modal-main{flex:1; min-width:0;}
+  .modal-actions-v{
+    display:flex; flex-direction:column; gap:10px; justify-content:center;
+    min-width:120px; flex-shrink:0;
+  }
+  .modal-actions-v button{width:100%; padding:16px 8px; font-size:var(--modal-fs); font-weight:700; border:2px solid #2b2b2b; border-radius:8px; background:#fff; font-family:inherit; cursor:pointer;}
+  .pattern-grid{display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:10px;}
+  .pattern-opt{
+    border:2px solid #2b2b2b; border-radius:10px; padding:10px; text-align:center; cursor:pointer; background:#fafafa;
+  }
+  .pattern-opt:active{transform:scale(0.97);}
+  .pattern-opt svg{width:100%; height:clamp(56px, 12vmin, 110px);}
+  .pattern-opt .pname{font-size:calc(var(--modal-fs) - 1px); margin-top:4px; font-weight:700;}
+
+  #traceCanvas{
+    display:block; height:auto; aspect-ratio:440/320; margin:8px auto 0;
+    width:min(100%, 600px, calc((var(--app-h) - 190px) * 440 / 320));
+    border:2px solid #2b2b2b; border-radius:10px; touch-action:none; background:#fdfdfb;
+  }
+  #tracePct{text-align:center; font-size:clamp(18px, 4vmin, 30px); font-weight:900; color:#2f6f4f; margin:6px 0;}
+
+  #coverCanvasWrap{
+    position:relative; aspect-ratio:320/220; margin:8px auto 0;
+    width:min(100%, 560px, calc((var(--app-h) - 210px) * 320 / 220));
+    border:2px solid #2b2b2b; border-radius:10px; overflow:hidden; background:#fdfdfb; touch-action:none;
+  }
+  #coverCanvasWrap canvas{position:absolute; inset:0; width:100%; height:100%;}
+  #coverPct{text-align:center; font-size:clamp(16px, 3.6vmin, 28px); font-weight:900; color:#2f6f4f; margin:6px 0;}
+  #coverModeHint{font-size:calc(var(--modal-fs) - 2px); color:#666; margin-top:4px;}
+
+  .modal-actions{display:flex; gap:10px; justify-content:center; margin-top:10px; flex-wrap:wrap;}
+  .modal-actions button{
+    border:2px solid #2b2b2b; border-radius:8px; padding:8px 16px; font-size:var(--modal-fs); cursor:pointer; background:#fff; font-family:inherit;
+  }
+  .btn-primary{
+    background:#2f6f4f !important; color:#fff !important; border-color:#2f6f4f !important;
+    font-weight:700; text-shadow:0 0 2px rgba(0,0,0,0.6);
+  }
+  .btn-primary:disabled{
+    background:#cfcfcf !important; color:#666 !important; border-color:#999 !important;
+    cursor:not-allowed; text-shadow:none; opacity:1;
+  }
+
+  .time-opt-grid{display:flex; gap:10px; justify-content:center; margin-top:12px;}
+  .time-opt{border:2px solid #2b2b2b; border-radius:10px; padding:clamp(10px,2vmin,20px) clamp(14px,2.5vmin,28px); cursor:pointer; background:#fafafa; font-weight:700; font-size:calc(var(--modal-fs) + 2px);}
+  .time-opt:active{transform:scale(0.96);}
+  #countdownView{display:none;}
+  #countdownView.show{display:block;}
+  #clockEmoji{font-size:48px;}
+  #countdownText{font-size:32px; font-weight:900; color:#2f6f4f; margin:6px 0;}
+  #countdownBarWrap{width:100%; max-width:340px; height:14px; background:#eee; border-radius:8px; margin:8px auto; overflow:hidden; border:2px solid #2b2b2b;}
+  #countdownBarFill{height:100%; width:0%; background:#2f6f4f; transition:width .1s linear;}
+
+  #screen-result{align-items:center; justify-content:safe center; gap:14px;}
+  #screen-result .resultBox{background:#fff; border:3px solid #2b2b2b; border-radius:16px; padding:clamp(14px,3vmin,30px) clamp(16px,3.5vmin,36px); text-align:center; max-width:min(560px, 94vw); width:100%;}
+  #screen-result .resultBox h2{margin:0 0 4px;}
+  #screen-result .bigscore{font-size:clamp(34px, 8vmin, 64px); font-weight:900; color:#2f6f4f;}
+  #resultDetails{text-align:left; font-size:var(--cl-fs); margin-top:10px; max-height:calc(var(--app-h) - 260px); min-height:80px; overflow-y:auto;}
+  #resultDetails div{padding:3px 0; border-bottom:1px dashed #ddd;}
+  #resultSummaryLine{font-size:var(--cl-fs); color:#666; margin-top:6px;}
+
+  /* ================== RESPONSIVE ==================
+     มือถือแนวนอน = จอเตี้ย (สูง ≤ 500px)
+     ไอแพด = กว้าง ≥ 1000px และสูง ≥ 700px
+  ================================================== */
+
+  /* มือถือแนวนอน (iPhone / Android) */
+  @media (max-height:500px){
+    :root{
+      --gap: 5px;
+      --tb-w: 74px; --tb-item-h: 64px; --tb-ic: 30px; --tb-lb: 9px;
+      --cl-w: 140px; --cl-fs: 10.5px; --cl-ic: 16px;
+      --bin-img: 32px; --bin-w: 76px; --bin-lbl: 8.5px;
+      --ppe: 48px; --ppe-ic: 15px;
+      --top-fs: 13px; --btn-fs: 12px; --btn-pad: 3px 8px;
+      --toast-fs: 14px; --modal-fs: 13px;
+    }
+    #topbar{padding:3px 8px; border-radius:8px;}
+    #toolbar, #stage, #checklistPanel{border-radius:8px;}
+    .tb-scroll-btn{height:20px;}
+    .tb-item{padding:3px 2px;}
+    #checklistPanel h4{margin:5px 8px 2px;}
+    .log-item{padding:4px 5px; gap:5px; margin-top:4px;}
+    .binWrap2 .binLbl2{padding:1px 3px;}
+    #toast{padding:10px 16px;}
+    .modal{padding:6px;}
+    .modal-box{padding:10px 12px; border-radius:10px;}
+    .modal-box h3{margin:0 0 4px; font-size:15px;}
+    .modal-box-h{gap:10px;}
+    .modal-actions-v{min-width:100px;}
+    .modal-actions-v button{padding:10px 6px;}
+    .pattern-grid{grid-template-columns:repeat(4, 1fr); gap:8px;}
+    .pattern-opt{padding:6px;}
+    #tracePct, #coverPct{margin:2px 0;}
+    #clockEmoji{font-size:32px;}
+    #countdownText{font-size:24px;}
+    .scenario-card{padding:12px;}
+    .scenario-card h3{font-size:15px;}
+    #screen-select p.sub{font-size:13px; margin-bottom:0;}
+    #screen-select h1{margin-bottom:0;}
+    .screen{padding-top:10px; padding-bottom:10px;}
+  }
+
+  /* มือถือจอเล็กมาก (iPhone SE / Android จอเล็ก) */
+  @media (max-height:380px), (max-width:700px) and (max-height:500px){
+    :root{
+      --tb-w: 68px; --tb-item-h: 60px; --tb-ic: 28px; --tb-lb: 8.5px;
+      --cl-w: 118px; --cl-fs: 10px;
+      --bin-img: 28px; --bin-w: 68px; --bin-lbl: 8px;
+    }
+    #topbar .actionCountBox{display:none;}
+  }
+
+  /* ไอแพด / แท็บเล็ต แนวนอน */
+  @media (min-width:1000px) and (min-height:700px){
+    :root{
+      --gap: 10px;
+      --tb-w: 124px; --tb-item-h: 116px; --tb-ic: 60px; --tb-lb: 12.5px;
+      --cl-w: 250px; --cl-fs: 14px; --cl-ic: 24px;
+      --bin-img: 70px; --bin-w: 132px; --bin-lbl: 12.5px;
+      --ppe: 96px; --ppe-ic: 30px;
+      --top-fs: 19px; --btn-fs: 16px; --btn-pad: 9px 16px;
+      --toast-fs: 22px; --modal-fs: 17px;
+    }
+    #topbar{padding:8px 14px;}
+    .tb-scroll-btn{height:32px; font-size:15px;}
+    .modal-box h3{font-size:22px;}
+    .modal-actions-v{min-width:160px;}
+    .modal-actions-v button{padding:20px 10px;}
+    #clockEmoji{font-size:64px;}
+    #countdownText{font-size:44px;}
+    #countdownBarWrap{max-width:460px; height:18px;}
+  }
+
+  /* ไอแพด Pro 12.9" / จอใหญ่ */
+  @media (min-width:1300px) and (min-height:950px){
+    :root{
+      --tb-w: 140px; --tb-item-h: 132px; --tb-ic: 72px; --tb-lb: 14px;
+      --cl-w: 290px; --cl-fs: 15px; --cl-ic: 28px;
+      --bin-img: 84px; --bin-w: 150px; --bin-lbl: 14px;
+      --ppe: 110px; --ppe-ic: 34px;
+    }
+  }
+
+  #rotateOverlay{
+    display:none; position:fixed; inset:0; z-index:999;
+    background:#1c1c1c; color:#fff;
+    flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:24px;
+  }
+  #rotateOverlay .icon{font-size:64px; animation:rotateHint 1.6s ease-in-out infinite;}
+  #rotateOverlay h2{margin:14px 0 6px; font-size:20px;}
+  #rotateOverlay p{margin:0; font-size:14px; color:#ccc; max-width:280px;}
+  @keyframes rotateHint{0%,100%{transform:rotate(0deg);} 50%{transform:rotate(90deg);}}
+  @media (orientation:portrait){ #rotateOverlay{display:flex;} }
+</style>
+</head>
+<body>
+
+<div id="rotateOverlay">
+  <div class="icon">📱</div>
+  <h2 id="rotateTitleEl">กรุณาหมุนหน้าจอเป็นแนวนอน</h2>
+  <p id="rotateTextEl">เกมนี้ออกแบบมาให้เล่นในแนวนอนเท่านั้น เพื่อให้เห็นอุปกรณ์และขั้นตอนครบถ้วน</p>
+</div>
+
+<div id="app">
+
+  <div id="screen-lang" class="screen active">
+    <h1>เลือกภาษา / Select Language</h1>
+    <div class="scenario-cards">
+      <div class="scenario-card chem" onclick="selectLanguage('th')">
+        <span class="emoji">🇹🇭</span>
+        <h3>ภาษาไทย</h3>
+      </div>
+      <div class="scenario-card bio" onclick="selectLanguage('en')">
+        <span class="emoji">🇬🇧</span>
+        <h3>English</h3>
+      </div>
+    </div>
+  </div>
+
+  <div id="screen-studentinfo" class="screen">
+    <h1 id="studentInfoTitleEl">กรอกข้อมูลนิสิต</h1>
+    <div class="resultBox" style="max-width:380px;">
+      <div style="margin-bottom:12px; text-align:left;">
+        <label id="studentNameLabelEl" style="font-size:13px; font-weight:700; display:block; margin-bottom:5px;">ชื่อ-นามสกุล</label>
+        <input type="text" id="studentNameInput" style="width:100%; padding:9px; border:2px solid #2b2b2b; border-radius:8px; font-size:14px; font-family:inherit;">
+      </div>
+      <div style="margin-bottom:16px; text-align:left;">
+        <label id="studentIdLabelEl" style="font-size:13px; font-weight:700; display:block; margin-bottom:5px;">รหัสนิสิต</label>
+        <input type="text" id="studentIdInput" style="width:100%; padding:9px; border:2px solid #2b2b2b; border-radius:8px; font-size:14px; font-family:inherit;">
+      </div>
+      <button class="btn-primary" style="width:100%; padding:11px; font-size:15px; border-radius:8px;" onclick="submitStudentInfo()" id="studentInfoContinueBtn">ดำเนินการต่อ</button>
+    </div>
+  </div>
+
+  <div id="screen-select" class="screen">
+    <h1 id="appTitleEl">🧪 ฝึกเก็บกวาดสารเคมี/เชื้อหก</h1>
+    <p class="sub" id="appSubtitleEl">เลือกอุปกรณ์และลำดับขั้นตอนตามความเข้าใจของตัวเอง ผลคะแนนจะสรุปให้เมื่อกด "จบการฝึก"</p>
+    <div class="scenario-cards">
+      <div class="scenario-card chem" onclick="startGame('chemical')">
+        <span class="emoji">🧫</span>
+        <h3 id="scenarioChemNameEl">สารเคมีหก</h3>
+        <p id="scenarioChemDescEl">ฝึกขั้นตอนเก็บกวาดสารเคมีหกบนโต๊ะปฏิบัติการ</p>
+      </div>
+      <div class="scenario-card bio" onclick="startGame('biological')">
+        <span class="emoji">🦠</span>
+        <h3 id="scenarioBioNameEl">เชื้อจุลชีพหก (ปริมาณน้อย &lt;10 ml)</h3>
+        <p id="scenarioBioDescEl">ฝึกขั้นตอนการใช้ spill kit ตามขั้นตอนมาตรฐาน</p>
+      </div>
+    </div>
+  </div>
+
+  <div id="screen-game" class="screen">
+    <div id="topbar">
+      <div class="title" id="scenarioTitle">-</div>
+      <div class="actionCountBox"><span id="actionCountLabelEl">ทำไปแล้ว</span>: <span id="actionCountVal">0</span> <span id="actionCountUnitEl">ครั้ง</span></div>
+      <div class="btnGroup">
+        <button class="btn-finish" onclick="finishTraining()" id="finishBtnEl">✅ จบการฝึก</button>
+        <button onclick="goSelectScreen()" id="restartBtnEl">🔁 เริ่มใหม่</button>
+      </div>
+    </div>
+    <div id="gameArea">
+      <div id="toolbar">
+        <div class="tb-scroll-btn" onclick="scrollToolbar(-1)">▲</div>
+        <div id="toolbarList"></div>
+        <div class="tb-scroll-btn" onclick="scrollToolbar(1)">▼</div>
+      </div>
+
+      <div id="stage">
+        <div id="ppeAvatar">
+          <span class="slot" id="slotGlove">🧤</span>
+          <span class="slot" id="slotGoggle">🥽</span>
+          <span class="slot" id="slotMask">😷</span>
+          <span class="slot" id="slotApron">🥼</span>
+        </div>
+
+        <div id="spillWrap">
+          <img id="spillImg" alt="" style="position:absolute; left:6%; top:8%; width:88%; height:75%; object-fit:contain; pointer-events:none; z-index:1; display:none;">
+          <svg id="spillSvg" viewBox="0 0 320 220" style="position:relative; z-index:2;">
+            <path class="spillBlob" id="spillBlobPath" d="M40,120 C20,100 30,70 60,65 C70,40 110,30 140,45
+              C160,25 210,25 225,50 C260,45 285,65 275,90
+              C300,100 295,130 270,135 C265,160 220,170 195,155
+              C170,175 120,175 105,155 C70,165 45,145 40,120 Z"/>
+            <circle class="bubble" cx="110" cy="95" r="6"/>
+            <circle class="bubble" cx="150" cy="80" r="4"/>
+            <circle class="bubble" cx="190" cy="100" r="5"/>
+            <circle class="bubble" cx="130" cy="115" r="3.5"/>
+            <g class="bacteria">
+              <g class="bact" id="bact0"><ellipse cx="120" cy="100" rx="9" ry="5" fill="#4caf50" opacity="0.85" transform="rotate(20 120 100)"/><circle cx="120" cy="100" r="1.6" fill="#1b5e20"/></g>
+              <g class="bact" id="bact1"><ellipse cx="160" cy="88" rx="8" ry="4.5" fill="#29b6d6" opacity="0.85" transform="rotate(-15 160 88)"/><circle cx="160" cy="88" r="1.6" fill="#01579b"/></g>
+              <g class="bact" id="bact2"><ellipse cx="195" cy="108" rx="7" ry="4" fill="#4caf50" opacity="0.85" transform="rotate(45 195 108)"/><circle cx="195" cy="108" r="1.4" fill="#1b5e20"/></g>
+              <g class="bact" id="bact3"><ellipse cx="145" cy="125" rx="8" ry="4.5" fill="#29b6d6" opacity="0.85" transform="rotate(-30 145 125)"/><circle cx="145" cy="125" r="1.6" fill="#01579b"/></g>
+              <g class="bact" id="bact4"><ellipse cx="205" cy="90" rx="7" ry="4" fill="#4caf50" opacity="0.85" transform="rotate(10 205 90)"/><circle cx="205" cy="90" r="1.4" fill="#1b5e20"/></g>
+              <g class="bact" id="bact5"><ellipse cx="175" cy="122" rx="6.5" ry="3.5" fill="#29b6d6" opacity="0.85" transform="rotate(60 175 122)"/><circle cx="175" cy="122" r="1.3" fill="#01579b"/></g>
+            </g>
+          </svg>
+          <canvas id="coverOverlayCanvas" width="320" height="220"></canvas>
+          <!-- เศษแก้วอยู่ในกล่องคราบหก เพื่อให้ขยาย/ย่อไปพร้อมกัน -->
+          <div class="shardPiece" id="shard0" style="left:50%; top:56%;">
+            <img src="icons/shard1.png" alt="" style="width:100%;height:100%;object-fit:contain;display:none;" onload="this.style.display='block'; this.nextElementSibling.style.display='none';" onerror="this.style.display='none';">
+            <svg viewBox="0 0 40 40"><polygon points="6,34 16,6 26,16 13,30" fill="#bcdfe6" stroke="#5a8fa0" stroke-width="2" opacity="0.92"/><line x1="11" y1="27" x2="19" y2="12" stroke="#fff" stroke-width="1.5" opacity="0.7"/></svg>
+          </div>
+          <div class="shardPiece" id="shard1" style="left:60%; top:68%;">
+            <img src="icons/shard2.png" alt="" style="width:100%;height:100%;object-fit:contain;display:none;" onload="this.style.display='block'; this.nextElementSibling.style.display='none';" onerror="this.style.display='none';">
+            <svg viewBox="0 0 40 40"><polygon points="5,20 20,5 34,18 22,33" fill="#cdeaf0" stroke="#5a8fa0" stroke-width="2" opacity="0.92"/><line x1="12" y1="18" x2="24" y2="12" stroke="#fff" stroke-width="1.5" opacity="0.7"/></svg>
+          </div>
+          <div class="shardPiece" id="shard2" style="left:44%; top:70%;">
+            <img src="icons/shard3.png" alt="" style="width:100%;height:100%;object-fit:contain;display:none;" onload="this.style.display='block'; this.nextElementSibling.style.display='none';" onerror="this.style.display='none';">
+            <svg viewBox="0 0 40 40"><polygon points="8,32 4,12 22,6 30,24" fill="#bcdfe6" stroke="#5a8fa0" stroke-width="2" opacity="0.92"/><line x1="10" y1="24" x2="20" y2="12" stroke="#fff" stroke-width="1.5" opacity="0.7"/></svg>
+          </div>
+          <div class="shardPiece" id="shard3" style="left:65%; top:54%;">
+            <img src="icons/shard4.png" alt="" style="width:100%;height:100%;object-fit:contain;display:none;" onload="this.style.display='block'; this.nextElementSibling.style.display='none';" onerror="this.style.display='none';">
+            <svg viewBox="0 0 40 40"><polygon points="4,10 24,4 36,22 16,30" fill="#cdeaf0" stroke="#5a8fa0" stroke-width="2" opacity="0.92"/><line x1="10" y1="15" x2="24" y2="10" stroke="#fff" stroke-width="1.5" opacity="0.7"/></svg>
+          </div>
+        </div>
+
+
+        <div id="wipeFx">🧻</div>
+        <div id="flyItem">🗑️</div>
+
+        <div id="binColumn">
+        <div id="binBag" class="binWrap2">
+          <img src="icons/bin_bio_bag.png" alt="bin_bio_bag" style="width:48px;height:66px;object-fit:contain;display:block;margin:0 auto;" onerror="this.style.visibility='hidden'">
+          <div class="binLbl2" id="binBagLbl">ถุงขยะติดเชื้อ<br>(กระดาษ / PPE)</div>
+        </div>
+
+        <div id="binSharps" class="binWrap2">
+          <img src="icons/bin_bio_sharps.png" alt="bin_bio_sharps" style="width:48px;height:60px;object-fit:contain;display:block;margin:0 auto;" onerror="this.style.visibility='hidden'">
+          <div class="binLbl2" id="binSharpsLbl">ถังของมีคมติดเชื้อ<br>(เศษแก้วเท่านั้น)</div>
+        </div>
+
+        <div id="binChemBox" class="binWrap2">
+          <img src="icons/bin_chem_box.png" alt="bin_chem_box" style="width:48px;height:60px;object-fit:contain;display:block;margin:0 auto;" onerror="this.style.visibility='hidden'">
+          <div class="binLbl2" id="binChemBoxLbl">กล่องทิ้งเศษแก้ว</div>
+        </div>
+
+        <div id="binChemBag" class="binWrap2">
+          <img src="icons/bin_chem_bag.png" alt="bin_chem_bag" style="width:48px;height:66px;object-fit:contain;display:block;margin:0 auto;" onerror="this.style.visibility='hidden'">
+          <div class="binLbl2" id="binChemBagLbl">ถุงขยะสารเคมี</div>
+        </div>
+        </div>
+
+        <div id="toast"></div>
+      </div>
+
+      <div id="checklistPanel">
+        <h4 id="checklistPanelTitleEl">สิ่งที่ทำไปแล้ว</h4>
+        <div id="checklistList"><div id="checklistEmpty">ยังไม่มีการกระทำใดๆ</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="screen-result" class="screen">
+    <div class="resultBox">
+      <h2 id="resultTitleEl">สรุปผลการฝึก</h2>
+      <div class="bigscore" id="finalScore">0</div>
+      <div id="resultSummaryLine"></div>
+      <div id="resultDetails"></div>
+      <div class="modal-actions">
+        <button class="btn-primary" onclick="exportResultJPG()" id="exportBtnEl">📷 บันทึกเป็นรูปภาพ (JPG)</button>
+        <button class="btn-primary" onclick="goSelectScreen()" id="retryBtnEl">ฝึกอีกครั้ง</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: pattern choice -->
+  <div id="modal-pattern" class="modal">
+    <div class="modal-box">
+      <h3 id="patternModalTitle">เลือกรูปแบบ</h3>
+      <div class="pattern-grid" id="patternGrid"></div>
+    </div>
+  </div>
+
+  <!-- MODAL: trace -->
+  <div id="modal-trace" class="modal">
+    <div class="modal-box modal-box-h">
+      <div class="modal-main">
+        <h3 id="traceTitle">ลากนิ้วตามเส้นประให้แม่นยำที่สุด</h3>
+        <canvas id="traceCanvas" width="440" height="320"></canvas>
+        <div id="tracePct">0%</div>
+      </div>
+      <div class="modal-actions-v">
+        <button onclick="resetTrace()">↺ ลองใหม่</button>
+        <button class="btn-primary" id="traceConfirmBtn" disabled onclick="confirmTrace()">✔ ยืนยัน</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: cover area (paper sheets or spray paint, mode-driven) -->
+  <div id="modal-cover" class="modal">
+    <div class="modal-box modal-box-h">
+      <div class="modal-main">
+        <h3 id="coverTitle">คลุมพื้นที่ให้ครบ</h3>
+        <div id="coverModeHint"></div>
+        <div id="coverCanvasWrap">
+          <canvas id="coverGuideCanvas" width="320" height="220"></canvas>
+          <canvas id="coverPaintCanvas" width="320" height="220"></canvas>
+        </div>
+        <div id="coverPct">0% คลุมแล้ว</div>
+      </div>
+      <div class="modal-actions-v">
+        <button onclick="resetCover()">↺ เริ่มใหม่</button>
+        <button class="btn-primary" id="coverConfirmBtn" disabled onclick="confirmCover()">✔ ยืนยัน</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: timed wait -->
+  <div id="modal-timewait" class="modal">
+    <div class="modal-box modal-box-h">
+      <div class="modal-main">
+        <h3 id="timeWaitTitleEl">เลือกระยะเวลารอ (contact time)</h3>
+        <div id="timeChooseView">
+          <div class="time-opt-grid">
+            <div class="time-opt" onclick="chooseTime(10)"><span id="timeOpt10">10 นาที</span></div>
+            <div class="time-opt" onclick="chooseTime(20)"><span id="timeOpt20">20 นาที</span></div>
+            <div class="time-opt" onclick="chooseTime(30)"><span id="timeOpt30">30 นาที</span></div>
+          </div>
+        </div>
+        <div id="countdownView">
+          <div id="clockEmoji">⏳</div>
+          <div id="countdownText">10:00</div>
+          <div id="countdownBarWrap"><div id="countdownBarFill"></div></div>
+        </div>
+      </div>
+      <div class="modal-actions-v" id="countdownActionsV" style="display:none;">
+        <button class="btn-primary" id="waitContinueBtn" disabled onclick="continueAfterWait()"><span id="waitContinueBtnLabel">✔ ดำเนินการต่อ</span></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: report -->
+  <div id="modal-report" class="modal">
+    <div class="modal-box">
+      <h3 id="reportModalTitleEl">📋 รายงานอุบัติการณ์</h3>
+      <p style="font-size:13px; color:#555;" id="reportModalTextEl">แจ้งเหตุการหกของสารชีวภาพต่อผู้ดูแลห้องปฏิบัติการ พร้อมบันทึกรายละเอียดเหตุการณ์และการจัดการที่ทำไปแล้ว</p>
+      <div class="modal-actions">
+        <button class="btn-primary" onclick="submitReport()" id="reportSubmitBtnEl">✔ ส่งรายงาน</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: finish confirm -->
+  <div id="modal-finish-confirm" class="modal">
+    <div class="modal-box">
+      <h3 id="finishConfirmTitleEl">ยืนยันจบการฝึก?</h3>
+      <p style="font-size:13px; color:#555;" id="finishConfirmTextEl">เมื่อกดยืนยัน ระบบจะสรุปคะแนนทั้งหมดให้ดู และจะไม่สามารถทำขั้นตอนเพิ่มเติมได้อีก</p>
+      <div class="modal-actions">
+        <button onclick="document.getElementById('modal-finish-confirm').classList.remove('show')" id="finishConfirmCancelEl">ยกเลิก</button>
+        <button class="btn-primary" onclick="document.getElementById('modal-finish-confirm').classList.remove('show'); showResult();" id="finishConfirmOkEl">✔ ยืนยันจบการฝึก</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: multi-use tool choice (e.g. ที่คีบ) -->
+  <div id="modal-tool-choice" class="modal">
+    <div class="modal-box">
+      <h3 id="toolChoiceTitleEl">เลือกการใช้งาน "ที่คีบ"</h3>
+      <div id="toolChoiceButtons" style="display:flex; flex-direction:column; gap:10px; margin-top:10px;"></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+/* ============ VIEWPORT HEIGHT FIX (mobile browser toolbar) ============ */
+function fixViewportHeight(){
+  const app = document.getElementById('app');
+  const h = window.innerHeight;
+  document.documentElement.style.setProperty('--app-h', h + 'px');
+  if(app) app.style.height = h + 'px';
+  if(typeof layoutStage === 'function') layoutStage();
+}
+fixViewportHeight();
+window.addEventListener('resize', fixViewportHeight);
+window.addEventListener('orientationchange', ()=>{ setTimeout(fixViewportHeight, 100); setTimeout(fixViewportHeight, 400); });
+if(window.visualViewport) window.visualViewport.addEventListener('resize', fixViewportHeight);
+
+/* ============ STAGE LAYOUT (ปรับขนาดคราบหกให้พอดีกับพื้นที่จริงของจอ) ============ */
+const SPILL_RATIO = 320/220;
+function layoutStage(){
+  const stageEl = document.getElementById('stage');
+  const wrap = document.getElementById('spillWrap');
+  if(!stageEl || !wrap) return;
+  const W = stageEl.clientWidth, H = stageEl.clientHeight;
+  if(!W || !H) return;                       // หน้าจอเกมยังไม่แสดง
+  const binCol = document.getElementById('binColumn');
+  const binW = binCol ? binCol.offsetWidth + 10 : 0;
+  const ppe = document.getElementById('ppeAvatar');
+  const ppeW = ppe ? ppe.offsetWidth * 0.5 : 0;
+  // พื้นที่ว่างระหว่างกล่อง PPE (ซ้าย) กับถังขยะ (ขวา)
+  const areaL = Math.min(ppeW, 12), areaR = W - binW;
+  const availW = Math.max(80, areaR - areaL);
+  const availH = H;
+  let w = Math.min(availW * 0.98, availH * 0.84 * SPILL_RATIO);
+  w = Math.max(140, w);
+  const h = w / SPILL_RATIO;
+  wrap.style.width  = w + 'px';
+  wrap.style.height = h + 'px';
+  wrap.style.left = (areaL + availW/2) + 'px';
+  wrap.style.top  = (H/2 + Math.min(10, H*0.02)) + 'px';
+}
+if(window.ResizeObserver){
+  window.addEventListener('DOMContentLoaded', ()=>{
+    const st = document.getElementById('stage');
+    if(st) new ResizeObserver(()=>layoutStage()).observe(st);
+  });
+}
+window.addEventListener('resize', layoutStage);
+
+/* วาง emoji ที่ลอยลงถังให้เริ่มจากกลางคราบหก (ไม่ใช้ px ตายตัว) */
+function placeFlyAtSpill(fly){
+  const stageEl = document.getElementById('stage');
+  const wrap = document.getElementById('spillWrap');
+  const sr = stageEl.getBoundingClientRect(), wr = wrap.getBoundingClientRect();
+  fly.style.left = (wr.left - sr.left + wr.width/2) + 'px';
+  fly.style.top  = (wr.top  - sr.top  + wr.height/2) + 'px';
+}
+
+/* ============ ORIENTATION LOCK (best-effort) ============ */
+async function tryLockLandscape(){
+  try{
+    if(document.documentElement.requestFullscreen && !document.fullscreenElement){
+      await document.documentElement.requestFullscreen().catch(()=>{});
+    }
+    if(screen.orientation && screen.orientation.lock){
+      await screen.orientation.lock('landscape').catch(()=>{});
+    }
+  }catch(e){ /* not supported — rotate overlay still covers portrait mode */ }
+}
+document.addEventListener('pointerdown', function onceUnlock(){
+  tryLockLandscape();
+  document.removeEventListener('pointerdown', onceUnlock);
+}, { once:true });
+
+/* ============ ICON FILES (swap in your own artwork by filename) ============ */
+const ICON_FILES = {
+  gloves:'gloves.png', goggles:'goggles.png', mask:'mask.png', apron:'apron.png',
+  pad:'pad.png', bottle:'bottle.png', bottleEthanol:'bottle_ethanol.png', forceps:'forceps.png', shower:'shower.png', clipboard:'clipboard.png'
+};
+function iconImg(key, size){
+  const file = ICON_FILES[key] || '';
+  // ไม่ใส่ขนาด = ให้ CSS (--tb-ic / --cl-ic) กำหนดตามขนาดจอ
+  const sz = size ? `width:${size}px;height:${size}px;` : '';
+  return `<img src="icons/${file}" alt="${key}" style="${sz}object-fit:contain;" onerror="this.style.visibility='hidden'">`;
+}
+
+/* ============ DATA ============ */
+function L(field){
+  if(typeof field === 'string') return field;
+  return field[currentLang] || field.th;
+}
+
+const UI_TEXT = {
+  langScreenTitle: {th:'เลือกภาษา', en:'Select Language'},
+  langThaiBtn: {th:'ภาษาไทย', en:'Thai'},
+  langEnglishBtn: {th:'English', en:'English'},
+  studentInfoTitle: {th:'กรอกข้อมูลนิสิต', en:'Student Information'},
+  studentNameLabel: {th:'ชื่อ-นามสกุล', en:'Full Name'},
+  studentIdLabel: {th:'รหัสนิสิต', en:'Student ID'},
+  studentInfoContinue: {th:'ดำเนินการต่อ', en:'Continue'},
+  studentInfoWarn: {th:'กรุณากรอกชื่อและรหัสนิสิตให้ครบ', en:'Please fill in both your name and student ID'},
+  appTitle: {th:'🧪 ฝึกเก็บกวาดสารเคมี/เชื้อหก', en:'🧪 Spill Cleanup Training'},
+  appSubtitle: {th:'เลือกอุปกรณ์และลำดับขั้นตอนตามความเข้าใจของตัวเอง ผลคะแนนจะสรุปให้เมื่อกด "จบการฝึก"', en:'Choose equipment and order based on your own understanding. Scores are revealed when you press "Finish Training"'},
+  scenarioChemName: {th:'สารเคมีหก', en:'Chemical Spill'},
+  scenarioChemDesc: {th:'ฝึกขั้นตอนเก็บกวาดสารเคมีหกบนโต๊ะปฏิบัติการ', en:'Practice cleaning up a chemical spill on the lab bench'},
+  scenarioBioName: {th:'เชื้อจุลชีพหก (ปริมาณน้อย <10 ml)', en:'Biological Spill (small, <10 ml)'},
+  scenarioBioDesc: {th:'ฝึกขั้นตอนการใช้ spill kit ตามขั้นตอนมาตรฐาน', en:'Practice using a biological spill kit per standard procedure'},
+  actionCountLabel: {th:'ทำไปแล้ว', en:'Actions taken'},
+  actionCountUnit: {th:'ครั้ง', en:''},
+  finishBtn: {th:'✅ จบการฝึก', en:'✅ Finish Training'},
+  restartBtn: {th:'🔁 เริ่มใหม่', en:'🔁 Restart'},
+  checklistPanelTitle: {th:'สิ่งที่ทำไปแล้ว', en:'Actions Log'},
+  checklistEmptyText: {th:'ยังไม่มีการกระทำใดๆ', en:'No actions yet'},
+  rotateTitle: {th:'กรุณาหมุนหน้าจอเป็นแนวนอน', en:'Please rotate to landscape'},
+  rotateText: {th:'เกมนี้ออกแบบมาให้เล่นในแนวนอนเท่านั้น เพื่อให้เห็นอุปกรณ์และขั้นตอนครบถ้วน', en:'This game is designed for landscape mode only, so all equipment and steps are visible'},
+  resultTitle: {th:'สรุปผลการฝึก', en:'Training Summary'},
+  correctOrderText: {th:'ลำดับถูกต้อง', en:'Correct order'},
+  wrongOrderText: {th:'ผิดลำดับ', en:'Wrong order'},
+  timesLabel: {th:'ครั้งที่', en:'attempt'},
+  repeatHeader: {th:'การใช้ซ้ำเกินจำเป็น', en:'Unnecessary repeats'},
+  repeatLine: {th:'ใช้ซ้ำ', en:'repeated'},
+  patternWrongHeader: {th:'เลือกรูปแบบการเทผิด', en:'Wrong pattern chosen'},
+  timeShortHeader: {th:'รอเวลาไม่ครบ 30 นาที', en:'Contact time under 30 minutes'},
+  timeShortLine: {th:'รอไม่ครบ', en:'insufficient wait'},
+  patternWrongLine: {th:'เลือกผิด', en:'wrong choice'},
+  binWrongHeader: {th:'ทิ้งผิดถัง', en:'Wrong bin'},
+  binWrongLine: {th:'ทิ้งผิดถัง', en:'wrong bin'},
+  qualityHeader: {th:'คุณภาพการทำล่าสุด', en:'Latest quality'},
+  emptyResultText: {th:'ยังไม่ได้ทำขั้นตอนใดเลย', en:'No steps completed yet'},
+  exportBtn: {th:'📷 บันทึกเป็นรูปภาพ (JPG)', en:'📷 Export as JPG'},
+  retryBtn: {th:'ฝึกอีกครั้ง', en:'Try Again'},
+  timesDoneOf: {th:'ทำไปทั้งหมด', en:'Total actions'},
+  correctTimesLabel: {th:'ถูกลำดับ', en:'correct'},
+  wrongTimesLabel: {th:'ผิดลำดับ', en:'wrong'},
+  notDoneLabel: {th:'ยังไม่ได้ทำอีก', en:'steps not attempted'},
+  stepsUnit: {th:'ขั้นตอน', en:'steps'},
+  finishConfirmTitle: {th:'ยืนยันจบการฝึก?', en:'Confirm finish training?'},
+  finishConfirmText: {th:'เมื่อกดยืนยัน ระบบจะสรุปคะแนนทั้งหมดให้ดู และจะไม่สามารถทำขั้นตอนเพิ่มเติมได้อีก', en:'Once confirmed, your full score will be revealed and no further actions can be taken'},
+  finishConfirmCancel: {th:'ยกเลิก', en:'Cancel'},
+  finishConfirmOk: {th:'✔ ยืนยันจบการฝึก', en:'✔ Confirm Finish'},
+  reportModalTitle: {th:'📋 รายงานอุบัติการณ์', en:'📋 Incident Report'},
+  reportModalText: {th:'แจ้งเหตุการหกของสารชีวภาพต่อผู้ดูแลห้องปฏิบัติการ พร้อมบันทึกรายละเอียดเหตุการณ์และการจัดการที่ทำไปแล้ว', en:'Notify the lab supervisor of the spill and record the incident details and actions taken'},
+  reportSubmitBtn: {th:'✔ ส่งรายงาน', en:'✔ Submit Report'},
+  chooseBinToast: {th:'เลือกถังที่ถูกต้องเพื่อทิ้ง', en:'Choose the correct bin to dispose of'},
+  wrongBinToast: {th:'ผิดถัง! ลองใหม่อีกครั้ง (-5)', en:'Wrong bin! Try again (-5)'},
+  tapCorrectBinToast: {th:'แตะถังที่ถูกต้องเพื่อทิ้ง', en:'Tap the correct bin to dispose of'},
+  needFinishOtherFirstToast: {th:'ต้องทิ้งของที่ถืออยู่ลงถังให้ถูกก่อนครับ', en:'You must dispose of what you are holding first'},
+  forcepsArmToast: {th:'แตะที่เศษแก้วทีละชิ้นเพื่อคีบออก (เหลืออีก', en:'Tap each glass shard one at a time to remove ('},
+  forcepsArmToastEnd: {th:'ชิ้น)', en:'left)'},
+  forcepsBareHandToast: {th:'ห้ามหยิบด้วยมือเปล่า! ต้องกดคีมคีบก่อน', en:'Do not touch with bare hands! Use forceps first'},
+  forcepsRemainingToast: {th:'เหลืออีก', en:'remaining:'},
+  forcepsPiecesUnit: {th:'ชิ้น', en:'pieces'},
+  forcepsAllDoneToast: {th:'คีบครบ 4 ชิ้นแล้ว แตะถังที่ถูกต้องเพื่อทิ้ง', en:'All 4 pieces collected — tap the correct bin to dispose'},
+  wipeChoicePrefix: {th:'เช็ด', en:'wipe: '},
+  pourChoicePrefix: {th:'เท', en:'pour: '},
+  timeWaitTitle: {th:'เลือกระยะเวลารอ (contact time)', en:'Choose the wait duration (contact time)'},
+  minutesUnit: {th:'นาที', en:'min'},
+  waitContinueBtnLabel: {th:'✔ ดำเนินการต่อ', en:'✔ Continue'},
+  toolChoiceTitle: {th:'เลือกการใช้งาน "ที่คีบ"', en:'Choose how to use the "Forceps"'},
+  binBagLbl: {th:'ถุงขยะติดเชื้อ<br>(กระดาษ / PPE)', en:'Biohazard bag<br>(paper / PPE)'},
+  binSharpsLbl: {th:'ถังของมีคมติดเชื้อ<br>(เศษแก้วเท่านั้น)', en:'Sharps bin<br>(glass only)'},
+  binChemBoxLbl: {th:'กล่องทิ้งเศษแก้ว', en:'Glass shard box'},
+  binChemBagLbl: {th:'ถุงขยะสารเคมี', en:'Chemical waste bag'}
+};
+function t(key){
+  const entry = UI_TEXT[key];
+  if(!entry) return key;
+  return entry[currentLang] || entry.th;
+}
+
+const CHEM_DEFS = {
+  mask:        { icon:'mask',    shortLabel:{th:'สวมหน้ากาก', en:'Put on mask'}, label:{th:'สวมหน้ากาก', en:'Put on mask'}, type:'simple' },
+  gloves:      { icon:'gloves',  shortLabel:{th:'สวมถุงมือ', en:'Put on gloves'}, label:{th:'สวมถุงมือ', en:'Put on gloves'}, type:'simple' },
+  goggles:     { icon:'goggles', shortLabel:{th:'สวมแว่นตานิรภัย', en:'Put on goggles'}, label:{th:'สวมแว่นตานิรภัย', en:'Put on goggles'}, type:'simple' },
+  apron:       { icon:'apron',   shortLabel:{th:'สวมผ้ากันเปื้อน', en:'Put on apron'}, label:{th:'สวมผ้ากันเปื้อน', en:'Put on apron'}, type:'simple' },
+  forcepsShards: { icon:'forceps', shortLabel:{th:'ที่คีบ', en:'Forceps'}, label:{th:'คีบเศษแก้วใส่กล่องพลาสติก', en:'Pick up glass shards into the plastic box'}, type:'forcepsPickup', correctBin:'binChemBox', group:'forcepsTool' },
+  pad:         { icon:'pad',     shortLabel:{th:'วางแผ่นดูดซับ', en:'Place absorbent pad'}, label:{th:'วางแผ่นดูดซับสารเคมีที่หก', en:'Place absorbent pad over the chemical spill'}, type:'coverArea', coverMode:'paper', threshold:75, chainWait:false },
+  padCollect:  { icon:'forceps', shortLabel:{th:'ที่คีบ', en:'Forceps'}, label:{th:'เช็ดแล้วคีบแผ่นดูดซับทิ้งถุงขยะสารเคมี', en:'Wipe, then use forceps to discard the pad in the chemical waste bag'}, type:'wipeAndDispose', correctBin:'binChemBag', patterns:['zigzag','inout','outin'], group:'forcepsTool' },
+  shower:      { icon:'shower',  shortLabel:{th:'ล้างมือและถอดชุด PPE', en:'Wash hands & remove PPE'}, label:{th:'ถอดชุด PPE และล้างมือ', en:'Remove PPE and wash hands'}, type:'disposeChoice', correctBin:'binChemBag' },
+  report:      { icon:'clipboard', shortLabel:{th:'รายงานอุบัติการณ์', en:'Incident report'}, label:{th:'เขียนรายงานอุบัติการณ์', en:'Write incident report'}, type:'report' }
+};
+const CHEM_SEQ = [
+  { ids:['mask','gloves','goggles','apron'] },
+  { id:'forcepsShards' },
+  { id:'pad' }, { id:'padCollect' },
+  { id:'pad' }, { id:'padCollect' },
+  { id:'shower' },
+  { id:'report' }
+];
+
+const BIO_DEFS = {
+  gloves:       { icon:'gloves', shortLabel:{th:'สวมถุงมือ', en:'Put on gloves'}, label:{th:'สวมถุงมือ', en:'Put on gloves'}, type:'simple' },
+  goggles:      { icon:'goggles', shortLabel:{th:'สวมแว่นตานิรภัย', en:'Put on goggles'}, label:{th:'สวมแว่นตานิรภัย', en:'Put on goggles'}, type:'simple' },
+  cover:        { icon:'pad', shortLabel:{th:'วางแผ่นดูดซับ', en:'Place absorbent pad'}, label:{th:'คลุมรอยหกด้วยกระดาษ/แผ่นดูดซับชุบน้ำยาฆ่าเชื้อ', en:'Cover the spill with disinfectant-soaked paper/pads'}, type:'coverArea', coverMode:'paper', threshold:75, chainWait:false },
+  pour1:        { icon:'bottle', shortLabel:{th:'น้ำยาฆ่าเชื้อ NaClO', en:'NaClO disinfectant'}, label:{th:'ราดน้ำยาฆ่าเชื้อ ความเข้มข้น 0.5% รอบรอยหก', en:'Pour 0.5% disinfectant around the spill'}, type:'pourChoice', chainWait:true, correctPattern:'outin' },
+  collectPaper: { icon:'forceps', shortLabel:{th:'ที่คีบ', en:'Forceps'}, label:{th:'เก็บกระดาษที่คลุมทิ้งถุงแดง', en:'Collect the covering paper into the red bag'}, type:'disposeChoice', correctBin:'binBag', group:'forcepsTool' },
+  wipe:         { icon:'pad', shortLabel:{th:'เช็ดด้วยวัสดุซับ', en:'Wipe with pad'}, label:{th:'เช็ดออกด้วยกระดาษ/แผ่นดูดซับ', en:'Wipe up with paper/absorbent pad'}, type:'wipeAndDispose', correctBin:'binBag', patterns:['zigzag','inout','outin'] },
+  forceps:      { icon:'forceps', shortLabel:{th:'ที่คีบ', en:'Forceps'}, label:{th:'คีบเศษหลอดทดลองแตกทิ้งถังของมีคม', en:'Pick up broken glass into the sharps bin'}, type:'forcepsPickup', correctBin:'binSharps', group:'forcepsTool' },
+  spray2:       { icon:'bottleEthanol', shortLabel:{th:'เอทานอล 70%', en:'70% ethanol'}, label:{th:'พ่นน้ำยาเอทานอล 70% ให้ครอบคลุมพื้นที่', en:'Spray 70% ethanol to cover the area'}, type:'coverArea', coverMode:'spray', threshold:100, chainWait:true },
+  removePPE:    { icon:'shower', shortLabel:{th:'ล้างมือและถอดชุด PPE', en:'Wash hands & remove PPE'}, label:{th:'ถอด PPE และล้างมือ', en:'Remove PPE and wash hands'}, type:'disposeChoice', correctBin:'binBag' },
+  report:       { icon:'clipboard', shortLabel:{th:'รายงานอุบัติการณ์', en:'Incident report'}, label:{th:'รายงานอุบัติการณ์', en:'Write incident report'}, type:'report' }
+};
+const BIO_SEQ = [ {ids:['gloves','goggles']}, {id:'cover'}, {id:'pour1'}, {id:'collectPaper'}, {id:'forceps'}, {id:'wipe'}, {id:'spray2'}, {id:'wipe'}, {id:'removePPE'}, {id:'report'} ];
+
+const SCENARIOS = {
+  chemical: {
+    name:{th:'สารเคมีหก', en:'Chemical Spill'},
+    liquidName:{th:'สารทำให้เป็นกลาง / น้ำยาดูดซับสารเคมี', en:'Neutralizer / chemical absorbent'},
+    defs: CHEM_DEFS, seq: CHEM_SEQ
+  },
+  biological: {
+    name:{th:'เชื้อจุลชีพหก', en:'Biological Spill'},
+    liquidName:{th:'น้ำยาฆ่าเชื้อ (bleach 1:10 / 0.5% sodium hypochlorite)', en:'Disinfectant (1:10 bleach / 0.5% sodium hypochlorite)'},
+    defs: BIO_DEFS, seq: BIO_SEQ
+  }
+};
+
+const TRACE_THRESHOLD = 40;
+const COUNTDOWN_MS = 5000;
+
+/* ============ STATE ============ */
+let currentLang = 'th';
+let studentName = '';
+let studentId = '';
+let state = null;
+
+function buildIdPositions(seq){
+  const map = {};
+  seq.forEach((slot,i)=>{
+    const ids = slot.ids || [slot.id];
+    ids.forEach(id=>{ (map[id] = map[id]||[]).push(i); });
+  });
+  return map;
+}
+function shuffle(arr){
+  const a = arr.slice();
+  for(let i=a.length-1;i>0;i--){
+    const j = Math.floor(Math.random()*(i+1));
+    [a[i],a[j]] = [a[j],a[i]];
+  }
+  return a;
+}
+
+function randomizeShardPositions(){
+  // scatter zone tightly around the spill pool (in % of stage), well clear of the bins
+  // ตำแหน่งเป็น % ของกล่องคราบหก (#spillWrap) — จึงอยู่บนคราบเสมอไม่ว่าจอขนาดไหน
+  const zone = { xMin:16, xMax:68, yMin:16, yMax:56 };
+  const minDistPct = 19; // minimum spacing so pieces don't overlap
+  const placed = [];
+  for(let i=0;i<4;i++){
+    let p, tries = 0;
+    do{
+      p = {
+        x: zone.xMin + Math.random()*(zone.xMax-zone.xMin),
+        y: zone.yMin + Math.random()*(zone.yMax-zone.yMin)
+      };
+      tries++;
+    } while(
+      tries < 40 &&
+      placed.some(q => Math.hypot(p.x-q.x, p.y-q.y) < minDistPct)
+    );
+    placed.push(p);
+    const el = document.getElementById('shard'+i);
+    el.style.left = p.x + '%';
+    el.style.top = p.y + '%';
+  }
+}
+
+/* ============ SCREEN NAV ============ */
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+function goSelectScreen(){
+  cancelCountdown();
+  showScreen('screen-select');
+}
+
+function selectLanguage(lang){
+  currentLang = lang;
+  applyLanguage();
+  showScreen('screen-studentinfo');
+}
+
+function submitStudentInfo(){
+  const name = document.getElementById('studentNameInput').value.trim();
+  const id = document.getElementById('studentIdInput').value.trim();
+  if(!name || !id){
+    alert(t('studentInfoWarn'));
+    return;
+  }
+  studentName = name;
+  studentId = id;
+  showScreen('screen-select');
+}
+
+function applyLanguage(){
+  document.getElementById('studentInfoTitleEl').textContent = t('studentInfoTitle');
+  document.getElementById('studentNameLabelEl').textContent = t('studentNameLabel');
+  document.getElementById('studentIdLabelEl').textContent = t('studentIdLabel');
+  document.getElementById('studentInfoContinueBtn').textContent = t('studentInfoContinue');
+  document.getElementById('appTitleEl').textContent = t('appTitle');
+  document.getElementById('appSubtitleEl').textContent = t('appSubtitle');
+  document.getElementById('scenarioChemNameEl').textContent = t('scenarioChemName');
+  document.getElementById('scenarioChemDescEl').textContent = t('scenarioChemDesc');
+  document.getElementById('scenarioBioNameEl').textContent = t('scenarioBioName');
+  document.getElementById('scenarioBioDescEl').textContent = t('scenarioBioDesc');
+  document.getElementById('checklistPanelTitleEl').textContent = t('checklistPanelTitle');
+  document.getElementById('checklistEmpty').textContent = t('checklistEmptyText');
+  document.getElementById('rotateTitleEl').textContent = t('rotateTitle');
+  document.getElementById('rotateTextEl').textContent = t('rotateText');
+  document.getElementById('finishBtnEl').textContent = t('finishBtn');
+  document.getElementById('restartBtnEl').textContent = t('restartBtn');
+  document.getElementById('actionCountLabelEl').textContent = t('actionCountLabel');
+  document.getElementById('actionCountUnitEl').textContent = t('actionCountUnit');
+  document.getElementById('reportModalTitleEl').textContent = t('reportModalTitle');
+  document.getElementById('reportModalTextEl').textContent = t('reportModalText');
+  document.getElementById('reportSubmitBtnEl').textContent = t('reportSubmitBtn');
+  document.getElementById('finishConfirmTitleEl').textContent = t('finishConfirmTitle');
+  document.getElementById('finishConfirmTextEl').textContent = t('finishConfirmText');
+  document.getElementById('finishConfirmCancelEl').textContent = t('finishConfirmCancel');
+  document.getElementById('finishConfirmOkEl').textContent = t('finishConfirmOk');
+  document.getElementById('resultTitleEl').textContent = t('resultTitle');
+  document.getElementById('exportBtnEl').textContent = t('exportBtn');
+  document.getElementById('retryBtnEl').textContent = t('retryBtn');
+  document.getElementById('timeWaitTitleEl').textContent = t('timeWaitTitle');
+  document.getElementById('timeOpt10').textContent = '10 ' + t('minutesUnit');
+  document.getElementById('timeOpt20').textContent = '20 ' + t('minutesUnit');
+  document.getElementById('timeOpt30').textContent = '30 ' + t('minutesUnit');
+  document.getElementById('waitContinueBtnLabel').textContent = t('waitContinueBtnLabel');
+  document.getElementById('toolChoiceTitleEl').textContent = t('toolChoiceTitle');
+  document.getElementById('binBagLbl').innerHTML = t('binBagLbl');
+  document.getElementById('binSharpsLbl').innerHTML = t('binSharpsLbl');
+  document.getElementById('binChemBoxLbl').innerHTML = t('binChemBoxLbl');
+  document.getElementById('binChemBagLbl').innerHTML = t('binChemBagLbl');
+}
+
+function startGame(key){
+  const sc = SCENARIOS[key];
+  state = {
+    scenarioKey:key, defs: sc.defs, seq: sc.seq,
+    idPositions: buildIdPositions(sc.seq),
+    slotStatus: sc.seq.map(()=>({filled:false, correct:null})),
+    slotPointerByStepId: {},
+    repeatCountByStepId: {},
+    patternWrongCountByStepId: {},
+    qualityById: {},
+    groupDone: {}, groupMemberResult: {},
+    expectedIndex: 0,
+    score: 0,
+    actionLog: [],
+    pendingId: null, coverChainWait:false, pendingExtra:{},
+    forcepsArmed:false, shardsRemaining:4, activeForcepsId:null, chosenPattern:null,
+    chemWipeCount:0, bioWipeCount:0, bacteriaKilled:0, timeShortCountByStepId:{}, pendingMinutes:null,
+    awaitingBinFor:null, binWrongCountByStepId:{},
+    coverMode:null, coverThreshold:75
+  };
+
+  document.getElementById('scenarioTitle').textContent = L(sc.name) + (key==='chemical' ? ' 🧪' : ' 🦠');
+  document.getElementById('actionCountVal').textContent = '0';
+
+  document.getElementById('binBag').style.display = (key==='biological') ? 'block' : 'none';
+  document.getElementById('binSharps').style.display = (key==='biological') ? 'block' : 'none';
+  document.getElementById('binChemBox').style.display = (key==='chemical') ? 'block' : 'none';
+  document.getElementById('binChemBag').style.display = (key==='chemical') ? 'block' : 'none';
+  ['binBag','binSharps','binChemBox','binChemBag'].forEach(binId=>{
+    const el = document.getElementById(binId);
+    el.classList.remove('pulse','awaiting');
+  });
+
+  const stage = document.getElementById('spillWrap');
+  stage.className = key==='biological' ? 'scenario-bio' : '';
+  stage.classList.remove('cleaned','faded');
+  const blob = stage.querySelector('.spillBlob');
+  if(blob) blob.style.opacity = '';
+  clearCoverOverlay();
+  for(let i=0;i<6;i++){
+    const b = document.getElementById('bact'+i);
+    if(b){ b.style.opacity = ''; }
+  }
+  stage.querySelectorAll('.steamLine, .bubble').forEach(el=>{ el.style.opacity = ''; });
+
+  const spillImg = document.getElementById('spillImg');
+  spillImg.style.display = 'none';
+  spillImg.style.opacity = '';
+  if(blob) blob.style.visibility = 'visible';
+  spillImg.onload = ()=>{ spillImg.style.display = 'block'; if(blob) blob.style.visibility = 'hidden'; };
+  spillImg.onerror = ()=>{ spillImg.style.display = 'none'; if(blob) blob.style.visibility = 'visible'; };
+  spillImg.src = 'icons/' + (key==='biological' ? 'spill_blood.png' : 'spill_chemical.png');
+
+  document.getElementById('slotGlove').classList.remove('on');
+  document.getElementById('slotGoggle').classList.remove('on');
+  document.getElementById('slotMask').classList.remove('on');
+  document.getElementById('slotApron').classList.remove('on');
+  document.getElementById('slotMask').style.display = (key==='chemical') ? 'inline' : 'none';
+  document.getElementById('slotApron').style.display = (key==='chemical') ? 'inline' : 'none';
+  document.getElementById('wipeFx').classList.remove('play');
+  const flyItem = document.getElementById('flyItem');
+  flyItem.classList.remove('play'); flyItem.style.opacity = 0;
+  ['modal-pattern','modal-trace','modal-cover','modal-timewait','modal-report','modal-finish-confirm','modal-tool-choice'].forEach(id=>{
+    document.getElementById(id).classList.remove('show');
+  });
+  cancelCountdown();
+
+  for(let i=0;i<4;i++){
+    const el = document.getElementById('shard'+i);
+    el.classList.remove('collected','ready','flying');
+    el.style.display = 'block';
+  }
+  randomizeShardPositions();
+
+  document.getElementById('checklistList').innerHTML = '<div id="checklistEmpty">'+t('checklistEmptyText')+'</div>';
+
+  buildToolbar();
+  showScreen('screen-game');
+  layoutStage();
+  requestAnimationFrame(layoutStage);
+}
+
+/* ============ TOAST ============ */
+let toastTimer = null;
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>t.classList.remove('show'), 2200);
+}
+
+/* ============ TOOLBAR ============ */
+const GROUP_META = {
+  forcepsTool: { icon:'forceps', label:{th:'ที่คีบ', en:'Forceps'} }
+};
+
+function getToolbarElementFor(id){
+  const direct = document.getElementById('tb-'+id);
+  if(direct) return direct;
+  const step = state.defs[id];
+  if(step && step.group) return document.getElementById('tb-group-'+step.group);
+  return null;
+}
+function getBadgeElementFor(id){
+  const direct = document.getElementById('badge-'+id);
+  if(direct) return direct;
+  const step = state.defs[id];
+  if(step && step.group) return document.getElementById('badge-group-'+step.group);
+  return null;
+}
+
+function scrollToolbar(direction){
+  const list = document.getElementById('toolbarList');
+  if(list) list.scrollBy({ top: direction*90, behavior:'smooth' });
+}
+
+function buildToolbar(){
+  const el = document.getElementById('toolbarList');
+  el.innerHTML = '';
+
+  const allIds = Object.keys(state.defs);
+  const groupedIds = allIds.filter(id => state.defs[id].group);
+  const singleIds = allIds.filter(id => !state.defs[id].group);
+  const groupKeys = [...new Set(groupedIds.map(id => state.defs[id].group))];
+
+  const tiles = [];
+  singleIds.forEach(id => tiles.push({ kind:'single', id }));
+  groupKeys.forEach(gk => {
+    tiles.push({ kind:'group', groupKey:gk, memberIds: groupedIds.filter(id => state.defs[id].group === gk) });
+  });
+
+  shuffle(tiles).forEach(tile=>{
+    const d = document.createElement('div');
+    d.className = 'tb-item';
+    if(tile.kind === 'single'){
+      const step = state.defs[tile.id];
+      d.id = 'tb-'+tile.id;
+      d.innerHTML = `<div class="ic">${iconImg(step.icon)}</div><div class="lb">${L(step.shortLabel)}</div><div class="usedBadge" id="badge-${tile.id}"></div>`;
+      d.onclick = ()=>onToolbarClick(tile.id);
+    } else {
+      const meta = GROUP_META[tile.groupKey];
+      d.id = 'tb-group-'+tile.groupKey;
+      d.innerHTML = `<div class="ic">${iconImg(meta.icon)}</div><div class="lb">${L(meta.label)}</div><div class="usedBadge" id="badge-group-${tile.groupKey}"></div>`;
+      d.onclick = ()=>onGroupTileClick(tile);
+    }
+    el.appendChild(d);
+  });
+}
+
+function guardBusy(candidateIds){
+  if(state.awaitingBinFor && !candidateIds.includes(state.awaitingBinFor)){
+    showToast(t('needFinishOtherFirstToast'));
+    return true;
+  }
+  return false;
+}
+
+function onGroupTileClick(tile){
+  if(guardBusy(tile.memberIds)) return;
+  const pending = tile.memberIds.filter(id => (state.slotPointerByStepId[id]||0) === 0);
+  if(pending.length === 1){
+    dispatchStepAction(pending[0]);
+  } else {
+    openToolChoiceModal(tile.memberIds);
+  }
+}
+
+function openToolChoiceModal(memberIds){
+  const wrap = document.getElementById('toolChoiceButtons');
+  wrap.innerHTML = '';
+  memberIds.forEach(id=>{
+    const btn = document.createElement('button');
+    btn.className = 'btn-primary';
+    btn.style.width = '100%';
+    btn.textContent = L(state.defs[id].label);
+    btn.onclick = ()=>{
+      document.getElementById('modal-tool-choice').classList.remove('show');
+      dispatchStepAction(id);
+    };
+    wrap.appendChild(btn);
+  });
+  document.getElementById('modal-tool-choice').classList.add('show');
+}
+
+function onToolbarClick(id){
+  if(guardBusy([id])) return;
+  dispatchStepAction(id);
+}
+
+function dispatchStepAction(id){
+  const step = state.defs[id];
+  state.pendingId = id;
+
+  if(step.type === 'pourChoice'){
+    state.coverChainWait = !!step.chainWait;
+    openPatternModal(step.patterns || ['center','zigzag','inout','outin']);
+  } else if(step.type === 'wipeAndDispose'){
+    state.coverChainWait = false;
+    openPatternModal(step.patterns || ['zigzag','inout','outin']);
+  } else if(step.type === 'coverArea'){
+    state.coverMode = step.coverMode;
+    state.coverThreshold = step.threshold;
+    state.coverChainWait = !!step.chainWait;
+    openCoverModal(step);
+  } else if(step.type === 'report'){
+    document.getElementById('modal-report').classList.add('show');
+  } else if(step.type === 'forcepsPickup'){
+    handleForcepsToolClick(id);
+  } else if(step.type === 'disposeChoice'){
+    handleDisposeChoiceClick(id, step);
+  } else {
+    applyAction(id);
+    runStepAnimation(id);
+  }
+}
+
+function setBinsAwaiting(active){
+  ['binBag','binSharps','binChemBox','binChemBag'].forEach(binId=>{
+    const el = document.getElementById(binId);
+    if(el) el.classList.toggle('awaiting', active);
+  });
+}
+
+function armBinChoice(id, step){
+  state.awaitingBinFor = id;
+  const tb = getToolbarElementFor(id);
+  if(tb) tb.classList.add('armed');
+  setBinsAwaiting(true);
+  showToast(t('chooseBinToast') + ': ' + L(step.label));
+}
+
+function handleDisposeChoiceClick(id, step){
+  if(state.awaitingBinFor === id){
+    showToast(t('tapCorrectBinToast'));
+    return;
+  }
+  armBinChoice(id, step);
+}
+
+function resolveBinClick(binId){
+  if(!state.awaitingBinFor) return;
+  const id = state.awaitingBinFor;
+  const step = state.defs[id];
+  const correctBin = step.correctBin;
+
+  if(binId === correctBin){
+    state.awaitingBinFor = null;
+    const tb = getToolbarElementFor(id);
+    if(tb) tb.classList.remove('armed');
+    setBinsAwaiting(false);
+    const extra = state.pendingExtra || {};
+    applyAction(id, extra);
+    runStepAnimation(id);
+    state.pendingExtra = {};
+  } else {
+    state.score = Math.max(0, state.score - 5);
+    state.binWrongCountByStepId[id] = (state.binWrongCountByStepId[id]||0) + 1;
+    showToast(t('wrongBinToast'));
+  }
+}
+
+['binBag','binSharps','binChemBox','binChemBag'].forEach(binId=>{
+  const el = document.getElementById(binId);
+  if(el){
+    el.addEventListener('click', ()=>resolveBinClick(binId));
+    el.addEventListener('pointerup', (e)=>{ e.preventDefault(); resolveBinClick(binId); });
+  }
+});
+
+function applyAction(id, opts){
+  opts = opts || {};
+  const positions = state.idPositions[id] || [];
+  const ptr = state.slotPointerByStepId[id] || 0;
+  let delta = 0;
+
+  if(ptr < positions.length){
+    const slotIdx = positions[ptr];
+    state.slotPointerByStepId[id] = ptr + 1;
+    const slot = state.seq[slotIdx];
+    const correctOrder = (slotIdx === state.expectedIndex);
+    delta += correctOrder ? 10 : -5;
+
+    if(slot.ids){
+      // flexible-order group (e.g. gloves + goggles): order between members doesn't matter,
+      // but all members must be done while this slot is the active one
+      state.groupMemberResult[id] = { correct: correctOrder };
+      if(correctOrder){
+        state.groupDone[slotIdx] = state.groupDone[slotIdx] || new Set();
+        state.groupDone[slotIdx].add(id);
+        const allDone = slot.ids.every(gid => state.groupDone[slotIdx].has(gid));
+        state.slotStatus[slotIdx] = { filled: allDone, correct: true };
+        if(allDone) state.expectedIndex++;
+      }
+      // if not correctOrder, leave slotStatus as-is (don't clobber partial group progress)
+    } else {
+      state.slotStatus[slotIdx] = { filled:true, correct: correctOrder };
+      if(correctOrder) state.expectedIndex++;
+    }
+  } else {
+    delta += -5;
+    state.repeatCountByStepId[id] = (state.repeatCountByStepId[id]||0) + 1;
+  }
+  if(opts.patternWrong){
+    delta += -5;
+    state.patternWrongCountByStepId[id] = (state.patternWrongCountByStepId[id]||0) + 1;
+  }
+  if(opts.timeShort){
+    delta += -5;
+    state.timeShortCountByStepId[id] = (state.timeShortCountByStepId[id]||0) + 1;
+  }
+  if(opts.quality){ state.qualityById[id] = opts.quality; }
+
+  state.score = Math.max(0, state.score + delta);
+  logAction(id);
+}
+
+function logAction(id){
+  state.actionLog.push(id);
+  document.getElementById('actionCountVal').textContent = state.actionLog.length;
+
+  const step = state.defs[id];
+  const empty = document.getElementById('checklistEmpty');
+  if(empty) empty.remove();
+  const row = document.createElement('div');
+  row.className = 'log-item';
+  const useCount = state.actionLog.filter(x=>x===id).length;
+  row.innerHTML = `<div class="ic">${iconImg(step.icon, 20)}</div><div class="txt">${L(step.label)}</div>${useCount>1 ? `<div class="n">×${useCount}</div>` : ''}`;
+  document.getElementById('checklistList').prepend(row);
+
+  const badge = getBadgeElementFor(id);
+  if(badge){
+    const badgeCount = step.group
+      ? state.actionLog.filter(x => state.defs[x] && state.defs[x].group === step.group).length
+      : useCount;
+    badge.textContent = badgeCount>1 ? '✓×'+badgeCount : '✓';
+  }
+}
+
+function runStepAnimation(id){
+  const fly = document.getElementById('flyItem');
+  const stage = document.getElementById('spillWrap');
+
+  if(id==='gloves'){ document.getElementById('slotGlove').classList.add('on'); }
+  if(id==='goggles'){ document.getElementById('slotGoggle').classList.add('on'); }
+  if(id==='mask'){ document.getElementById('slotMask').classList.add('on'); }
+  if(id==='apron'){ document.getElementById('slotApron').classList.add('on'); }
+
+  if(id==='wipe'){
+    const fx = document.getElementById('wipeFx');
+    fx.classList.remove('play'); void fx.offsetWidth; fx.classList.add('play');
+    clearCoverOverlay();
+    state.bioWipeCount = Math.min(2, state.bioWipeCount + 1);
+    setTimeout(()=>{
+      if(state.bioWipeCount >= 2){
+        const blob = stage.querySelector('.spillBlob');
+        const img = document.getElementById('spillImg');
+        if(blob) blob.style.opacity = 0;
+        if(img) img.style.opacity = 0;
+        stage.querySelectorAll('.steamLine, .bubble').forEach(el=>{ el.style.opacity = 0; });
+      } else {
+        stage.classList.add('cleaned');
+      }
+    }, 500);
+  }
+
+  if(id==='collectPaper'){
+    fly.textContent = '📄';
+    placeFlyAtSpill(fly);
+    fly.classList.remove('play'); void fly.offsetWidth; fly.classList.add('play');
+    clearCoverOverlay();
+    stage.classList.add('faded');
+    const bin = document.getElementById('binBag');
+    bin.classList.remove('pulse'); void bin.offsetWidth; bin.classList.add('pulse');
+  }
+
+  if(id==='removePPE'){
+    document.getElementById('slotGlove').classList.remove('on');
+    document.getElementById('slotGoggle').classList.remove('on');
+    fly.textContent = '🧤';
+    fly.style.left='40px'; fly.style.top='40px';
+    fly.classList.remove('play'); void fly.offsetWidth; fly.classList.add('play');
+    const bin = document.getElementById('binBag');
+    bin.classList.remove('pulse'); void bin.offsetWidth; bin.classList.add('pulse');
+  }
+
+  /* ---- chemical scenario ---- */
+  if(id==='padCollect'){
+    const fx = document.getElementById('wipeFx');
+    fx.classList.remove('play'); void fx.offsetWidth; fx.classList.add('play');
+    clearCoverOverlay();
+    state.chemWipeCount = Math.min(2, state.chemWipeCount + 1);
+    const blob = stage.querySelector('.spillBlob');
+    const fadeOpacity = Math.max(0, 1 - 0.5*state.chemWipeCount);
+    if(blob) blob.style.opacity = fadeOpacity;
+    const img = document.getElementById('spillImg');
+    if(img) img.style.opacity = fadeOpacity;
+    if(state.chemWipeCount >= 2){
+      stage.querySelectorAll('.steamLine, .bubble').forEach(el=>{ el.style.opacity = 0; });
+    }
+    fly.textContent = '📄';
+    placeFlyAtSpill(fly);
+    fly.classList.remove('play'); void fly.offsetWidth; fly.classList.add('play');
+    const bin = document.getElementById('binChemBag');
+    bin.classList.remove('pulse'); void bin.offsetWidth; bin.classList.add('pulse');
+  }
+
+  if(id==='shower'){
+    document.getElementById('slotGlove').classList.remove('on');
+    document.getElementById('slotGoggle').classList.remove('on');
+    document.getElementById('slotMask').classList.remove('on');
+    document.getElementById('slotApron').classList.remove('on');
+    fly.textContent = '🧤';
+    fly.style.left='40px'; fly.style.top='40px';
+    fly.classList.remove('play'); void fly.offsetWidth; fly.classList.add('play');
+    const bin = document.getElementById('binChemBag');
+    bin.classList.remove('pulse'); void bin.offsetWidth; bin.classList.add('pulse');
+  }
+}
+
+/* ============ FINISH / RESULT ============ */
+function finishTraining(){
+  document.getElementById('modal-finish-confirm').classList.add('show');
+}
+
+function showResult(){
+  const totalRequired = state.seq.reduce((sum,slot)=> sum + (slot.ids ? slot.ids.length : 1), 0);
+  const maxScore = totalRequired * 10;
+  document.getElementById('finalScore').textContent = state.score + ' / ' + maxScore;
+
+  const det = document.getElementById('resultDetails');
+  let html = '';
+  let attemptedCount = 0, correctCount = 0, wrongCount = 0;
+  const occurrenceSoFar = {};
+
+  state.seq.forEach((slot, slotIdx)=>{
+    if(slot.ids){
+      slot.ids.forEach(id=>{
+        const r = state.groupMemberResult[id];
+        if(!r) return; // not attempted — don't reveal it
+        attemptedCount++;
+        r.correct ? correctCount++ : wrongCount++;
+        const step = state.defs[id];
+        const icon = r.correct ? '✅' : '⚠️';
+        const note = r.correct ? t('correctOrderText') : t('wrongOrderText');
+        html += `<div>${icon} ${L(step.label)} — ${note}</div>`;
+      });
+    } else {
+      const id = slot.id;
+      const s = state.slotStatus[slotIdx];
+      if(!s.filled) return; // not attempted — don't reveal it
+      attemptedCount++;
+      s.correct ? correctCount++ : wrongCount++;
+      const step = state.defs[id];
+      occurrenceSoFar[id] = (occurrenceSoFar[id]||0) + 1;
+      const suffix = state.idPositions[id].length > 1 ? ` (${t('timesLabel')} ${occurrenceSoFar[id]})` : '';
+      const icon = s.correct ? '✅' : '⚠️';
+      const note = s.correct ? t('correctOrderText') : t('wrongOrderText');
+      html += `<div>${icon} ${L(step.label)}${suffix} — ${note}</div>`;
+    }
+  });
+
+  const notDone = totalRequired - attemptedCount;
+  document.getElementById('resultSummaryLine').textContent =
+    `${t('timesDoneOf')} ${state.actionLog.length} ${t('actionCountUnit')} — ${t('correctTimesLabel')} ${correctCount} · ${t('wrongTimesLabel')} ${wrongCount}` +
+    (notDone > 0 ? ` — ${t('notDoneLabel')} ${notDone} ${t('stepsUnit')}` : '');
+
+  if(html === ''){
+    html = `<div style="color:#999; text-align:center; padding:8px 0;">${t('emptyResultText')}</div>`;
+  }
+
+  const repeatIds = Object.keys(state.repeatCountByStepId).filter(id=>state.repeatCountByStepId[id]>0);
+  if(repeatIds.length){
+    html += `<div style="margin-top:8px; font-weight:700;">${t('repeatHeader')}</div>`;
+    repeatIds.forEach(id=>{
+      html += `<div>🔁 ${L(state.defs[id].label)} — ${t('repeatLine')} ${state.repeatCountByStepId[id]} (-5×${state.repeatCountByStepId[id]})</div>`;
+    });
+  }
+  const patternWrongIds = Object.keys(state.patternWrongCountByStepId).filter(id=>state.patternWrongCountByStepId[id]>0);
+  if(patternWrongIds.length){
+    html += `<div style="margin-top:8px; font-weight:700;">${t('patternWrongHeader')}</div>`;
+    patternWrongIds.forEach(id=>{
+      html += `<div>🎯 ${L(state.defs[id].label)} — ${t('patternWrongLine')} ${state.patternWrongCountByStepId[id]} (-5×${state.patternWrongCountByStepId[id]})</div>`;
+    });
+  }
+  const timeShortIds = Object.keys(state.timeShortCountByStepId).filter(id=>state.timeShortCountByStepId[id]>0);
+  if(timeShortIds.length){
+    html += `<div style="margin-top:8px; font-weight:700;">${t('timeShortHeader')}</div>`;
+    timeShortIds.forEach(id=>{
+      html += `<div>⏱️ ${L(state.defs[id].label)} — ${t('timeShortLine')} ${state.timeShortCountByStepId[id]} (-5×${state.timeShortCountByStepId[id]})</div>`;
+    });
+  }
+  const binWrongIds = Object.keys(state.binWrongCountByStepId).filter(id=>state.binWrongCountByStepId[id]>0);
+  if(binWrongIds.length){
+    html += `<div style="margin-top:8px; font-weight:700;">${t('binWrongHeader')}</div>`;
+    binWrongIds.forEach(id=>{
+      html += `<div>🗑️ ${L(state.defs[id].label)} — ${t('binWrongLine')} ${state.binWrongCountByStepId[id]} (-5×${state.binWrongCountByStepId[id]})</div>`;
+    });
+  }
+  const qualIds = Object.keys(state.qualityById);
+  if(qualIds.length){
+    html += `<div style="margin-top:8px; font-weight:700;">${t('qualityHeader')}</div>`;
+    qualIds.forEach(id=>{
+      const q = state.qualityById[id];
+      html += `<div>📐 ${L(state.defs[id].label)} — ${q}</div>`;
+    });
+  }
+
+  det.innerHTML = html;
+  showScreen('screen-result');
+}
+
+/* ============ PATTERN MODAL ============ */
+const PATTERN_META = {
+  center: { name:{th:'เทตรงกลาง', en:'Pour at center'}, svg:'<circle cx="50" cy="35" r="10" fill="none" stroke="#333" stroke-width="3" stroke-dasharray="4 3"/>' },
+  zigzag: { name:{th:'ซิกแซก', en:'Zigzag'}, svg:'<polyline points="15,15 85,25 15,35 85,45 15,55" fill="none" stroke="#333" stroke-width="3" stroke-dasharray="4 3"/>' },
+  inout:  { name:{th:'วนจากในออกนอก', en:'Spiral inside-out'}, svg:'<path d="M50,35 C52,30 60,30 60,38 C60,48 44,50 42,38 C40,22 66,18 68,38 C70,58 30,62 28,38" fill="none" stroke="#333" stroke-width="3" stroke-dasharray="4 3"/>' },
+  outin:  { name:{th:'วนจากนอกเข้าใน', en:'Spiral outside-in'}, svg:'<path d="M28,38 C30,58 70,58 68,38 C66,18 40,22 42,38 C44,50 60,48 60,38 C60,30 52,30 50,35" fill="none" stroke="#333" stroke-width="3" stroke-dasharray="4 3"/>' }
+};
+
+function openPatternModal(patterns){
+  document.getElementById('patternModalTitle').textContent =
+    patterns.length > 3 ? (currentLang==='th'?'เลือกรูปแบบการเท':'Choose a pouring pattern') : (currentLang==='th'?'เลือกรูปแบบการเช็ด':'Choose a wiping pattern');
+  const grid = document.getElementById('patternGrid');
+  grid.innerHTML = '';
+  patterns.forEach(p=>{
+    const meta = PATTERN_META[p];
+    const opt = document.createElement('div');
+    opt.className = 'pattern-opt';
+    opt.innerHTML = `<svg viewBox="0 0 100 70">${meta.svg}</svg><div class="pname">${L(meta.name)}</div>`;
+    opt.onclick = ()=>choosePattern(p);
+    grid.appendChild(opt);
+  });
+  document.getElementById('modal-pattern').classList.add('show');
+}
+function closePatternModal(){ document.getElementById('modal-pattern').classList.remove('show'); }
+function choosePattern(p){
+  closePatternModal();
+  state.chosenPattern = p;
+  openTraceModal(p);
+}
+
+/* ============ TRACE MODAL ============ */
+const traceCanvas = document.getElementById('traceCanvas');
+const tctx = traceCanvas.getContext('2d');
+let guidePoints = [];
+let drawnPoints = [];
+let progressIndex = 0;
+let isTracing = false;
+const HIT_THRESHOLD = 26;
+
+function genPatternPoints(type){
+  const cx = 220, cy = 160, maxR = 120;
+  const pts = [];
+  if(type==='center'){
+    const r = 22;
+    for(let a=0;a<=Math.PI*2*2;a+=0.12) pts.push({x:cx+Math.cos(a)*r, y:cy+Math.sin(a)*r*0.9});
+  } else if(type==='zigzag'){
+    const rows=5, w=200, h=180;
+    const top=cy-h/2, left=cx-w/2;
+    for(let r=0;r<rows;r++){
+      const y = top + (h/(rows-1))*r;
+      if(r%2===0){ for(let x=left;x<=left+w;x+=8) pts.push({x,y}); }
+      else { for(let x=left+w;x>=left;x-=8) pts.push({x,y}); }
+    }
+  } else if(type==='inout' || type==='outin'){
+    const turns = 2.4, steps = 160;
+    for(let i=0;i<=steps;i++){
+      const t = i/steps;
+      const r = t*maxR;
+      const ang = t*turns*Math.PI*2;
+      pts.push({x:cx+Math.cos(ang)*r, y:cy+Math.sin(ang)*r*0.85});
+    }
+    if(type==='outin') pts.reverse();
+  }
+  return pts;
+}
+
+function openTraceModal(pattern){
+  const step = state.defs[state.pendingId];
+  const isWipe = step.type === 'wipeAndDispose';
+  const verb = isWipe ? t('wipeChoicePrefix') : t('pourChoicePrefix');
+  const context = isWipe ? '' : ` (${L(SCENARIOS[state.scenarioKey].liquidName)})`;
+  document.getElementById('traceTitle').textContent =
+    (currentLang==='th'
+      ? `ลากนิ้วตามเส้นประ${context} — รูปแบบ: ${verb}${L(PATTERN_META[pattern].name)}`
+      : `Drag your finger along the dotted line${context} — pattern: ${verb}${L(PATTERN_META[pattern].name)}`);
+  guidePoints = genPatternPoints(pattern);
+  resetTrace();
+  document.getElementById('modal-trace').classList.add('show');
+}
+
+function resetTrace(){
+  drawnPoints = []; progressIndex = 0;
+  document.getElementById('tracePct').textContent = '0%';
+  document.getElementById('traceConfirmBtn').disabled = true;
+  drawTraceCanvas();
+}
+
+function drawTraceCanvas(){
+  tctx.clearRect(0,0,traceCanvas.width, traceCanvas.height);
+  tctx.setLineDash([8,6]); tctx.strokeStyle = '#999'; tctx.lineWidth = 3;
+  tctx.beginPath();
+  guidePoints.forEach((p,i)=>{ i===0 ? tctx.moveTo(p.x,p.y) : tctx.lineTo(p.x,p.y); });
+  tctx.stroke();
+  if(guidePoints.length){
+    tctx.setLineDash([]); tctx.fillStyle = '#2f6f4f';
+    tctx.beginPath(); tctx.arc(guidePoints[0].x, guidePoints[0].y, 6,0,Math.PI*2); tctx.fill();
+  }
+  tctx.setLineDash([]); tctx.strokeStyle = '#c0392b'; tctx.lineWidth = 4;
+  tctx.beginPath();
+  drawnPoints.forEach((p,i)=>{ i===0 ? tctx.moveTo(p.x,p.y) : tctx.lineTo(p.x,p.y); });
+  tctx.stroke();
+}
+
+function canvasPoint(evt, canvasEl){
+  const rect = canvasEl.getBoundingClientRect();
+  const scaleX = canvasEl.width / rect.width;
+  const scaleY = canvasEl.height / rect.height;
+  return {x:(evt.clientX-rect.left)*scaleX, y:(evt.clientY-rect.top)*scaleY};
+}
+function dist(a,b){ return Math.hypot(a.x-b.x, a.y-b.y); }
+
+traceCanvas.addEventListener('pointerdown', (e)=>{
+  isTracing = true; drawnPoints = []; progressIndex = 0;
+  traceCanvas.setPointerCapture(e.pointerId);
+  handleTracePoint(e);
+});
+traceCanvas.addEventListener('pointermove', (e)=>{ if(isTracing) handleTracePoint(e); });
+traceCanvas.addEventListener('pointerup', ()=>{
+  if(!isTracing) return;
+  isTracing = false;
+  finalizeTraceAttempt();
+});
+traceCanvas.addEventListener('pointercancel', ()=>{ isTracing=false; });
+
+function handleTracePoint(e){
+  const p = canvasPoint(e, traceCanvas);
+  drawnPoints.push(p);
+  let advanced = true, guard = 0;
+  while(advanced && progressIndex < guidePoints.length-1 && guard<20){
+    advanced = false; guard++;
+    if(dist(p, guidePoints[progressIndex]) < HIT_THRESHOLD){ progressIndex++; advanced = true; }
+  }
+  const pct = Math.min(100, Math.round((progressIndex/(guidePoints.length-1))*100));
+  document.getElementById('tracePct').textContent = pct + '%';
+  drawTraceCanvas();
+}
+
+function finalizeTraceAttempt(){
+  const pct = Math.min(100, Math.round((progressIndex/(guidePoints.length-1))*100));
+  document.getElementById('tracePct').textContent = pct + '%';
+  document.getElementById('traceConfirmBtn').disabled = (pct < TRACE_THRESHOLD);
+  traceCanvas._lastPct = pct;
+}
+
+function confirmTrace(){
+  const step = state.defs[state.pendingId];
+  const patternWrong = step.correctPattern ? (state.chosenPattern !== step.correctPattern) : false;
+  const pct = traceCanvas._lastPct || 0;
+  document.getElementById('modal-trace').classList.remove('show');
+  const quality = currentLang==='th'
+    ? `เลือก "${L(PATTERN_META[state.chosenPattern].name)}", ความแม่นยำ ${pct}%`
+    : `Chose "${L(PATTERN_META[state.chosenPattern].name)}", accuracy ${pct}%`;
+
+  if(step.type === 'wipeAndDispose'){
+    state.pendingExtra = { patternWrong, quality };
+    armBinChoice(state.pendingId, step);
+  } else if(state.coverChainWait){
+    state.pendingExtra = { patternWrong, quality };
+    openTimeModal();
+  } else {
+    applyAction(state.pendingId, { patternWrong, quality });
+    runStepAnimation(state.pendingId);
+  }
+}
+
+/* ============ COVER-AREA MODAL (paper sheets or spray paint) ============ */
+const coverGuideCanvas = document.getElementById('coverGuideCanvas');
+const coverPaintCanvas = document.getElementById('coverPaintCanvas');
+const gctx = coverGuideCanvas.getContext('2d');
+const pctx = coverPaintCanvas.getContext('2d');
+const overlayCtx = document.getElementById('coverOverlayCanvas').getContext('2d');
+const BLOB_PATH_D = document.getElementById('spillBlobPath').getAttribute('d');
+const blobPath2D = new Path2D(BLOB_PATH_D);
+let isCovering = false;
+const SPRAY_BRUSH_R = 20;
+const SHEET_W = 56, SHEET_H = 40;
+
+function buildCoverSamples(){
+  const pts = [];
+  for(let x=10; x<=310; x+=8){
+    for(let y=10; y<=210; y+=8){
+      if(gctx.isPointInPath(blobPath2D, x, y)) pts.push({x,y,covered:false});
+    }
+  }
+  return pts;
+}
+let coverSamples = buildCoverSamples();
+
+function drawCoverGuide(){
+  gctx.clearRect(0,0,320,220);
+  gctx.setLineDash([7,5]); gctx.strokeStyle = '#888'; gctx.lineWidth = 3;
+  gctx.stroke(blobPath2D);
+  gctx.setLineDash([]);
+}
+
+function openCoverModal(step){
+  const titles = {
+    paper: {th:'แตะเพื่อวางกระดาษซับทีละแผ่นให้คลุมพื้นที่ (ซ้อนกันได้)', en:'Tap to place absorbent sheets over the area (overlap is fine)'},
+    spray: {th:'ลากนิ้วพ่นน้ำยาให้ครอบคลุมพื้นที่', en:'Drag your finger to spray and cover the area'}
+  };
+  const fallbackTitle = {th:'คลุมพื้นที่ให้ครบ', en:'Cover the whole area'};
+  document.getElementById('coverTitle').textContent = L(titles[step.coverMode] || fallbackTitle);
+  const hintPaper = {th:'แตะบนพื้นที่หกเพื่อวางกระดาษแต่ละแผ่น', en:'Tap on the spill to place each sheet'};
+  const hintSpray = {th:'ลากนิ้วต่อเนื่องให้ทั่วพื้นที่', en:'Drag continuously to cover the whole area'};
+  document.getElementById('coverModeHint').textContent = L(step.coverMode==='paper' ? hintPaper : hintSpray);
+  drawCoverGuide();
+  resetCover();
+  document.getElementById('modal-cover').classList.add('show');
+}
+
+function resetCover(){
+  pctx.clearRect(0,0,320,220);
+  coverSamples.forEach(p=>p.covered=false);
+  updateCoverPct();
+  document.getElementById('coverConfirmBtn').disabled = true;
+}
+
+function updateCoverPct(){
+  const total = coverSamples.length;
+  const covered = coverSamples.filter(p=>p.covered).length;
+  const pct = total ? Math.round((covered/total)*100) : 0;
+  document.getElementById('coverPct').textContent = currentLang==='th'
+    ? `${pct}% คลุมแล้ว (ต้องการ ≥${state.coverThreshold}%)`
+    : `${pct}% covered (need ≥${state.coverThreshold}%)`;
+  document.getElementById('coverConfirmBtn').disabled = (pct < state.coverThreshold);
+  return pct;
+}
+
+function placeSheet(p){
+  const angle = (Math.random()*24-12) * Math.PI/180;
+  pctx.save();
+  pctx.translate(p.x,p.y);
+  pctx.rotate(angle);
+  pctx.fillStyle = 'rgba(250,238,205,0.85)';
+  pctx.strokeStyle = 'rgba(150,130,90,0.8)';
+  pctx.lineWidth = 1.5;
+  pctx.fillRect(-SHEET_W/2,-SHEET_H/2,SHEET_W,SHEET_H);
+  pctx.strokeRect(-SHEET_W/2,-SHEET_H/2,SHEET_W,SHEET_H);
+  pctx.restore();
+  coverSamples.forEach(sp=>{
+    if(!sp.covered && Math.abs(sp.x-p.x)<=SHEET_W/2 && Math.abs(sp.y-p.y)<=SHEET_H/2) sp.covered = true;
+  });
+  updateCoverPct();
+}
+
+function paintAt(p){
+  pctx.fillStyle = 'rgba(200,225,230,0.5)';
+  pctx.beginPath(); pctx.arc(p.x, p.y, SPRAY_BRUSH_R, 0, Math.PI*2); pctx.fill();
+  coverSamples.forEach(sp=>{
+    if(!sp.covered && dist(sp,p) < SPRAY_BRUSH_R) sp.covered = true;
+  });
+  updateCoverPct();
+}
+
+coverPaintCanvas.addEventListener('pointerdown', (e)=>{
+  isCovering = true;
+  coverPaintCanvas.setPointerCapture(e.pointerId);
+  const p = canvasPoint(e, coverPaintCanvas);
+  if(state.coverMode==='paper'){ placeSheet(p); } else { paintAt(p); }
+});
+coverPaintCanvas.addEventListener('pointermove', (e)=>{
+  if(!isCovering) return;
+  if(state.coverMode==='spray'){ paintAt(canvasPoint(e, coverPaintCanvas)); }
+});
+coverPaintCanvas.addEventListener('pointerup', ()=>{ isCovering = false; });
+coverPaintCanvas.addEventListener('pointercancel', ()=>{ isCovering = false; });
+
+function confirmCover(){
+  const pct = updateCoverPct();
+  document.getElementById('modal-cover').classList.remove('show');
+  overlayCtx.clearRect(0,0,320,220);
+  overlayCtx.drawImage(coverPaintCanvas,0,0);
+  const quality = `คลุมพื้นที่ได้ ${pct}%`;
+  if(state.coverChainWait){
+    state.pendingExtra = { quality };
+    openTimeModal();
+  } else {
+    applyAction(state.pendingId, { quality });
+    runStepAnimation(state.pendingId);
+  }
+}
+function clearCoverOverlay(){
+  overlayCtx.clearRect(0,0,320,220);
+}
+
+/* ============ TIMED WAIT MODAL ============ */
+let countdownRAF = null;
+function openTimeModal(){
+  document.getElementById('timeChooseView').style.display = 'block';
+  document.getElementById('countdownView').classList.remove('show');
+  document.getElementById('countdownActionsV').style.display = 'none';
+  document.getElementById('waitContinueBtn').disabled = true;
+  document.getElementById('countdownBarFill').style.width = '0%';
+  document.getElementById('modal-timewait').classList.add('show');
+}
+function chooseTime(minutes){
+  state.pendingMinutes = minutes;
+  document.getElementById('timeChooseView').style.display = 'none';
+  document.getElementById('countdownView').classList.add('show');
+  document.getElementById('countdownActionsV').style.display = 'flex';
+  startCountdown(minutes);
+}
+function formatMMSS(totalSeconds){
+  const m = Math.floor(totalSeconds/60), s = Math.floor(totalSeconds%60);
+  return String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');
+}
+function startCountdown(minutes){
+  cancelCountdown();
+  const totalSimSeconds = minutes*60;
+  const startTs = performance.now();
+  const textEl = document.getElementById('countdownText');
+  const fillEl = document.getElementById('countdownBarFill');
+  const btn = document.getElementById('waitContinueBtn');
+  const clock = document.getElementById('clockEmoji');
+  btn.disabled = true;
+  textEl.textContent = formatMMSS(totalSimSeconds);
+  function tick(now){
+    const elapsed = now - startTs;
+    const frac = Math.min(1, elapsed/COUNTDOWN_MS);
+    textEl.textContent = formatMMSS(totalSimSeconds*(1-frac));
+    fillEl.style.width = (frac*100)+'%';
+    clock.textContent = frac<1 ? '⏳' : '⏰';
+    if(frac < 1){ countdownRAF = requestAnimationFrame(tick); }
+    else { btn.disabled = false; }
+  }
+  countdownRAF = requestAnimationFrame(tick);
+}
+function cancelCountdown(){
+  if(countdownRAF){ cancelAnimationFrame(countdownRAF); countdownRAF = null; }
+}
+
+const BACTERIA_KILL_MAP = {10:2, 20:4, 30:6};
+function killBacteria(count){
+  state.bacteriaKilled = Math.min(6, state.bacteriaKilled + count);
+  for(let i=0;i<state.bacteriaKilled;i++){
+    const b = document.getElementById('bact'+i);
+    if(b) b.style.opacity = '0';
+  }
+}
+
+function continueAfterWait(){
+  cancelCountdown();
+  document.getElementById('modal-timewait').classList.remove('show');
+  const minutes = state.pendingMinutes || 30;
+  const extra = Object.assign({}, state.pendingExtra, { timeShort: minutes < 30 });
+  if(state.pendingId === 'pour1' || state.pendingId === 'spray2'){
+    killBacteria(BACTERIA_KILL_MAP[minutes] || 0);
+  }
+  applyAction(state.pendingId, extra);
+  runStepAnimation(state.pendingId);
+  state.pendingExtra = {};
+  state.pendingMinutes = null;
+  state.coverChainWait = false;
+}
+
+
+/* ============ FORCEPS / GLASS SHARDS (x4) ============ */
+function handleForcepsToolClick(id){
+  if(state.shardsRemaining <= 0){
+    applyAction(id); // nothing left to pick — wasteful repeat use
+    return;
+  }
+  state.forcepsArmed = true;
+  state.activeForcepsId = id;
+  const tb = getToolbarElementFor(id);
+  if(tb) tb.classList.add('armed');
+  for(let i=0;i<4;i++){
+    const el = document.getElementById('shard'+i);
+    if(!el.classList.contains('collected')) el.classList.add('ready');
+  }
+  showToast(t('forcepsArmToast')+' '+state.shardsRemaining+' '+t('forcepsArmToastEnd'));
+}
+
+for(let i=0;i<4;i++){
+  document.getElementById('shard'+i).addEventListener('click', function(){
+    if(this.classList.contains('collected')) return;
+    if(!state.forcepsArmed){
+      showToast(t('forcepsBareHandToast'));
+      return;
+    }
+    this.classList.remove('ready');
+    this.classList.add('flying');
+    state.shardsRemaining -= 1;
+
+    const activeId = state.activeForcepsId;
+    const targetBinId = (state.defs[activeId] && state.defs[activeId].correctBin) || 'binSharps';
+    const bin = document.getElementById(targetBinId);
+    if(bin){ bin.classList.remove('pulse'); void bin.offsetWidth; bin.classList.add('pulse'); }
+
+    const shardEl = this;
+    setTimeout(()=>{ shardEl.classList.add('collected'); }, 620);
+
+    if(state.shardsRemaining <= 0){
+      state.forcepsArmed = false;
+      const tb = getToolbarElementFor(activeId);
+      if(tb) tb.classList.remove('armed');
+      state.awaitingBinFor = activeId;
+      setBinsAwaiting(true);
+      showToast(t('forcepsAllDoneToast'));
+    } else {
+      showToast(t('forcepsRemainingToast')+' '+state.shardsRemaining+' '+t('forcepsPiecesUnit'));
+    }
+  });
+}
+
+/* ============ REPORT MODAL ============ */
+function submitReport(){
+  document.getElementById('modal-report').classList.remove('show');
+  applyAction(state.pendingId);
+  runStepAnimation(state.pendingId);
+}
+
+/* ============ EXPORT RESULT AS JPG ============ */
+function wrapCanvasText(ctx, text, maxWidth){
+  const lines = [];
+  let line = '';
+  for(let i=0;i<text.length;i++){
+    const testLine = line + text[i];
+    if(ctx.measureText(testLine).width > maxWidth && line.length>0){
+      lines.push(line);
+      line = text[i];
+    } else {
+      line = testLine;
+    }
+  }
+  if(line) lines.push(line);
+  return lines;
+}
+
+function exportResultJPG(){
+  const W = 900, PADDING = 50, CONTENT_W = W - PADDING*2;
+  const measureCanvas = document.createElement('canvas');
+  const mctx = measureCanvas.getContext('2d');
+
+  const scenarioText = document.getElementById('scenarioTitle') ? document.getElementById('scenarioTitle').textContent : '';
+  const scoreText = document.getElementById('finalScore').textContent;
+  const summaryText = document.getElementById('resultSummaryLine').textContent;
+  const detailLines = Array.from(document.querySelectorAll('#resultDetails > div')).map(d => d.textContent);
+
+  mctx.font = '15px sans-serif';
+  let wrappedDetailLines = [];
+  detailLines.forEach(line=>{
+    wrappedDetailLines = wrappedDetailLines.concat(wrapCanvasText(mctx, line, CONTENT_W));
+  });
+
+  mctx.font = '14px sans-serif';
+  const summaryWrapped = wrapCanvasText(mctx, summaryText, CONTENT_W);
+
+  const lineHeight = 26;
+  const headerHeight = 235 + summaryWrapped.length*20;
+  const H = headerHeight + wrappedDetailLines.length*lineHeight + 60;
+
+  const canvas = document.createElement('canvas');
+  canvas.width = W;
+  canvas.height = H;
+  const ctx = canvas.getContext('2d');
+
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0,0,W,H);
+  ctx.strokeStyle = '#2b2b2b';
+  ctx.lineWidth = 3;
+  ctx.strokeRect(6,6,W-12,H-12);
+
+  ctx.textAlign = 'left';
+  ctx.fillStyle = '#2b2b2b';
+  ctx.font = 'bold 28px sans-serif';
+  ctx.fillText(t('resultTitle'), PADDING, 50);
+
+  ctx.font = '16px sans-serif';
+  ctx.fillStyle = '#555';
+  ctx.fillText(scenarioText, PADDING, 78);
+
+  ctx.strokeStyle = '#ddd';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(PADDING, 92); ctx.lineTo(W-PADDING, 92); ctx.stroke();
+
+  ctx.font = 'bold 17px sans-serif';
+  ctx.fillStyle = '#2b2b2b';
+  ctx.fillText(`${t('studentNameLabel')}: ${studentName}`, PADDING, 122);
+  ctx.fillText(`${t('studentIdLabel')}: ${studentId}`, PADDING, 150);
+
+  ctx.font = 'bold 42px sans-serif';
+  ctx.fillStyle = '#2f6f4f';
+  ctx.fillText(scoreText, PADDING, 205);
+
+  ctx.font = '14px sans-serif';
+  ctx.fillStyle = '#666';
+  let sy = 232;
+  summaryWrapped.forEach(line=>{
+    ctx.fillText(line, PADDING, sy);
+    sy += 20;
+  });
+
+  ctx.strokeStyle = '#ddd';
+  ctx.beginPath(); ctx.moveTo(PADDING, headerHeight-15); ctx.lineTo(W-PADDING, headerHeight-15); ctx.stroke();
+
+  ctx.font = '15px sans-serif';
+  ctx.fillStyle = '#222';
+  let y = headerHeight + 10;
+  wrappedDetailLines.forEach(line=>{
+    ctx.fillText(line, PADDING, y);
+    y += lineHeight;
+  });
+
+  ctx.font = '12px sans-serif';
+  ctx.fillStyle = '#999';
+  ctx.fillText(new Date().toLocaleString(currentLang==='th'?'th-TH':'en-US'), PADDING, H-22);
+
+  const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
+  const a = document.createElement('a');
+  a.href = dataUrl;
+  const safeId = (studentId || 'student').replace(/[^a-zA-Z0-9-_]/g,'');
+  a.download = `spill_result_${safeId}.jpg`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
+</script>
+</body>
+</html>

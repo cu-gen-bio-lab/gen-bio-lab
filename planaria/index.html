@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Planaria Habituation Simulation</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#e8e8e8;font-family:sans-serif;padding:12px}
+#app{display:flex;flex-direction:column;gap:10px;max-width:720px;margin:auto}
+#hdr{display:flex;align-items:center;justify-content:space-between;gap:6px}
+#rl{font-size:15px;font-weight:600}
+#sm{font-size:12px;color:#555}
+canvas{display:block;width:100%;border:1.5px solid #999;border-radius:3px}
+#row1,#row2,#row3{display:flex;align-items:center;gap:8px}
+.btn{padding:7px 18px;border-radius:6px;border:1px solid #bbb;background:#fff;font-size:13px;font-weight:500;cursor:pointer}
+.btn:hover{background:#f0f0f0}
+.btn:disabled{opacity:.35;cursor:default}
+#bsh{border:2px solid #b45309;color:#b45309;font-weight:700;background:#fff8f0;font-size:14px;padding:9px 22px}
+#bsh.pulse{animation:pb .85s infinite}
+@keyframes pb{0%,100%{box-shadow:0 0 0 0 rgba(180,83,9,.5)}50%{box-shadow:0 0 0 8px rgba(180,83,9,.1)}}
+#brs{background:#fff;border:1.5px solid #c0392b;color:#c0392b;font-size:13px;font-weight:700;padding:8px 20px;border-radius:8px}
+#brs:hover{background:#fff0ee}
+#tw{flex:1;min-width:80px;height:4px;background:#ddd;border-radius:2px;overflow:hidden}
+#tf{height:100%;width:0%;background:#3B6D11;border-radius:2px;transition:width .05s linear}
+#tl{font-size:13px;color:#777;min-width:32px}
+#hint{font-size:11px;color:#b45309;margin-top:2px}
+</style>
+</head><body>
+<div id="app">
+  <div id="hdr">
+    <div id="rl">Trial <span id="rn">1</span> / 6</div>
+    <div id="sm">Planaria at position 0 — press Start</div>
+  </div>
+  <canvas id="cv"></canvas>
+
+  <!-- Row 1: start + timer + reset -->
+  <div id="row1" style="display:flex;align-items:center;gap:8px">
+    <button class="btn" id="bst">&#9654; Start Trial 1</button>
+    <div id="tw"><div id="tf"></div></div>
+    <div id="tl">30s</div>
+    <button class="btn" id="brs" style="margin-left:auto">&#8635; Reset All</button>
+  </div>
+
+  <!-- Row 2: shake -->
+  <div id="row2" style="display:none">
+    <button class="btn" id="bsh">&#128243; Shake (Trial 6)</button>
+  </div>
+  <div id="hint" style="display:none;font-size:11px;color:#b45309">&#128241; Or shake your phone (gyroscope)</div>
+</div>
+
+
+
+<script>
+(function(){
+  var CV=document.getElementById('cv');
+  var cx=CV.getContext('2d');
+  var PW=660, PH=330;
+  CV.width=PW; CV.height=PH;
+  var S=PW/150;
+
+  var N=15, DUR=30000;
+  var FLEE_PCT=[0,0.875,0.80,0.70,0.625,0.525,0.825];
+  var FLEE_MM =[0,132,104,80,64,48,132];
+  var WL=4*S, WH=1.3*S;
+
+  var trial=1,running=false,elapsed=0,lastT=null,afId=null,shaken=false,allDone=false,lastGyro=0;
+  var worms=[];
+
+  function rand(a,b){return a+Math.random()*(b-a);}
+  function g(id){return document.getElementById(id);}
+
+  function drawWorm(w){
+    var sc=w.cT>0?0.82+0.18*(1-Math.max(0,w.cT)/260):1.0;
+    var l=WL*sc,h=WH*sc;
+    var wave=Math.sin(w.wo)*0.07;
+    cx.save();
+    cx.translate(w.x,w.y);
+    cx.rotate(w.a+wave);
+    cx.beginPath();
+    cx.moveTo(l/2,0);
+    cx.bezierCurveTo(l/2-l*.18,-h*.55,-l/2+l*.25,-h*.5,-l/2,0);
+    cx.bezierCurveTo(-l/2+l*.25,h*.5,l/2-l*.18,h*.55,l/2,0);
+    cx.closePath();
+    var grd=cx.createLinearGradient(l/2,0,-l/2,0);
+    grd.addColorStop(0,'#5c3317');grd.addColorStop(.35,'#8B5E3C');
+    grd.addColorStop(.65,'#7a4f2e');grd.addColorStop(1,'#4a2a10');
+    cx.fillStyle=grd;cx.fill();
+    cx.fillStyle='rgba(0,0,0,0.18)';
+    [[l*.1,-h*.1],[0,-h*.15],[-l*.1,h*.05],[l*.18,h*.08],[-l*.05,-h*.05],[-l*.18,h*.1],[l*.05,h*.15]].forEach(function(d){
+      if(Math.abs(d[0])<l*.4&&Math.abs(d[1])<h*.45){cx.beginPath();cx.arc(d[0],d[1],h*.055,0,6.28);cx.fill();}
+    });
+    cx.fillStyle='#6b3d1e';
+    cx.beginPath();cx.ellipse(l/2-l*.08,-h*.38,h*.18,h*.14,.5,0,6.28);cx.fill();
+    cx.beginPath();cx.ellipse(l/2-l*.08,h*.38,h*.18,h*.14,-.5,0,6.28);cx.fill();
+    cx.fillStyle='rgba(0,0,0,0.75)';
+    cx.beginPath();cx.arc(l/2-l*.12,-h*.14,h*.08,0,6.28);cx.fill();
+    cx.beginPath();cx.arc(l/2-l*.12,h*.14,h*.08,0,6.28);cx.fill();
+    cx.restore();
+  }
+
+  function makeWorm(i){
+    var lh=(PH-24)/(N-1);
+    return {
+      x:WL/2,  /* start exactly at x=0 edge */
+      y:Math.max(WH,Math.min(PH-WH,12+i*lh+rand(-lh*.15,lh*.15))),
+      a:rand(-.05,.05),ta:0,flee:false,mx:0,
+      spd:rand(.076,.12)*S/20,
+      dt2:rand(400,900),cT:0,wo:rand(0,6.28)
+    };
+  }
+  function initWorms(){worms=[];for(var i=0;i<N;i++)worms.push(makeWorm(i));}
+  function resetPos(){
+    worms.forEach(function(w,i){
+      var lh=(PH-24)/(N-1);
+      w.x=WL/2;
+      w.y=Math.max(WH,Math.min(PH-WH,12+i*lh+rand(-lh*.15,lh*.15)));
+      w.a=rand(-.05,.05);w.ta=0;w.dt2=rand(300,800);w.cT=0;
+    });
+  }
+  function assignBehaviors(){
+    var pct=shaken?FLEE_PCT[6]:FLEE_PCT[trial];
+    var mm=shaken?FLEE_MM[6]:FLEE_MM[trial];
+    var nF=Math.round(pct*N);
+    worms.slice().sort(function(){return Math.random()-.5;}).forEach(function(w,i){
+      w.flee=i<nF;
+      w.mx=w.flee?rand(mm*.42,mm)*S:rand(2,15)*S;
+      w.spd=rand(.072,.128)*S/20;
+      w.a=w.flee?rand(-.3,.3):rand(-1.2,1.2);
+      w.ta=w.a;
+    });
+  }
+
+  function updateWorm(w,dt){
+    w.dt2-=dt;
+    if(w.dt2<=0){
+      w.dt2=rand(650,1450);
+      w.ta=w.flee?rand(-.6,.6):w.a+rand(-1.5,1.5);
+      w.cT=rand(170,290);
+    }
+    if(w.cT>0)w.cT-=dt;
+    var da=w.ta-w.a;
+    while(da>Math.PI)da-=2*Math.PI;while(da<-Math.PI)da+=2*Math.PI;
+    w.a+=da*.085;
+    var sp=(w.cT>0)?w.spd*.42:w.spd;
+    var nx=w.x+Math.cos(w.a)*sp*dt;
+    var ny=w.y+Math.sin(w.a)*sp*dt;
+    var mg=WH*.55;
+    if(nx<WL/2){nx=WL/2;w.a=Math.PI-w.a;w.ta=Math.PI-w.ta;}
+    if(nx>w.mx){nx=w.mx;w.a=Math.PI-w.a;w.ta=Math.PI-w.ta;}
+    if(ny<mg){ny=mg;w.a=-w.a;w.ta=-w.ta;}
+    if(ny>PH-mg){ny=PH-mg;w.a=-w.a;w.ta=-w.ta;}
+    w.x=nx;w.y=ny;w.wo+=dt*.003;
+  }
+
+  function drawBg(){
+    var gr=cx.createLinearGradient(0,0,PW,0);
+    gr.addColorStop(0,'#ffffff');gr.addColorStop(.25,'#cccccc');
+    gr.addColorStop(.55,'#606060');gr.addColorStop(1,'#111111');
+    cx.fillStyle=gr;cx.fillRect(0,0,PW,PH);
+  }
+  function drawScale(){
+    var SPLIT=70*S;
+    var FS=Math.round(14*S/4.4);
+    for(var mm=0;mm<=150;mm++){
+      var x=mm*S,isCm=(mm%10===0),dark=(x>SPLIT);
+      cx.strokeStyle=dark
+        ?(isCm?'rgba(255,255,255,0.80)':'rgba(255,255,255,0.30)')
+        :(isCm?'rgba(0,0,0,0.70)':'rgba(0,0,0,0.25)');
+      cx.lineWidth=isCm?1.1:.45;
+      cx.beginPath();cx.moveTo(x,0);cx.lineTo(x,PH);cx.stroke();
+      if(isCm&&mm>0){
+        cx.font=FS+'px monospace';
+        var col=dark?'rgba(230,230,230,0.92)':'rgba(15,15,15,0.88)';
+        cx.fillStyle=col;
+        cx.fillText((mm/10)+'cm',x+2,FS+2);
+        cx.fillText((mm/10)+'cm',x+2,PH-4);
+      }
+    }
+  }
+  function drawAll(){
+    cx.clearRect(0,0,PW,PH);
+    drawBg();drawScale();
+    worms.forEach(drawWorm);
+  }
+
+  function loop(ts){
+    if(lastT===null)lastT=ts;
+    var dt=Math.min(ts-lastT,80);lastT=ts;elapsed+=dt;
+    worms.forEach(function(w){updateWorm(w,dt);});
+    drawAll();
+    var pct=Math.min(100,elapsed/DUR*100);
+    g('tf').style.width=pct+'%';
+    g('tl').textContent=Math.max(0,Math.ceil((DUR-elapsed)/1000))+'s';
+    if(elapsed>=DUR){endTrial();return;}
+    afId=requestAnimationFrame(loop);
+  }
+
+  function showShakeRow(show){
+    g('row2').style.display=show?'flex':'none';
+    g('hint').style.display=show?'block':'none';
+    if(show){
+      g('bsh').classList.add('pulse');
+    } else {
+      g('bsh').classList.remove('pulse');
+    }
+  }
+
+  function startTrial(){
+    if(running||allDone)return;
+    running=true;elapsed=0;lastT=null;
+    resetPos();assignBehaviors();
+    g('bst').disabled=true;
+    showShakeRow(false);
+    g('sm').textContent='Trial '+trial+' running...';
+    afId=requestAnimationFrame(loop);
+  }
+
+  function endTrial(){
+    cancelAnimationFrame(afId);running=false;
+    drawAll();
+    if(trial===6){
+      allDone=true;
+      g('bst').disabled=true;
+
+      showShakeRow(false);
+      g('sm').textContent='All 6 trials complete. Record results, then Reset.';
+    } else {
+      var justDone=trial;
+      trial++;
+      g('rn').textContent=trial;
+      g('bst').disabled=false;
+      g('bst').textContent='\u25B6 Start Trial '+trial;
+      if(justDone===5){
+        showShakeRow(true);
+        g('sm').textContent='Trial 6: Shake before starting, then press Start.';
+      } else {
+        showShakeRow(false);
+        g('sm').textContent='Trial '+trial+' ready. Record positions, then Start.';
+      }
+    }
+  }
+
+  function doShake(){
+    if(shaken)return;
+    shaken=true;
+    showShakeRow(false);
+    g('sm').textContent='Shaken! Press Start Trial 6.';
+    var n=0;
+    var sh=function(){
+      CV.style.transform='translateX('+(n%2?'5px':'-4px')+')';
+      n++;if(n<8)setTimeout(sh,65);else CV.style.transform='';
+    };sh();
+  }
+
+  function resetAll(){
+    cancelAnimationFrame(afId);
+    trial=1;running=false;elapsed=0;lastT=null;shaken=false;allDone=false;
+    g('rn').textContent='1';
+    g('bst').disabled=false;g('bst').textContent='\u25B6 Start Trial 1';
+
+    showShakeRow(false);
+    g('tf').style.width='0%';g('tl').textContent='30s';
+    g('sm').textContent='Planaria at position 0 — press Start.';
+    initWorms();drawAll();
+  }
+
+  g('bst').addEventListener('click',startTrial);
+  g('bsh').addEventListener('click',doShake);
+  g('brs').addEventListener('click',resetAll);
+
+  if(window.DeviceMotionEvent){
+    var gH=function(e){
+      var a=e.accelerationIncludingGravity;if(!a)return;
+      var mag=Math.sqrt((a.x||0)*(a.x||0)+(a.y||0)*(a.y||0)+(a.z||0)*(a.z||0));
+      var now=Date.now();
+      if(mag>20&&now-lastGyro>1500&&trial===6&&!shaken){lastGyro=now;doShake();}
+    };
+    if(typeof DeviceMotionEvent.requestPermission==='function'){
+      g('bsh').addEventListener('click',function(){
+        DeviceMotionEvent.requestPermission().then(function(r){if(r==='granted')window.addEventListener('devicemotion',gH);});
+      },{once:true});
+    } else {
+      window.addEventListener('devicemotion',gH);
+    }
+  }
+
+  initWorms();drawAll();
+})();
+</script>
+</body></html>

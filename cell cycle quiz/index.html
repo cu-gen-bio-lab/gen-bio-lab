@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>จับคู่ระยะ Cell Cycle</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;600&display=swap" rel="stylesheet">
+<!-- jsPDF: ใช้ไฟล์ในโฟลเดอร์ lib/ ก่อน ถ้าไม่มีค่อยโหลดจาก CDN -->
+<script src="lib/jspdf.umd.min.js"></script>
+<script>window.jspdf||document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"><\/script>')</script>
+<style>
+:root{--bg:#f4f6f3;--card:#fff;--ink:#1d2a24;--mut:#6b7a72;--acc:#1f8a5b;--line:#d5dcd8;--warn:#c0392b;--blue:#2b6cb0}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#121815;--card:#1d2621;--ink:#e8efe9;--mut:#93a39a;--acc:#4cc38a;--line:#2d3a33;--warn:#ff7b6b;--blue:#5a9be0}}
+:root[data-theme="dark"]{--bg:#121815;--card:#1d2621;--ink:#e8efe9;--mut:#93a39a;--acc:#4cc38a;--line:#2d3a33;--warn:#ff7b6b;--blue:#5a9be0}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:'Noto Sans Thai',system-ui,sans-serif;overflow:hidden;
+ padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+#app{height:100%;max-width:520px;margin:0 auto;display:flex;flex-direction:column}
+header{padding:8px 10px 2px;touch-action:pan-y}
+.top{display:flex;justify-content:space-between;align-items:baseline;padding:0 4px 6px;gap:8px}
+.top b{font-size:16px}.top span{font-size:12px;color:var(--mut);white-space:nowrap}
+.tabs{display:flex;gap:6px;padding:0 0 6px}
+.tabs button{flex:1;height:38px;border:2px solid var(--line);background:var(--card);color:var(--ink);border-radius:12px;font:inherit;font-size:15px;font-weight:600}
+.tabs .cur{border-color:var(--acc);background:var(--acc);color:#fff}
+.nav{display:flex;gap:4px;align-items:center}
+.nav button{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:10px;height:34px;font:inherit;font-size:14px;padding:0}
+#strip{display:flex;gap:4px;flex:1}
+#strip button{flex:1;min-width:0}
+#strip .cur{border-color:var(--acc);border-width:2px;font-weight:600}
+#strip .done{background:var(--acc);color:#fff;border-color:var(--acc)}
+.arr{width:34px;flex:0 0 34px}
+.rw{display:flex;flex-direction:column;min-height:0}
+.tag{font-size:11px;color:var(--mut);padding:2px 14px 0}
+.row{position:relative;display:flex;flex:1;min-height:0;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.row::-webkit-scrollbar{display:none}
+.row::before,.row::after{content:'';flex:0 0 calc(9% - 6px)}
+.row.lock{pointer-events:none}
+.c{flex:0 0 82%;margin:5px 6px;scroll-snap-align:center;scroll-snap-stop:always;background:var(--card);border:2px solid var(--line);border-radius:14px;position:relative;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:8px 10px;text-align:center;opacity:.45;transform:scale(.93);transition:transform .15s,opacity .15s,border-color .15s}
+.c.on{opacity:1;transform:none;border-color:var(--acc)}
+.row.lock .c.on{border-style:dashed}
+.rw{position:relative}
+.c{user-select:none;-webkit-user-select:none;cursor:pointer}.row.drag{scroll-snap-type:none;cursor:grabbing}.row.drag .c{transition:none}
+.rb{position:absolute;top:calc(50% + 7px);transform:translateY(-50%);z-index:3;width:38px;height:38px;border-radius:50%;border:1px solid var(--line);background:var(--card);color:var(--ink);font-size:22px;line-height:1;padding:0;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.15)}
+.rb.l{left:2px}.rb.r{right:2px}.rb:disabled{opacity:.25;cursor:default}
+@media (hover:none),(pointer:coarse){.rb{display:none}}
+.c.used{filter:grayscale(1)}
+.c .u{position:absolute;top:6px;right:8px;font-size:11px;background:var(--mut);color:#fff;border-radius:8px;padding:1px 7px;z-index:2}
+.nt{font-size:24px;font-weight:600;line-height:1.3}.ne{font-size:14px;color:var(--mut)}
+.c.im{padding:4px;background:#fff}
+.c img{position:absolute;inset:4px;width:calc(100% - 8px);height:calc(100% - 8px);object-fit:contain}
+.ph{color:#8a958f;font-size:14px;border:2px dashed #c9d1cc;border-radius:10px;padding:14px 18px}
+.dt{font-size:14px;line-height:1.6;overflow-y:auto;max-height:100%;width:100%}
+footer{display:flex;gap:8px;padding:8px 12px 12px}
+footer button,.m button{font:inherit;border:0;border-radius:14px;height:50px;padding:0 16px;font-size:16px;font-weight:600;background:var(--acc);color:#fff}
+#go{flex:1}
+button.sec{background:var(--card);color:var(--ink);border:2px solid var(--line)}
+#ex{background:var(--blue)}
+[hidden]{display:none!important}
+.scr{height:100%;max-width:520px;margin:0 auto;display:flex;flex-direction:column;justify-content:center;gap:12px;padding:24px}
+.scr h2{margin:0 0 6px}.scr label{font-size:13px;color:var(--mut)}
+.scr input{width:100%;font:inherit;font-size:17px;padding:13px;border:1px solid var(--line);border-radius:12px;background:var(--card);color:var(--ink)}
+.scr button{font:inherit;font-size:18px;font-weight:600;height:56px;border:0;border-radius:14px;background:var(--acc);color:#fff}
+.scr p{margin:0;font-size:13px;color:var(--mut)}
+#toast{z-index:99;position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:#222;color:#fff;padding:9px 16px;border-radius:20px;font-size:14px;opacity:0;transition:opacity .2s;pointer-events:none;max-width:86%;text-align:center}
+#toast.s{opacity:.95}
+.mo{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;align-items:flex-end;justify-content:center;z-index:50}
+.mo.s{display:flex}
+.m{background:var(--card);width:100%;max-width:520px;border-radius:20px 20px 0 0;padding:18px 16px calc(18px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:10px}
+.m .b{display:flex;gap:8px}.m .b button{flex:1}
+.m .st{font-size:14px;min-height:20px;text-align:center;color:var(--mut)}
+.m button:disabled{opacity:.5}.m p{margin:0;font-size:13px;color:var(--mut);line-height:1.5}
+</style></head>
+<body>
+<!-- 1) เลือกภาษา -->
+<div class="scr" id="s1"><h2>เลือกภาษา / Select language</h2><button data-l="th">ภาษาไทย</button><button data-l="en">English</button></div>
+<!-- 2) ข้อมูลนิสิต -->
+<div class="scr" id="s2" hidden><h2 id="h2"></h2>
+ <div><label id="l1" for="fn"></label><input id="fn" autocomplete="off"></div>
+ <div><label id="l2" for="ln"></label><input id="ln" autocomplete="off"></div>
+ <div><label id="l3" for="sid"></label><input id="sid" inputmode="numeric" autocomplete="off"></div>
+ <p id="howto"></p>
+ <button id="st"></button></div>
+<!-- 3) แอปจับคู่ -->
+<div id="app" hidden>
+<header id="hd">
+ <div class="top"><b id="ttl"></b><span id="cnt"></span></div>
+ <div class="tabs"><button id="tm"></button><button id="te"></button></div>
+ <div class="nav"><button class="arr" id="pv" aria-label="previous">‹</button><div id="strip"></div><button class="arr" id="nx" aria-label="next">›</button></div>
+</header>
+<div class="rw" style="flex:.7"><div class="tag" id="g1"></div><div class="row" id="rn"></div></div>
+<div class="rw" style="flex:1.6"><div class="tag" id="g2"></div><div class="row" id="ri"></div></div>
+<div class="rw" style="flex:1.25"><div class="tag" id="g3"></div><div class="row" id="rd"></div></div>
+<footer><button id="go"></button><button id="ex" hidden></button></footer>
+</div>
+<div id="toast"></div>
+<div class="mo" id="mo"><div class="m"><b id="mt"></b><p id="mp"></p><div class="b"><button id="jpg">JPG</button><button id="pdf">PDF</button></div><div class="st" id="ms"></div><button class="sec" id="cl"></button></div></div>
+<script>
+/* =====================================================================
+   ข้อมูลใบงาน — แก้ชื่อ/คำอธิบาย/ไฟล์รูปได้ที่นี่
+   ไฟล์รูปทั้งหมดอยู่ในโฟลเดอร์ images/ (ดู images/README.txt)
+   key = ตัวอักษรคำตอบในใบงานกระดาษ (อ้างอิงเท่านั้น ไม่แสดงในแอปหรือแผ่นคำตอบ)
+   ===================================================================== */
+const IMG_DIR='images/';
+const DATA={
+ mit:{part:1,items:[
+  {id:'m_inter',no:'1.1',key:'C',th:'อินเตอร์เฟส',en:'Interphase',img:'mitosis_interphase.png',
+   d:{en:'DNA is replicated; the cell grows and synthesizes proteins for nuclear division.',
+      th:'มีการจำลอง DNA เซลล์เจริญเติบโตและสังเคราะห์โปรตีนสำหรับการแบ่งนิวเคลียส'}},
+  {id:'m_pro',no:'1.2',key:'E',th:'โพรเฟส',en:'Prophase',img:'mitosis_prophase.png',
+   d:{en:'Chromatin coils into visible chromosomes; the nucleolus disappears.',
+      th:'โครมาทินขดตัวเป็นโครโมโซมที่มองเห็นได้ นิวคลีโอลัสหายไป'}},
+  {id:'m_prometa',no:'1.3',key:'F',th:'โพรเมตาเฟส',en:'Prometaphase',img:'mitosis_prometaphase.png', // ยังไม่มีไฟล์ – วางรูปชื่อนี้ใน images/
+   d:{en:'The nuclear envelope breaks down completely; mitotic spindles reach the kinetochores.',
+      th:'เยื่อหุ้มนิวเคลียสสลายไปจนหมด เส้นใยสปินเดิลยื่นไปถึงไคนีโทคอร์'}},
+  {id:'m_meta',no:'1.4',key:'A',th:'เมตาเฟส',en:'Metaphase',img:'mitosis_metaphase.png',
+   d:{en:"Chromosomes line up single-file at the cell's midline.",
+      th:'โครโมโซมเรียงตัวเป็นแถวเดียวที่แนวกลางเซลล์'}},
+  {id:'m_ana',no:'1.5',key:'B',th:'แอนาเฟส',en:'Anaphase',img:'mitosis_anaphase.png',
+   d:{en:'Sister chromatids separate and move to opposite ends.',
+      th:'sister chromatids แยกออกจากกันและเคลื่อนไปยังขั้วตรงข้ามของเซลล์'}},
+  {id:'m_telo',no:'1.6',key:'D',th:'เทโลเฟส',en:'Telophase',img:'mitosis_telophase.png',
+   d:{en:'Two nuclei form; chromosomes begin to uncoil. This results in the production of 2 daughter cells.',
+      th:'เกิดนิวเคลียส 2 นิวเคลียส โครโมโซมเริ่มคลายตัว ส่งผลให้ได้เซลล์ลูก 2 เซลล์'}}]},
+ mei:{part:2,items:[
+  {id:'e_p1',no:'2.1',key:'A',th:'โพรเฟส I',en:'Prophase I',img:'meiosis_prophase_1.png',
+   d:{en:'Homologous chromosomes pair up and cross over.',
+      th:'โฮมอโลกัสโครโมโซมจับคู่กันและเกิดครอสซิงโอเวอร์'}},
+  {id:'e_m1',no:'2.2',key:'B',th:'เมตาเฟส I',en:'Metaphase I',img:'meiosis_metaphase_1.png',
+   d:{en:"Homologous pairs (tetrads) align at the cell's equator.",
+      th:'โฮมอโลกัสโครโมโซมที่จับคู่กัน เรียงตัวอยู่ที่แนว metaphase plate'}},
+  {id:'e_a1',no:'2.3',key:'C',th:'แอนาเฟส I',en:'Anaphase I',img:'meiosis_anaphase_1.png',
+   d:{en:'Homologous chromosomes separate to opposite poles.',
+      th:'โฮมอโลกัสโครโมโซมแยกจากกันไปยังขั้วเซลล์'}},
+  {id:'e_t1',no:'2.4',key:'D',th:'เทโลเฟส I',en:'Telophase I',img:'meiosis_telophase_1.png',
+   d:{en:'Two haploid daughter cells form; cytokinesis occurs.',
+      th:'เกิดเซลล์ลูกแฮพลอยด์ 2 เซลล์ และเกิดไซโทไคนีซิส'}},
+  {id:'e_p2',no:'2.5',key:'E',th:'โพรเฟส II',en:'Prophase II',img:'meiosis_prophase_2.png',
+   d:{en:'The nuclear envelope breaks down, centrosomes move to opposite poles, and a new spindle apparatus forms in each haploid daughter cell.',
+      th:'เยื่อหุ้มนิวเคลียสสลาย เซนทริโอลเคลื่อนไปยังขั้วเซลล์ และเกิดชุดสปินเดิลใหม่ในเซลล์ลูกแฮพลอยด์แต่ละเซลล์'}},
+  {id:'e_m2',no:'2.6',key:'F',th:'เมตาเฟส II',en:'Metaphase II',img:'meiosis_metaphase_2.png',
+   d:{en:'Individual chromosomes align at the metaphase plate.',
+      th:'โครโมโซมแต่ละแท่งเรียงตัวที่แนว metaphase plate'}},
+  {id:'e_a2',no:'2.7',key:'G',th:'แอนาเฟส II',en:'Anaphase II',img:'meiosis_anaphase_2.png',
+   d:{en:'Sister chromatids finally separate and move apart.',
+      th:'sister chromatids แยกออกจากกันในที่สุดและเคลื่อนที่ออกห่างจากกัน'}},
+  {id:'e_t2',no:'2.8',key:'H',th:'เทโลเฟส II',en:'Telophase II',img:'meiosis_telophase_2.png',
+   d:{en:'The final stage of meiosis, chromosomes arrive at opposite poles, decondense into chromatin, and nuclear envelopes reform around each of the four new haploid sets.',
+      th:'ระยะสุดท้ายของไมโอซิส โครโมโซมเคลื่อนมาถึงขั้วตรงข้าม คลายตัวเป็นโครมาทิน และเยื่อหุ้มนิวเคลียสสร้างขึ้นใหม่ล้อมรอบชุดโครโมโซมแฮพลอยด์ทั้งสี่ชุด'}}]}};
+
+const TX={
+th:{ttl:'จับคู่ระยะการแบ่งเซลล์',mit:'ไมโทซิส',mei:'ไมโอซิส',part:'ส่วนที่',g1:'① ชื่อระยะ (เลื่อนซ้าย-ขวา)',g2:'② รูประยะเซลล์',g3:'③ คำอธิบาย',
+ sent:'ส่งแล้ว',go:'ส่งคำตอบข้อ',edit:'แก้ไขข้อ',ex:'สร้างไฟล์',h2:'ข้อมูลนิสิต',fn:'ชื่อ',ln:'นามสกุล',sid:'รหัสนิสิต',st:'เริ่มทำ',
+ howto:'เลื่อนแต่ละแถวซ้าย-ขวาให้ ชื่อระยะ รูป และคำอธิบาย ตรงกัน แล้วกด "ส่งคำตอบ" ทีละข้อ ทำให้ครบทั้งไมโทซิสและไมโอซิส แล้วกด "สร้างไฟล์" เพื่อส่งอาจารย์',
+ need:'กรอกข้อมูลให้ครบก่อน',used:'ใช้ในข้อ',lab:{n:'ชื่อระยะ',i:'รูป',d:'คำอธิบาย'},dupe:(l,j)=>`${l}นี้ถูกใช้ในข้อ ${j} แล้ว`,okm:n=>`ส่งข้อ ${n} แล้ว ✓`,
+ alldone:p=>`ส่ง${p}ครบแล้ว ✓`,ready:'ทำครบทุกข้อแล้ว ✓ กด "สร้างไฟล์" ได้เลย',notyet:'ต้องทำให้ครบทุกข้อทั้งไมโทซิสและไมโอซิสก่อน',cl:'ปิด',mt:'บันทึกไฟล์คำตอบ',gen:'กำลังสร้างไฟล์...',saved:'บันทึกแล้ว ✓',wait:'รอกดยืนยันการบันทึก...',decl:'ยกเลิกการบันทึก',
+ serr:'บันทึกไม่สำเร็จ',perr:'สร้าง PDF ไม่สำเร็จ ลองบันทึกเป็น JPG',inc:p=>`ไฟล์จะรวม: ${p}`,miss:p=>`(${p} ยังทำไม่ครบ จะไม่อยู่ในไฟล์ — ทำให้ครบก่อนแล้วค่อยสร้างไฟล์ใหม่)`,
+ rt:'แบบฝึกหัดจับคู่ระยะการแบ่งเซลล์',nm:'ชื่อ-นามสกุล',idl:'รหัสนิสิต',sc:'คะแนน',full:'ถูกครบทั้งข้อ',total:'คะแนนรวม',
+ rule:'ต่อระยะ: รูปถูก 1 คะแนน + คำอธิบายถูก 1 คะแนน',item:'ข้อ',stage:'ชื่อระยะ',pic:'รูปที่เลือก',desc:'คำอธิบายที่เลือก',key:'เฉลย',noimg:'ยังไม่มีรูป'},
+en:{ttl:'Match the Cell Division Stages',mit:'Mitosis',mei:'Meiosis',part:'Part',g1:'① Stage name (swipe left/right)',g2:'② Cell image',g3:'③ Description',
+ sent:'Submitted',go:'Submit item',edit:'Edit item',ex:'Create file',h2:'Student information',fn:'First name',ln:'Last name',sid:'Student ID',st:'Start',
+ howto:'Swipe each row so the stage name, image and description match, then tap "Submit" for each item. Finish both Mitosis and Meiosis, then tap "Create file" to send to your instructor.',
+ need:'Please fill in every field',used:'Used in item',lab:{n:'name',i:'image',d:'description'},dupe:(l,j)=>`This ${l} is already used in item ${j}`,okm:n=>`Item ${n} submitted ✓`,
+ alldone:p=>`${p} complete ✓`,ready:'All items done ✓ Tap "Create file"',notyet:'Finish every item in both Mitosis and Meiosis first',cl:'Close',mt:'Save answer sheet',gen:'Creating file...',saved:'Saved ✓',wait:'Waiting for save confirmation...',decl:'Save cancelled',
+ serr:'Save failed',perr:'Could not create PDF; try JPG',inc:p=>`File includes: ${p}`,miss:p=>`(${p} is not finished and will not be included — finish it, then create the file again)`,
+ rt:'Cell Division Stage Matching',nm:'Name',idl:'Student ID',sc:'Score',full:'Fully correct items',total:'Total score',
+ rule:'Per stage: correct image 1 pt + correct description 1 pt',item:'Item',stage:'Stage',pic:'Chosen image',desc:'Chosen description',key:'Key',noimg:'Image pending'}};
+
+/* ===================== สถานะ ===================== */
+let lang='th',mode='mit';const t=k=>TX[lang][k];
+const $=id=>document.getElementById(id),K=['n','i','d'],MODES=['mit','mei'];
+const byId={};MODES.forEach(m=>DATA[m].items.forEach(p=>byId[p.id]=p));
+const items=m=>DATA[m].items,NN=m=>items(m).length;
+const shuf=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[a[i],a[j]]=[a[j],a[i]]}return a};
+const fresh=()=>{const o={};MODES.forEach(m=>{const ids=items(m).map(p=>p.id);
+ o[m]={cur:0,ord:{n:shuf(ids),i:shuf(ids),d:shuf(ids)},slots:ids.map(()=>({sel:{n:null,i:null,d:null},done:false}))}});return o};
+let S=fresh(),info={};
+const R={n:$('rn'),i:$('ri'),d:$('rd')},st=()=>S[mode];
+let tick=0,tt;
+const nmOf=p=>lang==='th'?p.th:p.en,subOf=p=>lang==='th'?p.en:p.th;
+const full=m=>S[m].slots.every(s=>s.done),allDone=()=>MODES.every(full);
+const partName=m=>`${t('part')} ${DATA[m].part} ${t(m)}`;
+
+/* ไม่เก็บข้อมูลใด ๆ ในเครื่อง — เปิดใหม่/รีเฟรช = เริ่มใหม่ทุกครั้ง
+   (ลบข้อมูลเก่าที่เวอร์ชันก่อนเคยบันทึกไว้ทิ้ง) */
+try{localStorage.removeItem('cellcycle-match-v1')}catch(e){}
+
+function toast(x){const e=$('toast');e.textContent=x;e.classList.add('s');clearTimeout(tt);tt=setTimeout(()=>e.classList.remove('s'),1800)}
+
+/* ===================== การ์ด 3 แถว ===================== */
+function card(k,p){const c=document.createElement('div');c.className='c';c.dataset.id=p.id;
+ if(k==='n')c.innerHTML=`<div class="nt">${nmOf(p)}</div><div class="ne">${subOf(p)}</div>`;
+ else if(k==='i'){c.classList.add('im');const img=new Image();img.alt='';img.draggable=false;img.src=IMG_DIR+p.img;
+  img.onerror=()=>{img.remove();c.insertAdjacentHTML('afterbegin',`<div class="ph">🖼️<br>${t('noimg')}</div>`)};c.appendChild(img)}
+ else c.innerHTML=`<div class="dt">${p.d[lang]}</div>`;
+ return c}
+function build(){K.forEach(k=>R[k].replaceChildren(...st().ord[k].map(id=>card(k,byId[id]))));
+ const sp=$('strip');sp.replaceChildren();for(let i=0;i<NN(mode);i++){const b=document.createElement('button');b.textContent=i+1;b.onclick=()=>goTo(i);sp.appendChild(b)}}
+/* ===== ใช้บนคอมพิวเตอร์ (เมาส์): ปุ่ม ‹ › ต่อแถว, คลิกการ์ดข้าง ๆ, ลากด้วยเมาส์, หมุนล้อเมาส์ ===== */
+const locked=()=>st().slots[st().cur].done;
+function centerOn(k,c,smooth=true){const el=R[k];el.scrollTo({left:c.offsetLeft+c.offsetWidth/2-el.clientWidth/2,behavior:smooth?'smooth':'auto'})}
+function step(k,d){if(locked())return;const cs=[...R[k].children],i=cs.indexOf(centerCard(k)),j=Math.max(0,Math.min(cs.length-1,i+d));if(cs[j])centerOn(k,cs[j])}
+K.forEach(k=>{const el=R[k],w=el.parentElement;
+ [['l',-1,'‹'],['r',1,'›']].forEach(([c,d,s])=>{const b=document.createElement('button');b.className='rb '+c;b.textContent=s;b.dataset.k=k;b.type='button';b.setAttribute('aria-label',d<0?'previous':'next');b.onclick=()=>step(k,d);w.appendChild(b)});
+ el.addEventListener('click',e=>{if(el.dataset.moved==='1'||locked())return;const c=e.target.closest('.c');if(c&&!c.classList.contains('on'))centerOn(k,c)});
+ let wl=0;el.addEventListener('wheel',e=>{if(Math.abs(e.deltaY)<=Math.abs(e.deltaX))return;e.preventDefault();const n=Date.now();if(n-wl<280)return;wl=n;step(k,e.deltaY>0?1:-1)},{passive:false});
+ let dx0=null,sl0=0;
+ el.addEventListener('pointerdown',e=>{if(e.pointerType!=='mouse'||e.button!==0||locked())return;dx0=e.clientX;sl0=el.scrollLeft;el.dataset.moved='0'});
+ addEventListener('pointermove',e=>{if(dx0===null)return;const d=e.clientX-dx0;if(Math.abs(d)>5&&el.dataset.moved!=='1'){el.dataset.moved='1';el.classList.add('drag')}if(el.dataset.moved==='1')el.scrollLeft=sl0-d});
+ addEventListener('pointerup',()=>{if(dx0===null)return;dx0=null;if(el.dataset.moved==='1'){el.classList.remove('drag');const c=centerCard(k);if(c)centerOn(k,c);setTimeout(()=>{el.dataset.moved='0'},50)}});
+});
+addEventListener('keydown',e=>{if($('app').hidden||$('mo').classList.contains('s')||/INPUT/.test(document.activeElement.tagName))return;
+ if(e.key==='ArrowLeft'||e.key==='ArrowRight'){/* ลูกศรซ้าย-ขวา = เปลี่ยนข้อ */goTo(st().cur+(e.key==='ArrowRight'?1:-1))}});
+K.forEach(k=>R[k].addEventListener('scroll',()=>{if(!tick){tick=1;requestAnimationFrame(()=>{tick=0;sync()})}},{passive:true}));
+function centerCard(k){const el=R[k],mid=el.scrollLeft+el.clientWidth/2;let best=null,bd=1e9;for(const c of el.children){const d=Math.abs(c.offsetLeft+c.offsetWidth/2-mid);if(d<bd){bd=d;best=c}}return best}
+function sync(){const s=st().slots[st().cur];K.forEach(k=>{const c=centerCard(k);if(!c)return;for(const x of R[k].children)x.classList.toggle('on',x===c);if(!s.done)s.sel[k]=c.dataset.id});}
+function place(k,id){const el=R[k],c=[...el.children].find(x=>x.dataset.id===id)||el.children[0];if(c)el.scrollLeft=c.offsetLeft+c.offsetWidth/2-el.clientWidth/2}
+/* ตัวเลือกนี้ถูกส่งไปแล้วในข้ออื่นหรือยัง */
+const taken=(k,id,cur)=>st().slots.some((x,idx)=>idx!==cur&&x.done&&x.sel[k]===id);
+/* ไปข้อที่ i: ข้อที่ยังไม่ส่ง ให้ทุกแถวเลื่อนไปหยุดที่ตัวเลือกที่ยังไม่ถูกใช้ (ใกล้ตำแหน่งเดิมที่สุด) */
+function goTo(i){const n=NN(mode),S0=st();S0.cur=Math.max(0,Math.min(n-1,i));const s=S0.slots[S0.cur];
+ K.forEach(k=>{let id=s.sel[k];
+  if(!s.done&&(!id||taken(k,id,S0.cur))){const ord=S0.ord[k],from=Math.max(0,ord.indexOf(id));
+   for(let d=0;d<ord.length;d++){const c=ord[(from+d)%ord.length];if(!taken(k,c,S0.cur)){id=c;break}}
+   s.sel[k]=id}
+  place(k,id)});
+ sync();ui()}
+
+function ui(){const {slots,cur}=st(),s=slots[cur],n=NN(mode),dn=slots.filter(x=>x.done).length;
+ $('cnt').textContent=`${t('sent')} ${dn}/${n}`;
+ $('tm').textContent=t('mit')+(full('mit')?' ✓':'');$('te').textContent=t('mei')+(full('mei')?' ✓':'');
+ $('tm').className=mode==='mit'?'cur':'';$('te').className=mode==='mei'?'cur':'';
+ [...$('strip').children].forEach((b,i)=>{b.className=(i===cur?'cur ':'')+(slots[i].done?'done':'')});
+ $('go').textContent=`${s.done?t('edit'):t('go')} ${cur+1}`;$('go').className=s.done?'sec':'';
+ $('ex').textContent=t('ex');$('ex').hidden=!allDone();
+ document.querySelectorAll('.rb').forEach(b=>b.disabled=s.done);
+ K.forEach(k=>{R[k].classList.toggle('lock',s.done);for(const c of R[k].children){c.classList.remove('used');const o=c.querySelector('.u');if(o)o.remove();
+  const j=slots.findIndex((x,idx)=>idx!==cur&&x.done&&x.sel[k]===c.dataset.id);if(j>=0){c.classList.add('used');c.insertAdjacentHTML('beforeend',`<span class="u">${t('used')} ${j+1}</span>`)}}})}
+function setMode(m){mode=m;build();requestAnimationFrame(()=>goTo(st().cur))}
+$('tm').onclick=()=>setMode('mit');$('te').onclick=()=>setMode('mei');
+
+$('go').onclick=()=>{const {slots,cur}=st(),s=slots[cur];
+ if(s.done){s.done=false;ui();return}
+ sync();
+ for(const k of K){const j=slots.findIndex((x,idx)=>idx!==cur&&x.done&&x.sel[k]===s.sel[k]);if(j>=0){toast(t('dupe')(t('lab')[k],j+1));return}}
+ s.done=true;ui();
+ let nx=slots.findIndex((x,i)=>!x.done&&i>cur);if(nx<0)nx=slots.findIndex(x=>!x.done);
+ if(nx>=0){toast(t('okm')(cur+1));setTimeout(()=>goTo(nx),450)}
+ else{const o=MODES.find(m=>m!==mode&&!full(m));if(o){toast(t('alldone')(t(mode)));setTimeout(()=>setMode(o),900)}else toast(t('ready'))}};
+$('pv').onclick=()=>goTo(st().cur-1);$('nx').onclick=()=>goTo(st().cur+1);
+/* ปัดซ้าย-ขวาที่ส่วนหัวเพื่อเปลี่ยนข้อ */
+let x0=0,y0=0;$('hd').addEventListener('touchstart',e=>{x0=e.touches[0].clientX;y0=e.touches[0].clientY},{passive:true});
+$('hd').addEventListener('touchend',e=>{const dx=e.changedTouches[0].clientX-x0,dy=e.changedTouches[0].clientY-y0;if(Math.abs(dx)>50&&Math.abs(dx)>Math.abs(dy))goTo(st().cur+(dx<0?1:-1))},{passive:true});
+addEventListener('resize',()=>{if(!$('app').hidden)goTo(st().cur)});
+
+/* ===================== หน้าเริ่ม ===================== */
+document.querySelectorAll('[data-l]').forEach(b=>b.onclick=()=>{lang=b.dataset.l;document.documentElement.lang=lang;
+ $('h2').textContent=t('h2');$('l1').textContent=t('fn');$('l2').textContent=t('ln');$('l3').textContent=t('sid');$('st').textContent=t('st');$('howto').textContent=t('howto');
+ $('s1').hidden=true;$('s2').hidden=false});
+$('st').onclick=()=>{const a=$('fn').value.trim(),b=$('ln').value.trim(),c=$('sid').value.trim();
+ if(!a||!b||!c){alert(t('need'));return}
+ info={fn:a,ln:b,id:c};$('ttl').textContent=t('ttl');$('g1').textContent=t('g1');$('g2').textContent=t('g2');$('g3').textContent=t('g3');
+ $('s2').hidden=true;$('app').hidden=false;setMode(mode)};
+
+/* ===================== Export: แผ่นคำตอบ + ตรวจถูก/ผิด (ไม่แสดงเฉลย) ===================== */
+$('ex').onclick=()=>{const ok=MODES.filter(full),no=MODES.filter(m=>!full(m));
+ $('ms').textContent='';$('mt').textContent=t('mt');$('cl').textContent=t('cl');
+ if(!allDone()){toast(t('notyet'));return}
+ $('mp').textContent=t('inc')(ok.map(partName).join(', '));
+ $('mo').classList.add('s')};
+$('cl').onclick=()=>$('mo').classList.remove('s');
+
+function loadImgs(m){const o={};return Promise.all(items(m).map(p=>new Promise(r=>{const im=new Image();im.onload=()=>{o[p.id]=im;r()};im.onerror=()=>{o[p.id]=null;r()};im.src=IMG_DIR+p.img}))).then(()=>o)}
+function wrap(x,s,w){const seg=(window.Intl&&Intl.Segmenter)?[...new Intl.Segmenter(lang,{granularity:'word'}).segment(s)].map(g=>g.segment):[...s];const L=[];let l='';
+ for(const g of seg){if(x.measureText(l+g).width>w&&l){L.push(l);l=g.trimStart()}else l+=g}if(l)L.push(l);return L}
+function scoreOf(m){let pts=0,fullN=0;S[m].slots.forEach(s=>{const a=s.sel.i===s.sel.n,b=s.sel.d===s.sel.n;pts+=a+b;fullN+=a&&b});return {pts,max:2*NN(m),fullN}}
+
+async function drawPart(m,useImg){
+ const FF='"Noto Sans Thai",sans-serif',G='#1f8a5b',RD='#c0392b',MU='#6b7a72',IK='#1d2a24';
+ const im=useImg?await loadImgs(m):{};
+ const W=1240,T=300,PAD=16,DX=700,DW=W-DX-30,LH=28;
+ const meas=document.createElement('canvas').getContext('2d');meas.font=`400 20px ${FF}`;
+ // เรียงตามลำดับในใบงาน (1.1, 1.2, ...)
+ const rows=S[m].slots.map(s=>({ref:byId[s.sel.n],pi:byId[s.sel.i],pd:byId[s.sel.d]})).sort((a,b)=>a.ref.no.localeCompare(b.ref.no,undefined,{numeric:true}));
+ rows.forEach(r=>{r.oi=r.pi===r.ref;r.od=r.pd===r.ref;r.dl=wrap(meas,r.pd.d[lang],DW-66);
+  r.h=Math.max(200,PAD*2+24+r.dl.length*LH+16)});
+ const H=T+rows.reduce((a,r)=>a+r.h,0)+30,cv=document.createElement('canvas');cv.width=W;cv.height=H;
+ const x=cv.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,W,H);x.textBaseline='top';
+ const txt=(s,px,xx,y,col,wt=400,al='left')=>{x.font=`${wt} ${px}px ${FF}`;x.fillStyle=col;x.textAlign=al;x.fillText(s,xx,y)};
+ const box=(a,b,w,h,sk,fl,lw=3)=>{x.beginPath();x.roundRect?x.roundRect(a,b,w,h,12):x.rect(a,b,w,h);x.fillStyle=fl;x.fill();x.lineWidth=lw;x.strokeStyle=sk;x.stroke()};
+ const mark=(ok,cx,cy)=>{x.beginPath();x.arc(cx,cy,15,0,7);x.fillStyle=ok?G:RD;x.fill();txt(ok?'✓':'✗',20,cx,cy-13,'#fff',600,'center')};
+ const thumb=(p,cx,cy,s)=>{const i=im[p.id];if(i){const r=Math.min(s/i.width,s/i.height),w=i.width*r,h=i.height*r;x.drawImage(i,cx-w/2,cy-h/2,w,h)}
+  else{x.setLineDash([8,6]);box(cx-s/2,cy-s/2,s,s,'#b9c2bd','#fafbfa',2);x.setLineDash([]);txt(t('noimg'),s>120?18:13,cx,cy-10,MU,400,'center')}};
+ const sc=scoreOf(m);
+ txt(t('rt'),36,50,36,IK,600);txt(partName(m),30,50,84,G,600);
+ txt(`${t('nm')}: ${info.fn} ${info.ln}`,26,50,134,IK);txt(`${t('idl')}: ${info.id}`,26,50,172,IK);
+ txt(new Date().toLocaleString(lang==='th'?'th-TH':'en-GB'),20,50,214,MU);
+ txt(`${sc.pts} / ${sc.max}`,92,W-50,30,sc.pts===sc.max?G:IK,600,'right');
+ txt(`${t('sc')} · ${t('full')} ${sc.fullN}/${NN(m)}`,24,W-50,140,IK,600,'right');txt(t('rule'),18,W-50,178,MU,400,'right');
+ // หัวตาราง
+ x.fillStyle=IK;x.fillRect(0,T-40,W,3);
+ [[t('item'),30],[t('stage'),150],[t('pic'),400],[t('desc'),DX]].forEach(([s,xx])=>txt(s,18,xx,T-30,MU,600));
+ let y=T;rows.forEach((r,i)=>{const h=r.h,pts=r.oi+r.od;
+  x.fillStyle=i%2?'#f5f7f5':'#fff';x.fillRect(0,y,W,h);x.fillStyle='#e3e8e5';x.fillRect(0,y+h-1,W,1);
+  txt(r.ref.no,26,30,y+20,IK,600);txt(`${pts}/2`,34,30,y+60,pts===2?G:pts?'#b7791f':RD,600);
+  // ชื่อระยะ (จุดยึดของข้อ)
+  box(140,y+12,240,h-24,'#9aa8a0','#fff');txt(nmOf(r.ref),25,260,y+h/2-26,IK,600,'center');txt(subOf(r.ref),17,260,y+h/2+10,MU,400,'center');
+  // รูปที่เลือก (+ เฉลยถ้าผิด)
+  const iw=280;box(395,y+12,iw,h-24,r.oi?G:RD,'#fff');thumb(r.pi,395+iw/2,y+h/2,Math.min(iw,h-24)-24);mark(r.oi,395+18,y+30);
+  // คำอธิบายที่เลือก (+ เฉลยถ้าผิด)
+  box(DX,y+12,DW,h-24,r.od?G:RD,'#fff');mark(r.od,DX+22,y+34);
+  let ty=y+PAD+12;r.dl.forEach(l=>{txt(l,20,DX+44,ty,IK);ty+=LH});
+  y+=h});
+ return cv}
+
+async function drawAll(useImg){
+ try{await Promise.race([Promise.all([document.fonts.load('600 24px "Noto Sans Thai"'),document.fonts.load('400 24px "Noto Sans Thai"')]),new Promise(r=>setTimeout(r,2500))])}catch(e){}
+ const out=[];for(const m of MODES.filter(full))out.push(await drawPart(m,useImg));return out}
+
+const msg=x=>{$('ms').textContent=x};let busy=false;
+async function save(fn,blob){let d=null;try{d=(window.claude&&claude.use)?await claude.use('downloads'):null}catch(e){}
+ if(d){try{msg(t('wait'));await d.save({filename:fn,data:blob});msg(t('saved'))}catch(e){msg(e&&e.code==='declined'?t('decl'):t('serr')+' ('+((e&&e.code)||e)+')')}return}
+ const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=fn;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),60000);msg(t('saved'))}
+async function exportAs(type){if(busy)return;if(!allDone()){msg(t('notyet'));return}busy=true;$('jpg').disabled=$('pdf').disabled=true;msg(t('gen'));
+ try{let cvs;try{cvs=await drawAll(true);cvs.forEach(c=>c.toDataURL('image/jpeg',.5))}catch(e){cvs=await drawAll(false)} // ถ้ารูปทำให้ canvas ติด CORS ให้วาดแบบไม่มีรูป
+  const base='CellCycle_'+info.id.replace(/[^\w฀-๿-]/g,'');
+  if(type==='jpg'){const W=Math.max(...cvs.map(c=>c.width)),GAP=24,H=cvs.reduce((a,c)=>a+c.height,0)+GAP*(cvs.length-1);
+   const all=document.createElement('canvas');all.width=W;all.height=H;const x=all.getContext('2d');x.fillStyle='#c9d1cc';x.fillRect(0,0,W,H);
+   let y=0;cvs.forEach(c=>{x.drawImage(c,0,y);y+=c.height+GAP});
+   const b=await new Promise(r=>all.toBlob(r,'image/jpeg',.88));if(!b)throw new Error('toBlob');await save(base+'.jpg',b)}
+  else{if(!window.jspdf){msg(t('perr'));return}
+   let pdf;cvs.forEach((c,i)=>{const f=[c.width,c.height],o=c.width>c.height?'l':'p';
+    if(!i)pdf=new window.jspdf.jsPDF({unit:'px',format:f,orientation:o,hotfixes:['px_scaling']});else pdf.addPage(f,o);
+    pdf.addImage(c.toDataURL('image/jpeg',.88),'JPEG',0,0,c.width,c.height)});
+   await save(base+'.pdf',pdf.output('blob'))}
+ }catch(e){msg(t('serr')+' ('+e+')')}finally{busy=false;$('jpg').disabled=$('pdf').disabled=false}}
+$('jpg').onclick=()=>exportAs('jpg');$('pdf').onclick=()=>exportAs('pdf');
+</script>
+</body>
+</html>

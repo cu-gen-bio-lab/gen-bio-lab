@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Genetic Drift Simulation</title>
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Sarabun',sans-serif;background:#f5f4f0;color:#1a1a18;min-height:100vh;padding:1rem}
+.wrap{max-width:680px;margin:0 auto;padding:.5rem}
+.phase{display:none}.phase.active{display:block}
+h1{font-size:20px;font-weight:600;margin-bottom:1.2rem}
+h2{font-size:17px;font-weight:600;margin-bottom:.9rem}
+label{font-size:13px;color:#555;display:block;margin-bottom:3px}
+select,input[type=range]{width:100%;margin-bottom:.9rem}
+select{padding:6px 8px;border:1px solid #ddd;border-radius:6px;background:#fff;font-family:'Sarabun',sans-serif;font-size:13px}
+input[type=range]{accent-color:#2a6e3a}
+.row{display:flex;gap:10px;margin-bottom:.9rem;flex-wrap:wrap}
+.col{flex:1;min-width:130px}
+.card{background:#fff;border:1px solid #e8e6e0;border-radius:10px;padding:.9rem 1.1rem;margin-bottom:.9rem}
+.metric{background:#f0efe9;border-radius:8px;padding:.6rem .5rem;text-align:center;flex:1;min-width:70px}
+.metric .val{font-size:20px;font-weight:600}
+.metric .lbl{font-size:11px;color:#666;margin-top:2px;line-height:1.3}
+button{cursor:pointer;background:#fff;border:1px solid #ccc;border-radius:8px;padding:8px 18px;font-size:13px;font-family:'Sarabun',sans-serif;color:#1a1a18;transition:background .15s}
+button:hover{background:#f0efe9}
+button.primary{background:#2a6e3a;color:#fff;border-color:#2a6e3a}
+button.primary:hover{background:#235c31}
+button:active{transform:scale(.98)}
+button:disabled{opacity:.38;cursor:not-allowed}
+canvas{display:block;border-radius:10px;border:1px solid #ddd}
+.info-box{background:#e8f4fd;border-left:3px solid #5aabdc;padding:9px 13px;font-size:13px;color:#1a4a6e;margin-bottom:.9rem;border-radius:0 6px 6px 0}
+.warn-box{background:#fff8e6;border-left:3px solid #e8a820;padding:9px 13px;font-size:13px;color:#7a5210;margin-bottom:.9rem;border-radius:0 6px 6px 0}
+.step-bar{display:flex;margin-bottom:1.2rem;gap:2px}
+.step{flex:1;text-align:center;font-size:11px;color:#aaa;padding:5px 2px;border-bottom:2px solid #ddd}
+.step.done{color:#2a6e3a;border-color:#2a6e3a;font-weight:600}
+.mode-btn{flex:1;padding:10px;font-size:13px;font-family:'Sarabun',sans-serif;border:1px solid #ccc;border-radius:8px;cursor:pointer;background:#fff;color:#1a1a18}
+.mode-btn.active{background:#2a6e3a;color:#fff;border-color:#2a6e3a}
+.islands-wrap{display:flex;gap:10px;margin-bottom:.75rem}
+.island-box{flex:1;min-width:0}
+.island-label{font-size:12px;color:#666;text-align:center;margin-bottom:4px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;color:#666;font-weight:500;padding:5px 8px;border-bottom:1px solid #e8e6e0}
+td{padding:6px 8px;border-bottom:1px solid #e8e6e0}
+.btn-row{display:flex;gap:10px;margin-top:.7rem;flex-wrap:wrap}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>🏝 Genetic Drift Simulation</h1>
+
+<div id="mode-select" style="margin-bottom:1.2rem">
+  <div style="font-size:13px;color:#555;margin-bottom:8px">เลือกโหมดการทดลอง</div>
+  <div style="display:flex;gap:8px">
+    <button class="mode-btn active" id="mb1" onclick="setMode('bottleneck')">🌋 Bottleneck Effect</button>
+    <button class="mode-btn" id="mb2" onclick="setMode('founder')">⛵ Founder Effect</button>
+  </div>
+</div>
+<div class="step-bar" id="step-bar"></div>
+
+<!-- BOTTLENECK -->
+<div id="bn-phases">
+<div class="phase active" id="bn-p1">
+  <h2>ตั้งค่า — Bottleneck Effect</h2>
+  <div class="card">
+    <div class="row">
+      <div class="col">
+        <label>ประชากรเริ่มต้น: <strong id="bn-pop-out">50</strong> ตัว</label>
+        <input type="range" id="bn-pop" min="30" max="80" value="50" step="5">
+        <label>สัดส่วน Allele A: <strong id="bn-a-out">50</strong>%</label>
+        <input type="range" id="bn-a" min="20" max="80" value="50" step="5">
+        <div style="font-size:12px;color:#777;margin-top:-8px;margin-bottom:.9rem">Allele B = <span id="bn-b-out">50</span>%</div>
+      </div>
+      <div class="col">
+        <label>ประเภทเหตุการณ์</label>
+        <select id="bn-event">
+          <option value="volcano">ภูเขาไฟระเบิด</option>
+          <option value="drought">ภัยแล้ง</option>
+          <option value="disease">โรคระบาด</option>
+          <option value="predator">นักล่าบุกเกาะ</option>
+        </select>
+        <label>รอดชีวิตโดยรวม: <strong id="bn-sev-out">30</strong>%</label>
+        <input type="range" id="bn-sev" min="10" max="60" value="30" step="5">
+      </div>
+    </div>
+    <div style="font-size:12px;color:#666;background:#f8f7f3;border-radius:6px;padding:8px 10px">
+      📐 การฟื้นตัว: Logistic + Allee &nbsp;|&nbsp; r = 0.5 &nbsp;|&nbsp; A = 18% ของ K
+    </div>
+  </div>
+  <button class="primary" onclick="bnStart()">เริ่มการทดลอง →</button>
+</div>
+<div class="phase" id="bn-p2">
+  <h2>ประชากรก่อนเหตุการณ์</h2>
+  <div class="info-box">นับจำนวนจุดแต่ละสีบนเกาะ บันทึกไว้คำนวณ allele frequency เองครับ</div>
+  <canvas id="bn-cv2" style="width:100%"></canvas>
+  <div class="row" style="margin-top:.7rem" id="bn-stats2"></div>
+  <div class="btn-row"><button onclick="bnReset()">← กลับ</button><button class="primary" onclick="bnTrigger()">เกิดเหตุการณ์! →</button></div>
+</div>
+<div class="phase" id="bn-p3">
+  <h2 id="bn-ev-title">เหตุการณ์</h2>
+  <div id="bn-ev-desc-wrap"></div>
+  <canvas id="bn-cv3" style="width:100%"></canvas>
+  <div class="row" style="margin-top:.7rem" id="bn-stats3"></div>
+  <div class="btn-row"><button class="primary" id="bn-btn-rec" onclick="bnRecover()" disabled>ประชากรฟื้นตัว →</button></div>
+</div>
+<div class="phase" id="bn-p4">
+  <h2>ประชากรกำลังฟื้นตัว</h2>
+  <div class="info-box">กราฟมุมล่างขวา: เส้นสีเขียว = K &nbsp;|&nbsp; เส้นสีส้ม = Allee threshold (A) &nbsp;|&nbsp; ถ้า N &lt; A ประชากรสูญพันธุ์</div>
+  <canvas id="bn-cv4" style="width:100%"></canvas>
+  <div class="row" style="margin-top:.7rem" id="bn-stats4"></div>
+  <div class="btn-row"><button class="primary" id="bn-btn-res" onclick="bnResult()" disabled>ดูผลลัพธ์ →</button></div>
+</div>
+<div class="phase" id="bn-p5">
+  <h2>ผลลัพธ์ — Bottleneck Effect</h2>
+  <div class="row">
+    <div class="island-box"><div class="island-label">ก่อนเหตุการณ์</div><canvas id="bn-r1" style="width:100%"></canvas></div>
+    <div class="island-box"><div class="island-label">หลังฟื้นตัว</div><canvas id="bn-r2" style="width:100%"></canvas></div>
+  </div>
+  <div id="bn-rtable" style="margin-top:.75rem"></div>
+  <div class="btn-row"><button onclick="bnReset()">ทดลองใหม่</button></div>
+</div>
+</div>
+
+<!-- FOUNDER -->
+<div id="fd-phases" style="display:none">
+<div class="phase active" id="fd-p1">
+  <h2>ตั้งค่า — Founder Effect</h2>
+  <div class="card">
+    <div class="row">
+      <div class="col">
+        <label>ประชากรเกาะต้นทาง: <strong id="fd-pop-out">60</strong> ตัว</label>
+        <input type="range" id="fd-pop" min="30" max="80" value="60" step="5">
+        <label>สัดส่วน Allele A: <strong id="fd-a-out">50</strong>%</label>
+        <input type="range" id="fd-a" min="20" max="80" value="50" step="5">
+        <div style="font-size:12px;color:#777;margin-top:-8px;margin-bottom:.9rem">Allele B = <span id="fd-b-out">50</span>%</div>
+      </div>
+      <div class="col">
+        <label>จำนวน founder ที่ย้าย (สุ่มจริง): <strong id="fd-f-out">8</strong> ตัว</label>
+        <input type="range" id="fd-f" min="4" max="20" value="8" step="1">
+        <label>K เกาะใหม่ (carrying capacity): <strong id="fd-r-out">50</strong> ตัว</label>
+        <input type="range" id="fd-r" min="20" max="70" value="50" step="5">
+      </div>
+    </div>
+    <div style="font-size:12px;color:#666;background:#f8f7f3;border-radius:6px;padding:8px 10px">
+      📐 การฟื้นตัว: Logistic + Allee &nbsp;|&nbsp; r = 0.5 &nbsp;|&nbsp; A = 18% ของ K
+    </div>
+  </div>
+  <button class="primary" onclick="fdStart()">เริ่มการทดลอง →</button>
+</div>
+<div class="phase" id="fd-p2">
+  <h2>เกาะต้นทาง — ก่อนการย้ายถิ่น</h2>
+  <div class="info-box">นับจำนวนจุดแต่ละสีบนเกาะต้นทาง บันทึกไว้คำนวณ allele frequency เองครับ</div>
+  <canvas id="fd-cv2" style="width:100%"></canvas>
+  <div class="row" style="margin-top:.7rem" id="fd-stats2"></div>
+  <div class="btn-row"><button onclick="fdReset()">← กลับ</button><button class="primary" onclick="fdMigrate()">ย้ายถิ่น! ⛵ →</button></div>
+</div>
+<div class="phase" id="fd-p3">
+  <h2>การย้ายถิ่น — Founder กำลังเดินทาง</h2>
+  <div id="fd-mig-desc-wrap"></div>
+  <canvas id="fd-cv3" style="width:100%"></canvas>
+  <div class="row" style="margin-top:.7rem" id="fd-stats3"></div>
+  <div class="btn-row"><button class="primary" id="fd-btn-rec" onclick="fdRecover()" disabled>ประชากรขยายพันธุ์บนเกาะใหม่ →</button></div>
+</div>
+<div class="phase" id="fd-p4">
+  <h2>เกาะใหม่ — ประชากรกำลังเพิ่มขึ้น</h2>
+  <div class="info-box">กราฟมุมล่างขวา: เส้นสีเขียว = K &nbsp;|&nbsp; เส้นสีส้ม = Allee threshold (A)</div>
+  <div class="islands-wrap">
+    <div class="island-box"><div class="island-label">เกาะต้นทาง</div><canvas id="fd-cv4a" style="width:100%"></canvas></div>
+    <div class="island-box"><div class="island-label">เกาะใหม่ (กำลังฟื้นตัว)</div><canvas id="fd-cv4b" style="width:100%"></canvas></div>
+  </div>
+  <div class="row" id="fd-stats4"></div>
+  <div class="btn-row"><button class="primary" id="fd-btn-res" onclick="fdResult()" disabled>ดูผลลัพธ์ →</button></div>
+</div>
+<div class="phase" id="fd-p5">
+  <h2>ผลลัพธ์ — Founder Effect</h2>
+  <div class="islands-wrap">
+    <div class="island-box"><div class="island-label">เกาะต้นทาง</div><canvas id="fd-r1" style="width:100%"></canvas></div>
+    <div class="island-box"><div class="island-label">เกาะใหม่</div><canvas id="fd-r2" style="width:100%"></canvas></div>
+  </div>
+  <div id="fd-rtable" style="margin-top:.75rem"></div>
+  <div class="btn-row"><button onclick="fdReset()">ทดลองใหม่</button></div>
+</div>
+</div>
+</div>
+
+<script>
+// ============================================================
+// ISLAND IMAGES
+// วางไฟล์ PNG ไว้โฟลเดอร์เดียวกับ HTML ชื่อตามนี้:
+//   normal_island.png, volcano_island.png, dry_island.png, new_island.png
+// ============================================================
+const processedImgs = {};
+const ISLAND_FILES = {
+  normal_island:  'normal_island.png',
+  volcano_island: 'volcano_island.png',
+  dry_island:     'dry_island.png',
+  new_island:     'new_island.png'
+};
+
+// โหลด Image ตรงๆ ไม่ใช้ getImageData (ไม่มีปัญหา CORS)
+// พื้นหลังดำลบด้วย screen blend ตอนวาด
+(function preloadAll() {
+  Object.entries(ISLAND_FILES).forEach(([key, src]) => {
+    const img = new Image();
+    img.onload = () => { processedImgs[key] = img; };
+    img.onerror = () => console.warn('ไม่พบ ' + src + ' — ใช้ fallback แทน');
+    img.src = src;
+  });
+})();
+
+// Fallback: วาด canvas เมื่อรูปยังไม่โหลด
+function drawFallbackIsland(ctx, W, H, key) {
+  const isDry = key === 'dry_island';
+  const isNew = key === 'new_island';
+  const isVolcano = key === 'volcano_island';
+  // sea
+  ctx.fillStyle = '#7ab8d4'; ctx.fillRect(0, 0, W, H);
+  // island base
+  ctx.beginPath(); ctx.ellipse(W*.51, H*.64, W*.42, H*.32, 0, 0, Math.PI*2);
+  ctx.fillStyle = isDry ? '#d4b87a' : '#6aaa5e'; ctx.fill();
+  // inner highlight
+  ctx.beginPath(); ctx.ellipse(W*.51, H*.58, W*.26, H*.22, 0, 0, Math.PI*2);
+  ctx.fillStyle = isDry ? '#e4c88a' : '#7cbb6e'; ctx.fill();
+  // volcano cone
+  if (isVolcano || !isDry) {
+    ctx.beginPath();
+    ctx.moveTo(W*.30, H*.60); ctx.lineTo(W*.365, H*.28); ctx.lineTo(W*.43, H*.60);
+    ctx.fillStyle = '#5a5a52'; ctx.fill();
+    if (isVolcano) {
+      ctx.beginPath(); ctx.arc(W*.365, H*.28, W*.022, 0, Math.PI*2);
+      ctx.fillStyle = '#FF6B1A'; ctx.fill();
+    }
+  }
+  if (isDry) {
+    // cracks
+    ctx.strokeStyle='#a08840'; ctx.lineWidth=1;
+    [[.38,.5,.5,.62],[.52,.48,.62,.58],[.44,.6,.56,.68]].forEach(([x1,y1,x2,y2])=>{
+      ctx.beginPath();ctx.moveTo(W*x1,H*y1);ctx.lineTo(W*x2,H*y2);ctx.stroke();
+    });
+  }
+}
+
+function drawIslandImg(ctx, W, H, key) {
+  // วาดทะเลก่อนเสมอ
+  ctx.fillStyle = '#7ab8d4'; ctx.fillRect(0, 0, W, H);
+  const img = processedImgs[key];
+  if (img) {
+    // screen blend: พิกเซลดำ = โปร่งใส ไม่ต้องใช้ getImageData
+    ctx.globalCompositeOperation = 'screen';
+    ctx.drawImage(img, 0, 0, W, H);
+    ctx.globalCompositeOperation = 'source-over';
+  } else {
+    drawFallbackIsland(ctx, W, H, key);
+  }
+}
+
+// ============================================================
+// SIMULATION CORE
+// ============================================================
+const CA = '#D85A30', CB = '#378ADD';
+let mode = 'bottleneck', animF = null;
+
+function setMode(m) {
+  mode = m;
+  document.getElementById('mb1').className = 'mode-btn' + (m==='bottleneck'?' active':'');
+  document.getElementById('mb2').className = 'mode-btn' + (m==='founder'?' active':'');
+  document.getElementById('bn-phases').style.display = m==='bottleneck'?'block':'none';
+  document.getElementById('fd-phases').style.display = m==='founder'?'block':'none';
+  rebuildSteps();
+}
+function rebuildSteps() {
+  const bn = ['1 ตั้งค่า','2 ก่อนเหตุการณ์','3 เหตุการณ์','4 ฟื้นตัว','5 ผลลัพธ์'];
+  const fd = ['1 ตั้งค่า','2 เกาะต้นทาง','3 ย้ายถิ่น','4 ขยายพันธุ์','5 ผลลัพธ์'];
+  const labels = mode==='bottleneck'?bn:fd;
+  document.getElementById('step-bar').innerHTML =
+    labels.map((l,i)=>`<div class="step done" id="s${i+1}">${l}</div>`).join('');
+}
+function setStep(n){for(let i=1;i<=5;i++){const s=document.getElementById('s'+i);if(s)s.className='step'+(i<=n?' done':'');}}
+
+['bn-pop','bn-a','bn-sev','fd-pop','fd-a','fd-f','fd-r'].forEach(id=>{
+  document.getElementById(id).oninput=function(){
+    const el=document.getElementById(id+'-out');if(el)el.textContent=this.value;
+    if(id==='bn-a')document.getElementById('bn-b-out').textContent=100-+this.value;
+    if(id==='fd-a')document.getElementById('fd-b-out').textContent=100-+this.value;
+  };
+});
+
+// ---- Population helpers ----
+function makePop2(N,pA){
+  const nA=Math.round(N*pA),nB=N-nA;
+  return [...Array(nA).fill(0),...Array(nB).fill(1)].sort(()=>Math.random()-.5);
+}
+function countAB(pop){let a=0,b=0;pop.forEach(x=>x===0?a++:b++);return{a,b};}
+
+// ---- Logistic + Allee ----
+// N_{t+1} = N_t + r * N_t * (N_t/A - 1) * (1 - N_t/K)
+function alleThreshold(K){return Math.max(3,Math.round(K*0.18));}
+function computeTrajectory(N0,K){
+  const r=0.5,A=alleThreshold(K);
+  const traj=[N0];let N=N0;
+  for(let t=0;t<80;t++){
+    const dN=r*N*(N/A-1)*(1-N/K);
+    N=Math.min(K,Math.max(0,N+dN));
+    traj.push(N);
+    if(N<0.5){traj.push(0);break;}
+    if(N>=K*0.995)break;
+  }
+  return traj;
+}
+
+// ---- Canvas helpers ----
+function cvSetup(id){
+  const c=document.getElementById(id);
+  const W=c.offsetWidth||Math.min(640,window.innerWidth-32);
+  const H=Math.min(240,Math.round(W*.42));
+  c.width=W;c.height=H;
+  return{c,ctx:c.getContext('2d'),W,H};
+}
+function onIsland(px,py,W,H){
+  const cx=W*.51,cy=H*.60,rx=W*.33,ry=H*.20;
+  return((px-cx)**2/rx**2+(py-cy)**2/ry**2)<=1.0;
+}
+function onNewIsland(px,py,W,H){
+  const cx=W*.52,cy=H*.58,rx=W*.35,ry=H*.22;
+  return((px-cx)**2/rx**2+(py-cy)**2/ry**2)<=1.0;
+}
+function genPos(N,W,H,isNew){
+  const r=dotR(W);const pos=[];let t=0;
+  const cx=W*.51,cy=isNew?H*.58:H*.60,rx=isNew?W*.33:W*.31,ry=isNew?H*.20:H*.18;
+  const check=isNew?(px,py)=>onNewIsland(px,py,W,H):(px,py)=>onIsland(px,py,W,H);
+  while(pos.length<N&&t<N*40){
+    t++;
+    const px=cx+(Math.random()*2-1)*rx,py=cy+(Math.random()*2-1)*ry;
+    if(!check(px,py,W,H))continue;
+    let ok=true;
+    for(const p of pos)if((p.px-px)**2+(p.py-py)**2<(r*2.4)**2){ok=false;break;}
+    if(ok)pos.push({px,py});
+  }
+  while(pos.length<N)pos.push({px:cx+(Math.random()-.5)*rx*1.4,py:cy+(Math.random()-.5)*ry*1.4});
+  return pos;
+}
+function dotR(W){return Math.max(4,Math.min(7,W/80));}
+function drawDots(ctx,pop,pos,alphas,W){
+  const r=dotR(W);
+  pop.forEach((a,i)=>{
+    const{px,py}=pos[i]||{px:W/2,py:W/2};
+    ctx.globalAlpha=alphas?Math.max(0,alphas[i]):1;
+    ctx.beginPath();ctx.arc(px,py,r,0,Math.PI*2);
+    ctx.fillStyle=a===0?CA:CB;ctx.fill();
+    ctx.strokeStyle='rgba(255,255,255,.65)';ctx.lineWidth=1;ctx.stroke();
+  });ctx.globalAlpha=1;
+}
+function drawStatic(id,pop,isNew){
+  const{ctx,W,H}=cvSetup(id);
+  drawIslandImg(ctx,W,H,isNew?'new_island':'normal_island');
+  drawDots(ctx,pop,genPos(pop.length,W,H,isNew),null,W);
+}
+
+// ---- Mini growth chart ----
+function drawGrowthChart(ctx,W,H,traj,curGen,K,A){
+  const cW=Math.round(W*.30),cH=Math.round(H*.34);
+  const ox=W-cW-6,oy=H-cH-6;
+  const pad={l:20,r:4,t:8,b:16},pW=cW-pad.l-pad.r,pH=cH-pad.t-pad.b;
+  const maxGen=traj.length-1;
+  ctx.fillStyle='rgba(255,255,255,.88)';
+  ctx.beginPath();ctx.roundRect(ox,oy,cW,cH,4);ctx.fill();
+  ctx.strokeStyle='#ccc';ctx.lineWidth=.5;ctx.strokeRect(ox,oy,cW,cH);
+  const gx=t=>ox+pad.l+(Math.min(t,maxGen)/Math.max(maxGen,1))*pW;
+  const gy=n=>oy+pad.t+pH-(Math.max(0,n)/K)*pH;
+  ctx.setLineDash([3,2]);ctx.strokeStyle='#2a6e3a';ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(gx(0),gy(K));ctx.lineTo(gx(maxGen),gy(K));ctx.stroke();
+  ctx.strokeStyle='#e8a820';
+  ctx.beginPath();ctx.moveTo(gx(0),gy(A));ctx.lineTo(gx(maxGen),gy(A));ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.strokeStyle='#888';ctx.lineWidth=1.5;ctx.beginPath();
+  traj.forEach((n,i)=>{i===0?ctx.moveTo(gx(i),gy(n)):ctx.lineTo(gx(i),gy(Math.max(0,n)));});
+  ctx.stroke();
+  const cg=Math.min(curGen,maxGen);
+  ctx.beginPath();ctx.arc(gx(cg),gy(Math.max(0,traj[cg])),3.5,0,Math.PI*2);
+  ctx.fillStyle='#D85A30';ctx.fill();
+  ctx.font='8px sans-serif';
+  ctx.fillStyle='#2a6e3a';ctx.fillText('K',ox+2,gy(K)+3);
+  ctx.fillStyle='#e8a820';ctx.fillText('A',ox+2,gy(A)+3);
+  ctx.fillStyle='#888';ctx.fillText('Gen',gx(maxGen/2)-8,oy+cH-2);
+}
+
+// ---- UI helpers ----
+function statsHTML(pop,showDead,deadN){
+  const{a,b}=countAB(pop);const N=pop.length;
+  let h=`<div class="metric"><div class="val">${N}</div><div class="lbl">ประชากรทั้งหมด</div></div>`;
+  if(showDead)h+=`<div class="metric"><div class="val" style="color:#E24B4A">${deadN}</div><div class="lbl">เสียชีวิต</div></div>`;
+  h+=`<div class="metric"><div class="val" style="color:${CA}">${a}</div><div class="lbl">Allele A<br>(แดง)</div></div>`;
+  h+=`<div class="metric"><div class="val" style="color:${CB}">${b}</div><div class="lbl">Allele B<br>(น้ำเงิน)</div></div>`;
+  return h;
+}
+function showBnPhase(n){document.querySelectorAll('#bn-phases .phase').forEach(p=>p.classList.remove('active'));document.getElementById('bn-p'+n).classList.add('active');setStep(n);}
+function showFdPhase(n){document.querySelectorAll('#fd-phases .phase').forEach(p=>p.classList.remove('active'));document.getElementById('fd-p'+n).classList.add('active');setStep(n);}
+function resultTable(elId,rows,extinct){
+  let h=`<table><tr><th></th><th style="color:${CA}">Allele A (แดง)</th><th style="color:${CB}">Allele B (น้ำเงิน)</th><th>รวม</th></tr>`;
+  rows.forEach(r=>{h+=`<tr><td>${r.label}</td><td>${r.nA}</td><td>${r.nB}</td><td>${r.total}</td></tr>`;});
+  if(extinct)h+=`<tr><td colspan="4" style="color:#E24B4A;text-align:center;padding:6px">⚠ ประชากรสูญพันธุ์ — N ต่ำกว่า Allee threshold</td></tr>`;
+  h+=`</table>`;document.getElementById(elId).innerHTML=h;
+}
+function infoBox(t){return`<div class="info-box">${t}</div>`;}
+function warnBox(t){return`<div class="warn-box">${t}</div>`;}
+function alleBox(s,A){
+  return s>A
+    ?`<div class="info-box">✅ ผู้รอดชีวิต <strong>${s}</strong> ตัว > Allee threshold (<strong>${A}</strong> ตัว) — ประชากรสามารถฟื้นตัวได้</div>`
+    :`<div class="warn-box">⚠ ผู้รอดชีวิต <strong>${s}</strong> ตัว ≤ Allee threshold (<strong>${A}</strong> ตัว) — ประชากรมีแนวโน้มสูญพันธุ์</div>`;
+}
+
+// ============================================================
+// BOTTLENECK
+// ============================================================
+let BN={pop:[],pos:[],survive:[],survIdx:[],recover:[],recPos:[],extinct:false};
+function bnReset(){if(animF)cancelAnimationFrame(animF);animF=null;showBnPhase(1);}
+function bnStart(){
+  const N=+document.getElementById('bn-pop').value;
+  const pA=+document.getElementById('bn-a').value/100;
+  BN.pop=makePop2(N,pA);
+  showBnPhase(2);
+  setTimeout(()=>{
+    const{ctx,W,H}=cvSetup('bn-cv2');
+    BN.pos=genPos(N,W,H,false);
+    drawIslandImg(ctx,W,H,'normal_island');
+    drawDots(ctx,BN.pop,BN.pos,null,W);
+    document.getElementById('bn-stats2').innerHTML=statsHTML(BN.pop,false,0);
+  },60);
+}
+function bnTrigger(){
+  const evType=document.getElementById('bn-event').value;
+  const survRate=+document.getElementById('bn-sev').value/100;
+  const idx=BN.pop.map((_,i)=>i);
+  // Pure random die-off
+  let si=idx.filter(()=>Math.random()<survRate);
+  if(si.length<2)si=idx.sort(()=>Math.random()-.5).slice(0,2);
+  BN.survIdx=si;BN.survive=si.map(i=>BN.pop[i]);
+  const deadN=BN.pop.length-BN.survive.length;
+  const K=BN.pop.length,A=alleThreshold(K);
+  const titles={volcano:'ภูเขาไฟระเบิด!',drought:'ภัยแล้งรุนแรง!',disease:'โรคระบาดบนเกาะ!',predator:'นักล่าบุกเกาะ!'};
+  document.getElementById('bn-ev-title').textContent=titles[evType];
+  document.getElementById('bn-ev-desc-wrap').innerHTML=
+    infoBox(`สิ่งมีชีวิตตายแบบสุ่มจริง (pure random) — เสียชีวิต ${deadN} ตัว เหลือรอด ${BN.survive.length} ตัว`)+
+    alleBox(BN.survive.length,A);
+  document.getElementById('bn-btn-rec').disabled=true;
+  showBnPhase(3);
+  const{c,ctx,W,H}=cvSetup('bn-cv3');
+  const survSet=new Set(si);
+  const onDone=()=>{document.getElementById('bn-stats3').innerHTML=statsHTML(BN.survive,true,deadN);document.getElementById('bn-btn-rec').disabled=false;};
+  if(evType==='volcano')animVolcano(ctx,W,H,BN.pop,BN.pos,survSet,onDone);
+  else if(evType==='drought')animDrought(ctx,W,H,BN.pop,BN.pos,survSet,onDone);
+  else if(evType==='disease')animDisease(ctx,W,H,BN.pop,BN.pos,survSet,onDone);
+  else animPredator(ctx,W,H,BN.pop,BN.pos,survSet,onDone);
+}
+function bnRecover(){
+  const K=BN.pop.length;
+  const{a}=countAB(BN.survive);const pA=a/BN.survive.length;
+  const traj=computeTrajectory(BN.survive.length,K);
+  const finalN=Math.round(traj[traj.length-1]);
+  BN.extinct=finalN<1;
+  BN.recover=BN.extinct?[]:makePop2(finalN,pA);
+  showBnPhase(4);document.getElementById('bn-btn-res').disabled=true;
+  setTimeout(()=>{
+    const{ctx,W,H}=cvSetup('bn-cv4');
+    BN.recPos=genPos(K,W,H,false);
+    animRecover(ctx,W,H,BN.survive,K,BN.recPos,'bn-stats4','normal_island',traj,pA,
+      ()=>document.getElementById('bn-btn-res').disabled=false);
+  },60);
+}
+function bnResult(){
+  showBnPhase(5);
+  setTimeout(()=>{
+    drawStatic('bn-r1',BN.pop,false);
+    if(BN.extinct){
+      const{ctx,W,H}=cvSetup('bn-r2');drawIslandImg(ctx,W,H,'normal_island');
+      ctx.fillStyle='rgba(0,0,0,.55)';ctx.fillRect(0,0,W,H);
+      ctx.fillStyle='#fff';ctx.textAlign='center';
+      ctx.font=`bold 16px 'Sarabun',sans-serif`;ctx.fillText('ประชากรสูญพันธุ์',W/2,H/2);
+      ctx.textAlign='left';
+    }else drawStatic('bn-r2',BN.recover,false);
+    const{a:a1,b:b1}=countAB(BN.pop);
+    resultTable('bn-rtable',[
+      {label:'ก่อนเหตุการณ์',nA:a1,nB:b1,total:BN.pop.length},
+      {label:'ผู้รอดชีวิต',nA:countAB(BN.survive).a,nB:countAB(BN.survive).b,total:BN.survive.length},
+      {label:'หลังฟื้นตัว',nA:countAB(BN.recover).a,nB:countAB(BN.recover).b,total:BN.recover.length}
+    ],BN.extinct);
+  },80);
+}
+
+// ============================================================
+// FOUNDER
+// ============================================================
+let FD={srcPop:[],srcPos:[],founders:[],fdrIdx:[],newPop:[],newPos:[],extinct:false};
+function fdReset(){if(animF)cancelAnimationFrame(animF);animF=null;showFdPhase(1);}
+function fdStart(){
+  const N=+document.getElementById('fd-pop').value;
+  const pA=+document.getElementById('fd-a').value/100;
+  FD.srcPop=makePop2(N,pA);
+  showFdPhase(2);
+  setTimeout(()=>{
+    const{ctx,W,H}=cvSetup('fd-cv2');FD.srcPos=genPos(N,W,H,false);
+    drawIslandImg(ctx,W,H,'normal_island');drawDots(ctx,FD.srcPop,FD.srcPos,null,W);
+    document.getElementById('fd-stats2').innerHTML=statsHTML(FD.srcPop,false,0);
+  },60);
+}
+function fdMigrate(){
+  const fN=+document.getElementById('fd-f').value;
+  const K=+document.getElementById('fd-r').value,A=alleThreshold(K);
+  // Pure random founder selection
+  const shuffled=[...FD.srcPop.map((_,i)=>i)].sort(()=>Math.random()-.5);
+  FD.fdrIdx=shuffled.slice(0,fN);
+  FD.founders=FD.fdrIdx.map(i=>FD.srcPop[i]);
+  const{a:fA,b:fB}=countAB(FD.founders);
+  document.getElementById('fd-mig-desc-wrap').innerHTML=
+    infoBox(`สิ่งมีชีวิต ${fN} ตัวถูกสุ่มเลือก (pure random) ออกเดินทางสู่เกาะใหม่`)+
+    `<div style="font-size:13px;margin-bottom:.75rem">Allele A: <strong>${fA}</strong> ตัว &nbsp;|&nbsp; Allele B: <strong>${fB}</strong> ตัว</div>`+
+    alleBox(fN,A);
+  document.getElementById('fd-btn-rec').disabled=true;
+  showFdPhase(3);
+  const{c,ctx,W,H}=cvSetup('fd-cv3');
+  animBoat(ctx,W,H,FD.srcPop,FD.srcPos,new Set(FD.fdrIdx),()=>{
+    document.getElementById('fd-stats3').innerHTML=statsHTML(FD.founders,false,0);
+    document.getElementById('fd-btn-rec').disabled=false;
+  });
+}
+function fdRecover(){
+  const K=+document.getElementById('fd-r').value;
+  const{a}=countAB(FD.founders);const pA=a/FD.founders.length;
+  const traj=computeTrajectory(FD.founders.length,K);
+  const finalN=Math.round(traj[traj.length-1]);
+  FD.extinct=finalN<1;
+  FD.newPop=FD.extinct?[]:makePop2(finalN,pA);
+  document.getElementById('fd-btn-res').disabled=true;
+  showFdPhase(4);
+  setTimeout(()=>{
+    drawStatic('fd-cv4a',FD.srcPop,false);
+    const{ctx,W,H}=cvSetup('fd-cv4b');FD.newPos=genPos(K,W,H,true);
+    animRecover(ctx,W,H,FD.founders,K,FD.newPos,'fd-stats4','new_island',traj,pA,
+      ()=>document.getElementById('fd-btn-res').disabled=false);
+  },60);
+}
+function fdResult(){
+  showFdPhase(5);
+  setTimeout(()=>{
+    drawStatic('fd-r1',FD.srcPop,false);
+    if(FD.extinct){
+      const{ctx,W,H}=cvSetup('fd-r2');drawIslandImg(ctx,W,H,'new_island');
+      ctx.fillStyle='rgba(0,0,0,.55)';ctx.fillRect(0,0,W,H);
+      ctx.fillStyle='#fff';ctx.textAlign='center';
+      ctx.font=`bold 16px 'Sarabun',sans-serif`;ctx.fillText('ประชากรสูญพันธุ์',W/2,H/2);
+      ctx.textAlign='left';
+    }else drawStatic('fd-r2',FD.newPop,true);
+    const{a:as,b:bs}=countAB(FD.srcPop);
+    const{a:af,b:bf}=countAB(FD.founders);
+    const{a:an,b:bn}=countAB(FD.newPop);
+    resultTable('fd-rtable',[
+      {label:'เกาะต้นทาง',nA:as,nB:bs,total:FD.srcPop.length},
+      {label:'Founder ที่ย้าย',nA:af,nB:bf,total:FD.founders.length},
+      {label:'เกาะใหม่ (หลังขยายพันธุ์)',nA:an,nB:bn,total:FD.newPop.length}
+    ],FD.extinct);
+  },80);
+}
+
+// ============================================================
+// ANIMATIONS
+// ============================================================
+function animVolcano(ctx,W,H,pop,pos,survSet,onDone){
+  let parts=[],fr=0;const vx=W*.34,vy=H*.27;
+  function sp(){const a=(Math.random()-.35)*Math.PI*.75-Math.PI/2,s=2.5+Math.random()*4;parts.push({x:vx,y:vy,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:1,r:3+Math.random()*6,col:['#FF4422','#FF8822','#FFAA22','#CC2200'][0|Math.random()*4]});}
+  function loop(){
+    ctx.clearRect(0,0,W,H);drawIslandImg(ctx,W,H,'volcano_island');
+    if(fr<100)for(let i=0;i<5;i++)sp();
+    parts=parts.filter(p=>p.life>0);
+    parts.forEach(p=>{p.x+=p.vx;p.y+=p.vy;p.vy+=.13;p.life-=.016;ctx.globalAlpha=Math.max(0,p.life);ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fillStyle=p.col;ctx.fill();});ctx.globalAlpha=1;
+    if(fr>35){const ashA=Math.min(.60,(fr-35)/60);const g=ctx.createRadialGradient(W/2,H*.55,0,W/2,H*.55,W*.45);g.addColorStop(0,`rgba(90,85,78,${ashA})`);g.addColorStop(1,`rgba(90,85,78,0)`);ctx.fillStyle=g;ctx.beginPath();ctx.ellipse(W/2,H*.55,W*.45,H*.35,0,0,Math.PI*2);ctx.fill();}
+    const al=pop.map((_,i)=>!survSet.has(i)&&fr>65?Math.max(0,1-(fr-65)/42):1);
+    drawDots(ctx,pop,pos,al,W);
+    fr++;if(fr<170)animF=requestAnimationFrame(loop);else onDone();
+  }loop();
+}
+function animDrought(ctx,W,H,pop,pos,survSet,onDone){
+  let fr=0;
+  function loop(){
+    ctx.clearRect(0,0,W,H);
+    drawIslandImg(ctx,W,H,'normal_island');
+    if(fr>8){ctx.globalAlpha=Math.min(1,(fr-8)/75);drawIslandImg(ctx,W,H,'dry_island');ctx.globalAlpha=1;}
+    if(fr>55){ctx.globalAlpha=.10;ctx.strokeStyle='#FFE060';ctx.lineWidth=1;for(let i=0;i<5;i++){const hx=W*.2+i*W*.14;ctx.beginPath();ctx.moveTo(hx+Math.sin(fr*.12+i)*4,H*.25);ctx.lineTo(hx+Math.sin(fr*.12+i+1)*4,H*.82);ctx.stroke();}ctx.globalAlpha=1;}
+    const al=pop.map((_,i)=>!survSet.has(i)&&fr>72?Math.max(0,1-(fr-72)/38):1);
+    drawDots(ctx,pop,pos,al,W);
+    fr++;if(fr<148)animF=requestAnimationFrame(loop);else onDone();
+  }loop();
+}
+function animDisease(ctx,W,H,pop,pos,survSet,onDone){
+  let fr=0;
+  const blobs=Array.from({length:20},()=>({x:W*.15+Math.random()*W*.7,y:H*.3+Math.random()*H*.5,r:18+Math.random()*32,vx:(Math.random()-.5)*.5,vy:(Math.random()-.5)*.4,phase:Math.random()*Math.PI*2}));
+  function loop(){
+    ctx.clearRect(0,0,W,H);drawIslandImg(ctx,W,H,'normal_island');
+    const fogIn=Math.min(1,fr/45),fogOut=fr>95?Math.max(0,1-(fr-95)/45):1,fogA=fogIn*fogOut*0.60;
+    if(fogA>0.01){blobs.forEach(b=>{b.x+=b.vx;b.y+=b.vy;if(b.x<-b.r)b.x=W+b.r;if(b.x>W+b.r)b.x=-b.r;if(b.y<H*.2)b.vy=Math.abs(b.vy);if(b.y>H*.88)b.vy=-Math.abs(b.vy);const pulse=1+Math.sin(fr*.05+b.phase)*.18;const g=ctx.createRadialGradient(b.x,b.y,0,b.x,b.y,b.r*pulse);g.addColorStop(0,`rgba(170,70,230,${fogA})`);g.addColorStop(.5,`rgba(130,40,190,${fogA*.7})`);g.addColorStop(1,`rgba(90,10,160,0)`);ctx.fillStyle=g;ctx.beginPath();ctx.arc(b.x,b.y,b.r*pulse,0,Math.PI*2);ctx.fill();});}
+    const al=pop.map((_,i)=>!survSet.has(i)&&fr>50?Math.max(0,1-(fr-50)/48):1);
+    drawDots(ctx,pop,pos,al,W);
+    fr++;if(fr<165)animF=requestAnimationFrame(loop);else onDone();
+  }loop();
+}
+function animPredator(ctx,W,H,pop,pos,survSet,onDone){
+  let fr=0;
+  const hunters=[{ox:W+30,oy:H*.42,tx:W*.60,delay:0},{ox:W+55,oy:H*.54,tx:W*.67,delay:7},{ox:W+40,oy:H*.64,tx:W*.62,delay:15},{ox:W+20,oy:H*.48,tx:W*.73,delay:4},{ox:W+70,oy:H*.58,tx:W*.70,delay:11}];
+  const hs=hunters.map(h=>({x:h.ox,y:h.oy}));
+  function drawHunter(x,y,fr,idx){
+    const sw=Math.sin((fr-hunters[idx].delay)*.2)*10;
+    ctx.save();ctx.strokeStyle='#2a2a28';ctx.lineWidth=2;
+    ctx.beginPath();ctx.moveTo(x,y-18);ctx.lineTo(x,y+2);ctx.stroke();
+    ctx.beginPath();ctx.arc(x,y-24,6,0,Math.PI*2);ctx.fillStyle='#c49060';ctx.fill();ctx.strokeStyle='#2a2a28';ctx.lineWidth=1.5;ctx.stroke();
+    ctx.lineWidth=2;ctx.strokeStyle='#2a2a28';
+    ctx.beginPath();ctx.moveTo(x,y+2);ctx.lineTo(x-7+sw,y+17);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(x,y+2);ctx.lineTo(x+7-sw,y+17);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(x,y-10);ctx.lineTo(x-9,-sw*.4+y-2);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(x,y-10);ctx.lineTo(x+13,sw*.4+y-6);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(x+13,y-6);ctx.lineTo(x+26,y-24);ctx.strokeStyle='#7a4a18';ctx.lineWidth=2;ctx.stroke();
+    ctx.beginPath();ctx.moveTo(x+26,y-24);ctx.lineTo(x+22,y-20);ctx.lineTo(x+28,y-20);ctx.closePath();ctx.fillStyle='#aaa';ctx.fill();
+    ctx.restore();
+  }
+  function loop(){
+    ctx.clearRect(0,0,W,H);drawIslandImg(ctx,W,H,'normal_island');
+    const al=pop.map((_,i)=>!survSet.has(i)&&fr>72?Math.max(0,1-(fr-72)/38):1);
+    drawDots(ctx,pop,pos,al,W);
+    hunters.forEach((h,idx)=>{if(fr>=h.delay){if(hs[idx].x>h.tx)hs[idx].x-=2.5;drawHunter(hs[idx].x,hs[idx].y,fr,idx);}});
+    fr++;if(fr<165)animF=requestAnimationFrame(loop);else onDone();
+  }loop();
+}
+function animBoat(ctx,W,H,pop,pos,fdrSet,onDone){
+  let fr=0;
+  const srcCx=W*.27,newCx=W*.75,rx=W*.21,ry=H*.40;
+  const founders=[];let fi=0;
+  pop.forEach((a,i)=>{
+    if(!fdrSet.has(i))return;
+    const spx=srcCx+(pos[i].px-W*.51)*0.45,spy=H*.60+(pos[i].py-H*.60)*0.45;
+    const ang=(fi/fdrSet.size)*Math.PI*2;
+    founders.push({allele:a,x:spx,y:spy,tx:newCx+Math.cos(ang)*rx*.45,ty:H*.58+Math.sin(ang)*ry*.45,startFr:15+fi*4,arrived:false});
+    fi++;
+  });
+  function drawSrcIsland(){
+    const si=processedImgs['normal_island'];
+    ctx.fillStyle='#7ab8d4';ctx.fillRect(0,0,W*.5,H);
+    if(si){ctx.save();ctx.beginPath();ctx.ellipse(srcCx,H*.58,rx,ry,0,0,Math.PI*2);ctx.clip();ctx.globalCompositeOperation='screen';ctx.drawImage(si,-W*.02,0,W*.56,H);ctx.globalCompositeOperation='source-over';ctx.restore();}
+    else{ctx.beginPath();ctx.ellipse(srcCx,H*.58,rx,ry,0,0,Math.PI*2);ctx.fillStyle='#6aaa5e';ctx.fill();}
+  }
+  function drawDestIsland(){
+    const ni=processedImgs['new_island'];
+    if(ni){ctx.save();ctx.beginPath();ctx.ellipse(newCx,H*.56,rx*1.1,ry*1.05,0,0,Math.PI*2);ctx.clip();ctx.fillStyle='#7ab8d4';ctx.fillRect(W*.48,0,W*.55,H);ctx.globalCompositeOperation='screen';ctx.drawImage(ni,W*.45,-H*.05,W*.58,H*1.1);ctx.globalCompositeOperation='source-over';ctx.restore();}
+    else{ctx.beginPath();ctx.ellipse(newCx,H*.56,rx,ry,0,0,Math.PI*2);ctx.fillStyle='#5a9a4e';ctx.fill();}
+  }
+  const r=dotR(W);
+  function loop(){
+    ctx.clearRect(0,0,W,H);ctx.fillStyle='#7ab8d4';ctx.fillRect(0,0,W,H);
+    ctx.strokeStyle='rgba(255,255,255,.22)';ctx.lineWidth=1;
+    for(let i=0;i<4;i++){ctx.beginPath();ctx.moveTo(0,H*.28+i*H*.14);for(let x=0;x<=W;x+=18)ctx.lineTo(x,H*.28+i*H*.14+Math.sin(x*.045+fr*.04+i)*3);ctx.stroke();}
+    drawSrcIsland();drawDestIsland();
+    ctx.fillStyle='rgba(0,0,0,.50)';ctx.font=`bold 11px 'Sarabun',sans-serif`;
+    ctx.fillText('ต้นทาง',srcCx-18,H*.1);ctx.fillText('เกาะใหม่',newCx-22,H*.1);
+    pop.forEach((a,i)=>{
+      if(fdrSet.has(i))return;
+      const spx=srcCx+(pos[i].px-W*.51)*0.45,spy=H*.60+(pos[i].py-H*.60)*0.45;
+      ctx.beginPath();ctx.arc(spx,spy,r,0,Math.PI*2);ctx.fillStyle=a===0?CA:CB;ctx.fill();
+      ctx.strokeStyle='rgba(255,255,255,.6)';ctx.lineWidth=1;ctx.stroke();
+    });
+    founders.forEach(f=>{
+      if(fr<f.startFr)return;
+      if(!f.arrived){f.x+=(f.tx-f.x)*.05;f.y+=(f.ty-f.y)*.05;if(Math.abs(f.x-f.tx)<1.5&&Math.abs(f.y-f.ty)<1.5)f.arrived=true;}
+      if(!f.arrived){ctx.globalAlpha=.28;ctx.beginPath();ctx.arc(f.x-1.5,f.y,r*.65,0,Math.PI*2);ctx.fillStyle='rgba(255,255,255,.5)';ctx.fill();ctx.globalAlpha=1;}
+      ctx.beginPath();ctx.arc(f.x,f.y,r,0,Math.PI*2);ctx.fillStyle=f.allele===0?CA:CB;ctx.fill();
+      ctx.strokeStyle='rgba(255,255,255,.7)';ctx.lineWidth=1.5;ctx.stroke();
+    });
+    fr++;
+    if(!founders.every(f=>f.arrived)||fr<220)animF=requestAnimationFrame(loop);
+    else onDone();
+  }loop();
+}
+function animRecover(ctx,W,H,survPop,K,allPos,statsId,islandKey,traj,pA,onDone){
+  const A=alleThreshold(K);
+  const FPG=10,maxGen=traj.length-1,totalFrames=maxGen*FPG+30;
+  let fr=0,lastGen=-1,curPop=[];
+  function loop(){
+    const gen=Math.min(Math.floor(fr/FPG),maxGen);
+    const curN=Math.max(0,Math.round(traj[gen]));
+    if(gen!==lastGen){curPop=makePop2(curN,pA);lastGen=gen;}
+    ctx.clearRect(0,0,W,H);
+    if(curN===0&&gen>0){
+      drawIslandImg(ctx,W,H,islandKey);
+      ctx.fillStyle='rgba(0,0,0,.58)';ctx.fillRect(0,0,W,H);
+      ctx.fillStyle='#fff';ctx.textAlign='center';
+      ctx.font=`bold 15px 'Sarabun',sans-serif`;ctx.fillText('ประชากรสูญพันธุ์',W/2,H/2-10);
+      ctx.font=`12px 'Sarabun',sans-serif`;ctx.fillText(`N ต่ำกว่า Allee threshold (A = ${A})`,W/2,H/2+12);
+      ctx.textAlign='left';
+      document.getElementById(statsId).innerHTML=`<div style="color:#E24B4A;font-weight:600;padding:.5rem">ประชากรสูญพันธุ์</div>`;
+    }else{
+      drawIslandImg(ctx,W,H,islandKey);
+      drawDots(ctx,curPop,allPos.slice(0,curN),null,W);
+      ctx.fillStyle='rgba(255,255,255,.85)';ctx.fillRect(8,8,150,26);
+      ctx.fillStyle='#1a1a18';ctx.font=`12px 'Sarabun',sans-serif`;
+      ctx.fillText(`ประชากร: ${curN} ตัว  (Gen ${gen})`,13,26);
+      drawGrowthChart(ctx,W,H,traj,gen,K,A);
+      document.getElementById(statsId).innerHTML=statsHTML(curPop,false,0);
+    }
+    fr++;
+    if(fr<=totalFrames)animF=requestAnimationFrame(loop);else onDone();
+  }loop();
+}
+
+rebuildSteps();
+</script>
+</body>
+</html>

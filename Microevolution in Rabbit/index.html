@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Bead bag: selection on alleles F / f</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anuphan:wght@400;500;600;700&family=Chakra+Petch:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#eef2f1; --grid:#dbe4e2; --surface:#fbfcfc; --surface2:#e4ebea;
+  --ink:#1f2a30; --muted:#5d6b70; --line:#c9d4d2; --accent:#2d5d7b; --accent-ink:#ffffff;
+  --red:#d42a35; --green:#279445; --dead:#8a6f6f; --dead-bg:#f4ecec;
+  --bag-fill:rgba(255,255,255,.55); --bag-stroke:#8aa0a6;
+  --shadow:0 1px 0 rgba(31,42,48,.06), 0 6px 18px rgba(31,42,48,.07);
+  color-scheme:light;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --paper:#141a1d; --grid:#1c2428; --surface:#1b2327; --surface2:#232d32;
+    --ink:#e4ecee; --muted:#9aabb0; --line:#33424a; --accent:#7fb6d8; --accent-ink:#0f1a20;
+    --red:#ef5560; --green:#4cc06a; --dead:#c8a8a8; --dead-bg:#2a2022;
+    --bag-fill:rgba(255,255,255,.06); --bag-stroke:#6c8790;
+    --shadow:0 1px 0 rgba(0,0,0,.3), 0 6px 18px rgba(0,0,0,.25);
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#141a1d; --grid:#1c2428; --surface:#1b2327; --surface2:#232d32;
+  --ink:#e4ecee; --muted:#9aabb0; --line:#33424a; --accent:#7fb6d8; --accent-ink:#0f1a20;
+  --red:#ef5560; --green:#4cc06a; --dead:#c8a8a8; --dead-bg:#2a2022;
+  --bag-fill:rgba(255,255,255,.06); --bag-stroke:#6c8790;
+  --shadow:0 1px 0 rgba(0,0,0,.3), 0 6px 18px rgba(0,0,0,.25);
+  color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{
+  margin:0; color:var(--ink); background:var(--paper);
+  background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+  background-size:24px 24px;
+  font-family:"Anuphan",system-ui,sans-serif;
+  font-size:16px; line-height:1.55;
+}
+.num{font-family:"Chakra Petch","Anuphan",ui-monospace,monospace;font-variant-numeric:tabular-nums}
+.wrap{max-width:1180px;margin:0 auto;padding:20px 16px 48px}
+header{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px 24px;margin-bottom:18px}
+h1{font-size:clamp(1.35rem,3.2vw,1.9rem);line-height:1.25;margin:0;font-weight:700;letter-spacing:-.01em}
+.sub{margin:4px 0 0;color:var(--muted);max-width:62ch;font-size:.95rem}
+.gen-track{display:flex;align-items:center;gap:10px}
+.gen-label{font-weight:600;white-space:nowrap}
+.gen-label .num{font-size:1.6rem;color:var(--accent)}
+.dots{display:flex;gap:4px;flex-wrap:wrap}
+.dot{width:12px;height:12px;border-radius:3px;background:var(--surface2);border:1px solid var(--line)}
+.dot.done{background:var(--accent);border-color:var(--accent)}
+.dot.now{border:2px solid var(--accent);background:transparent}
+
+.layout{display:grid;grid-template-columns:minmax(260px,330px) 1fr;gap:18px;align-items:start}
+@media (max-width:820px){.layout{grid-template-columns:1fr}}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);padding:16px}
+.panel h2{font-size:1.05rem;margin:0 0 10px;font-weight:600}
+
+/* bag */
+.bag{position:relative;width:100%;max-width:290px;margin:0 auto;aspect-ratio:200/215}
+.bag svg{position:absolute;inset:0;width:100%;height:100%}
+.bag-beads{position:absolute;inset:0}
+.bag-beads .bead{position:absolute;width:7.2%;transform:translate(-50%,-50%);transition:transform .35s ease, opacity .35s ease}
+.bag-beads .bead.lift{transform:translate(-50%,-260%) scale(1.5);opacity:0;z-index:999}
+.bag-count{display:flex;justify-content:center;gap:16px;margin-top:6px;font-weight:600}
+.bag-count span{display:inline-flex;align-items:center;gap:6px}
+
+/* beads */
+.bead{
+  display:inline-block;aspect-ratio:1;border-radius:50%;
+  background:radial-gradient(circle at 33% 28%,rgba(255,255,255,.95) 0 6%,var(--c1) 17%,var(--c2) 50%,var(--c3) 100%);
+  box-shadow:0 2px 2px rgba(0,0,0,.28), inset 0 -2px 4px rgba(0,0,0,.25);
+  flex:none;
+}
+.bead.F{--c1:#ff9a9f;--c2:#d61f2c;--c3:#5c0910}
+.bead.f{--c1:#a3eeb2;--c2:#22903d;--c3:#093a16}
+.bead.sm{width:16px}
+.bead.md{width:20px}
+.bead.lg{width:54px}
+
+/* draw zone */
+.draw{margin-top:14px;border-top:1px dashed var(--line);padding-top:12px;min-height:118px;display:flex;align-items:center;gap:14px}
+.draw .pair-big{display:flex;gap:4px}
+.draw .pair-big .bead{animation:pop .3s ease-out}
+@keyframes pop{from{transform:translateY(-14px) scale(.6);opacity:0}to{transform:none;opacity:1}}
+.draw .geno{font-size:1.6rem;font-weight:700;font-style:italic;line-height:1.1}
+.draw .verdict{font-size:.92rem;color:var(--muted)}
+.draw .verdict.bad{color:var(--dead)}
+.draw .empty{color:var(--muted);font-size:.95rem}
+
+/* controls */
+.controls{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px}
+button{
+  font:inherit;font-weight:600;border-radius:10px;border:1px solid var(--line);
+  background:var(--surface2);color:var(--ink);padding:10px 12px;cursor:pointer;min-height:44px;
+}
+button.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+button.wide{grid-column:1/-1}
+button:disabled{opacity:.42;cursor:not-allowed}
+button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.speed{display:flex;align-items:center;gap:8px;margin-top:12px;font-size:.92rem;color:var(--muted)}
+.speed select{font:inherit;color:var(--ink);background:var(--surface2);border:1px solid var(--line);border-radius:8px;padding:6px 8px}
+
+details.settings{margin-top:14px;font-size:.92rem}
+details.settings summary{cursor:pointer;color:var(--muted);font-weight:600}
+.set-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:10px}
+.set-grid label{display:flex;flex-direction:column;gap:3px;color:var(--muted);font-size:.85rem}
+.set-grid input{font:inherit;color:var(--ink);background:var(--surface2);border:1px solid var(--line);border-radius:8px;padding:6px 8px;width:100%}
+.set-note{color:var(--muted);font-size:.82rem;margin:6px 0 0}
+
+/* right side */
+.banner{border-radius:12px;padding:12px 14px;margin-bottom:14px;background:var(--surface);border:1px solid var(--line);border-left:5px solid var(--accent);box-shadow:var(--shadow)}
+.banner b{font-weight:700}
+.trays{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+@media (max-width:640px){.trays{grid-template-columns:1fr}}
+.tray{background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);display:flex;flex-direction:column;min-height:220px}
+.tray-head{padding:12px 14px 10px;border-bottom:1px solid var(--line)}
+.tray-title{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+.tray-title .g{font-size:1.45rem;font-weight:700;font-style:italic}
+.tray-title .cnt{font-size:1.6rem;font-weight:700}
+.tray-meta{font-size:.85rem;color:var(--muted);display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.tray-body{padding:10px;display:flex;flex-wrap:wrap;gap:6px;align-content:flex-start;flex:1}
+.pair{display:inline-flex;gap:1px;padding:3px;border-radius:999px;background:var(--surface2)}
+.pair.new{animation:pop .3s ease-out}
+.tray.dead{background:var(--dead-bg);border-style:dashed}
+.tray.dead .g,.tray.dead .cnt{color:var(--dead)}
+.tray.dead .pair{position:relative;opacity:.8}
+.tray.dead .pair::after{content:"";position:absolute;left:2px;right:2px;top:50%;height:2px;background:var(--dead);transform:rotate(-14deg)}
+
+.summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:12px}
+@media (max-width:640px){.summary{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+.stat .k{font-size:.82rem;color:var(--muted)}
+.stat .v{font-size:1.35rem;font-weight:700}
+
+/* history */
+.history{margin-top:18px}
+.hist-head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px}
+.hist-head h2{margin:0}
+.toggle{display:inline-flex;align-items:center;gap:8px;font-size:.9rem;color:var(--muted);cursor:pointer}
+.toggle input{width:18px;height:18px;accent-color:var(--accent)}
+.table-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px}
+table{border-collapse:collapse;width:100%;min-width:720px;font-size:.92rem;background:var(--surface)}
+th,td{padding:8px 10px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}
+th:first-child,td:first-child{text-align:left}
+thead th{background:var(--surface2);font-weight:600;vertical-align:bottom}
+thead tr.grp th{text-align:center;border-bottom:1px solid var(--line)}
+tbody tr.current{background:color-mix(in srgb,var(--accent) 10%,transparent)}
+tbody tr.final td{font-weight:600;border-top:2px solid var(--line)}
+td.r{color:var(--red)} td.gr{color:var(--green)} td.d{color:var(--dead)}
+.theory{display:none;color:var(--muted)}
+.show-theory .theory{display:table-cell}
+.chart-box{margin-top:14px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px}
+.chart-box svg{width:100%;height:auto;display:block}
+.legend{display:flex;flex-wrap:wrap;gap:14px;font-size:.85rem;color:var(--muted);margin-top:6px}
+.legend i{display:inline-block;width:18px;height:3px;vertical-align:middle;margin-right:6px;border-radius:2px}
+.legend .th-l{display:none}
+.show-theory .legend .th-l{display:inline}
+
+@media (prefers-reduced-motion:reduce){
+  *{animation:none!important;transition:none!important}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Bead bag: natural selection on rabbit fur alleles</h1>
+      <p class="sub">Red = allele <i>F</i>, green = allele <i>f</i>. Draw 2 beads at a time until the bag is empty. <i>FF</i> and <i>Ff</i> offspring survive and go back in the bag. <i>ff</i> offspring have no fur, die in the cold, and are removed.</p>
+    </div>
+    <div class="gen-track">
+      <div class="gen-label">Generation <span class="num" id="genNow">1</span> / <span class="num" id="genMax">10</span></div>
+      <div class="dots" id="dots"></div>
+    </div>
+  </header>
+
+  <div class="layout">
+    <!-- left: bag + controls -->
+    <section class="panel" aria-label="Bead bag">
+      <h2>Beads in the bag</h2>
+      <div class="bag">
+        <svg viewBox="0 0 200 215" aria-hidden="true">
+          <path d="M64 52 C22 72 10 122 18 162 C28 208 172 208 182 162 C190 122 178 72 136 52 Z" fill="var(--bag-fill)" stroke="var(--bag-stroke)" stroke-width="2.5"/>
+          <path d="M64 52 Q100 66 136 52" fill="none" stroke="var(--bag-stroke)" stroke-width="2"/>
+          <path d="M70 52 L60 22 Q100 34 140 22 L130 52" fill="var(--bag-fill)" stroke="var(--bag-stroke)" stroke-width="2.5" stroke-linejoin="round"/>
+          <rect x="60" y="44" width="80" height="9" rx="4.5" fill="var(--accent)" opacity=".85"/>
+        </svg>
+        <div class="bag-beads" id="bagBeads"></div>
+      </div>
+      <div class="bag-count num">
+        <span><i class="bead F md"></i><span id="bagR">50</span></span>
+        <span><i class="bead f md"></i><span id="bagG">50</span></span>
+        <span style="color:var(--muted)">Total <span id="bagT">100</span></span>
+      </div>
+
+      <div class="draw" id="draw" aria-live="polite">
+        <div class="empty">Press “Draw 1 pair” to draw your first pair of beads</div>
+      </div>
+
+      <div class="controls">
+        <button class="primary wide" id="btnOne">Draw 1 pair</button>
+        <button class="primary wide" id="btnNext" disabled>Return alleles of survivors to the bag and start the next generation</button>
+        <button class="wide" id="btnReset">Restart the experiment</button>
+      </div>
+
+      <details class="settings">
+        <summary>Experiment settings</summary>
+        <div class="set-grid">
+          <label>Red beads (F)<input type="number" id="setR" min="0" max="300" value="50"></label>
+          <label>Green beads (f)<input type="number" id="setG" min="0" max="300" value="50"></label>
+          <label>Generations<input type="number" id="setN" min="1" max="30" value="10"></label>
+        </div>
+        <p class="set-note">New values apply when you press “Restart the experiment”</p>
+      </details>
+    </section>
+
+    <!-- right: trays + stats -->
+    <section aria-label="Results for the current generation">
+      <div class="banner" id="banner">Generation 1: start drawing beads from the bag</div>
+      <div class="trays">
+        <div class="tray" id="trayFF">
+          <div class="tray-head">
+            <div class="tray-title"><span class="g">FF</span></div>
+            <div class="tray-meta"><span>Survive, return to bag</span></div>
+          </div>
+          <div class="tray-body" id="bFF"></div>
+        </div>
+        <div class="tray" id="trayFf">
+          <div class="tray-head">
+            <div class="tray-title"><span class="g">Ff</span></div>
+            <div class="tray-meta"><span>Survive, return to bag</span></div>
+          </div>
+          <div class="tray-body" id="bFf"></div>
+        </div>
+        <div class="tray dead" id="trayff">
+          <div class="tray-head">
+            <div class="tray-title"><span class="g">ff</span></div>
+            <div class="tray-meta"><span>Die, removed</span></div>
+          </div>
+          <div class="tray-body" id="bff"></div>
+        </div>
+      </div>
+
+    </section>
+  </div>
+
+</div>
+
+<script>
+(function(){
+  const $ = id => document.getElementById(id);
+  const SPEEDS = [{lift:450,show:750},{lift:240,show:380},{lift:70,show:90},null];
+
+  let cfg = {R:50,G:50,N:10};
+  let uid = 0, bag = [], leftover = [], trays, gen, history, phase, totalOut, busy=false, autoRun=false;
+
+  function newBead(t){
+    const a = Math.random()*Math.PI*2, r = Math.sqrt(Math.random());
+    // pile sits toward the bottom of the sack
+    const x = 50 + Math.cos(a)*r*33;
+    const y = 67 + Math.sin(a)*r*21 + (1-r)*4;
+    return {id:uid++, t, x, y};
+  }
+  const geno = (a,b) => (a.t==='F'&&b.t==='F')?'FF':(a.t==='f'&&b.t==='f')?'ff':'Ff';
+  const sleep = ms => new Promise(r=>setTimeout(r,ms));
+  const countBag = () => { let R=0; bag.forEach(b=>{ if(b.t==='F') R++; }); return {R, G:bag.length-R}; };
+
+  function init(){
+    autoRun=false; busy=false;
+    cfg.R = clamp(+$('setR').value,0,300,50);
+    cfg.G = clamp(+$('setG').value,0,300,50);
+    cfg.N = clamp(+$('setN').value,1,30,10);
+    $('setR').value=cfg.R; $('setG').value=cfg.G; $('setN').value=cfg.N;
+    bag=[]; leftover=[]; totalOut=0;
+    for(let i=0;i<cfg.R;i++) bag.push(newBead('F'));
+    for(let i=0;i<cfg.G;i++) bag.push(newBead('f'));
+    gen=1; phase='drawing';
+    history=[{gen:1,R:cfg.R,G:cfg.G,FF:0,Ff:0,ff:0,done:false}];
+    startTrays();
+    $('draw').innerHTML='<div class="empty">Press “Draw 1 pair” to draw your first pair of beads</div>';
+    setBanner('Generation 1: start drawing beads from the bag');
+    renderAll();
+  }
+  function clamp(v,lo,hi,d){ return Number.isFinite(v)? Math.min(hi,Math.max(lo,Math.round(v))) : d; }
+
+  function startTrays(){
+    trays={FF:[],Ff:[],ff:[]};
+    ['FF','Ff','ff'].forEach(k=>$('b'+k).innerHTML='');
+  }
+
+  /* ---------- rendering ---------- */
+  function renderBag(){
+    const box=$('bagBeads');
+    const sorted=[...bag].sort((a,b)=>a.y-b.y);
+    box.innerHTML = sorted.map(b=>`<i class="bead ${b.t}" data-id="${b.id}" style="left:${b.x}%;top:${b.y}%"></i>`).join('');
+    const c=countBag();
+    $('bagR').textContent=c.R; $('bagG').textContent=c.G; $('bagT').textContent=bag.length;
+  }
+  function pairHTML(a,b,cls){ return `<span class="pair ${cls||''}"><i class="bead ${a.t} sm"></i><i class="bead ${b.t} sm"></i></span>`; }
+  function addTray(a,b,g,animate){
+    trays[g].push([a,b]);
+    $('b'+g).insertAdjacentHTML('beforeend',pairHTML(a,b,animate?'new':''));
+  }
+  function renderTrays(){
+    const n={FF:trays.FF.length,Ff:trays.Ff.length,ff:trays.ff.length};
+    const h=history[history.length-1];
+    if(h && !h.done){ h.FF=n.FF; h.Ff=n.Ff; h.ff=n.ff; }
+  }
+  function showDraw(a,b,g){
+    const dead = g==='ff';
+    $('draw').innerHTML = `<div class="pair-big"><i class="bead ${a.t} lg"></i><i class="bead ${b.t} lg"></i></div>
+      <div><div class="geno" style="color:${dead?'var(--dead)':'var(--ink)'}">${g}</div>
+      <div class="verdict ${dead?'bad':''}">${dead?'No fur, dies → removed':'Survives → back in the bag next generation'}</div></div>`;
+  }
+  function setBanner(html){ $('banner').innerHTML=html; }
+  function renderGen(){
+    $('genNow').textContent=Math.min(gen,cfg.N); $('genMax').textContent=cfg.N;
+    let d='';
+    for(let i=1;i<=cfg.N;i++){
+      const done = i<gen || (i===gen && phase!=='drawing');
+      d+=`<span class="dot ${done?'done':(i===gen?'now':'')}" title="Generation ${i}"></span>`;
+    }
+    $('dots').innerHTML=d;
+  }
+  function renderButtons(){
+    const canDraw = phase==='drawing' && bag.length>=2;
+    $('btnOne').disabled = !canDraw || busy;
+    $('btnNext').disabled = phase!=='genDone' || busy;
+    $('btnNext').textContent = (phase==='finished') ? `All ${cfg.N} generations done` : 'Return alleles of survivors to the bag and start the next generation';
+  }
+  function renderAll(){ renderBag(); renderTrays(); renderGen(); renderButtons(); }
+
+  /* ---------- table & chart ---------- */
+
+  /* ---------- simulation ---------- */
+  function pickTwo(){
+    const i=Math.floor(Math.random()*bag.length);
+    let j=Math.floor(Math.random()*(bag.length-1)); if(j>=i) j++;
+    return [bag[i],bag[j]];
+  }
+  function removeFromBag(a,b){ bag=bag.filter(x=>x!==a&&x!==b); }
+
+  async function drawOnce(){
+    if(bag.length<2) return;
+    const sp=SPEEDS[1]; // fixed at Normal speed
+    const [a,b]=pickTwo();
+    const els=[a,b].map(x=>$('bagBeads').querySelector(`[data-id="${x.id}"]`));
+    els.forEach(e=>e&&e.classList.add('lift'));
+    await sleep(sp.lift);
+    removeFromBag(a,b); renderBag();
+    const g=geno(a,b);
+    showDraw(a,b,g);
+    addTray(a,b,g,true);
+    if(g==='ff') totalOut+=2;
+    renderTrays();
+    if(bag.length<2) finishGen();
+    await sleep(sp.show);
+  }
+  function finishGen(){
+    leftover = bag.slice(); // only if an odd bead remains
+    bag=[];
+    const h=history[history.length-1];
+    h.FF=trays.FF.length; h.Ff=trays.Ff.length; h.ff=trays.ff.length; h.done=true;
+    phase = gen>=cfg.N ? 'finished' : 'genDone';
+    const backR=2*h.FF+h.Ff+leftover.filter(b=>b.t==='F').length, backG=h.Ff+leftover.filter(b=>b.t==='f').length;
+    const extra = leftover.length ? ` (${leftover.length} unpaired leftover bead also returned)` : '';
+    if(phase==='finished'){
+      setBanner(`<b>All ${cfg.N} generations done.</b> The surviving population has <b class="num">${backR}</b> red and <b class="num">${backG}</b> green beads. Record your final counts.`);
+    } else {
+      setBanner(`<b>Generation ${gen} complete.</b> ${h.FF+h.Ff} survived, ${h.ff} died. Return <b class="num">${backR}</b> red and <b class="num">${backG}</b> green beads to the bag${extra}.`);
+    }
+    renderGen(); renderButtons();
+  }
+  function nextGen(){
+    if(phase!=='genDone') return;
+    const back=[];
+    trays.FF.concat(trays.Ff).forEach(([a,b])=>{ back.push(newBead(a.t)); back.push(newBead(b.t)); });
+    leftover.forEach(b=>back.push(newBead(b.t)));
+    leftover=[];
+    bag=back; gen++; phase='drawing';
+    const c=countBag();
+    history.push({gen,R:c.R,G:c.G,FF:0,Ff:0,ff:0,done:false});
+    startTrays();
+    $('draw').innerHTML=`<div class="empty">Generation ${gen}: survivors are back in the bag. Shake it and start drawing.</div>`;
+    setBanner(`Generation ${gen}: the bag holds <b class="num">${c.R}</b> red and <b class="num">${c.G}</b> green beads`);
+    if(bag.length<2){ finishGen(); }
+    renderAll();
+  }
+
+  async function runOne(){
+    if(busy||phase!=='drawing') return;
+    busy=true; renderButtons();
+    await drawOnce();
+    busy=false; renderButtons();
+  }
+
+  $('btnOne').addEventListener('click',runOne);
+  $('btnNext').addEventListener('click',nextGen);
+  $('btnReset').addEventListener('click',()=>{ autoRun=false; setTimeout(init, busy?1300:0); });
+
+  init();
+})();
+</script>
+</body>
+</html>

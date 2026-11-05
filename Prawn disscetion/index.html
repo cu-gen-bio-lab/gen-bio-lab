@@ -1,0 +1,913 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>ผ่ากุ้งก้ามกรามสามมิติ · ห้องปฏิบัติการเสมือน</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bench-1:#e3e9e5; --bench-2:#c9d3cd;
+  --panel:rgba(250,252,251,.9); --panel-line:rgba(23,32,29,.12);
+  --ink:#17201d; --muted:#56635d;
+  --scrub:#0e7c7b; --scrub-ink:#ffffff; --scrub-soft:rgba(14,124,123,.14);
+  --cut:#a4161a; --warn:#8a5a00;
+  --chip:rgba(23,32,29,.82); --chip-ink:#fff;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+  font-family:'IBM Plex Sans Thai','Noto Sans Thai','Sukhumvit Set','Leelawadee UI',Tahoma,system-ui,sans-serif;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bench-1:#25302c; --bench-2:#131a18;
+    --panel:rgba(30,38,35,.9); --panel-line:rgba(233,240,236,.12);
+    --ink:#e8efeb; --muted:#9fb0a8;
+    --scrub:#3cbfb2; --scrub-ink:#0b1a18; --scrub-soft:rgba(60,191,178,.18);
+    --cut:#ff6b6b; --warn:#f2c26b;
+    --chip:rgba(240,246,243,.9); --chip-ink:#14201c;
+  }
+}
+:root[data-theme="dark"]{
+  --bench-1:#25302c; --bench-2:#131a18;
+  --panel:rgba(30,38,35,.9); --panel-line:rgba(233,240,236,.12);
+  --ink:#e8efeb; --muted:#9fb0a8;
+  --scrub:#3cbfb2; --scrub-ink:#0b1a18; --scrub-soft:rgba(60,191,178,.18);
+  --cut:#ff6b6b; --warn:#f2c26b;
+  --chip:rgba(240,246,243,.9); --chip-ink:#14201c;
+}
+*,*::before,*::after{box-sizing:inherit}
+html{height:100%;scroll-padding-top:env(safe-area-inset-top,0px);overflow:hidden;overscroll-behavior:none}
+body{height:100%;height:100dvh;margin:0;overflow:hidden;position:fixed;inset:0;overscroll-behavior:none;-webkit-touch-callout:none;color:var(--ink);
+  background:radial-gradient(120% 90% at 50% 35%,var(--bench-1),var(--bench-2));
+  -webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none}
+#c{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none;outline:none}
+#c.t-scalpel,#c.t-scissors{cursor:crosshair} #c.t-forceps,#c.t-probe{cursor:grab} #c.t-pins{cursor:copy} #c.t-view{cursor:move}
+
+button{font:inherit;color:inherit}
+button:focus-visible{outline:3px solid var(--scrub);outline-offset:2px}
+
+/* top: step card + side controls */
+#top{position:fixed;top:0;left:0;right:0;z-index:5;pointer-events:none;
+  padding:calc(env(safe-area-inset-top,0px) + 10px) 12px 0;display:flex;gap:10px;align-items:flex-start}
+.card{background:var(--panel);border:1px solid var(--panel-line);border-radius:16px;
+  -webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);box-shadow:0 6px 24px rgba(10,20,16,.12)}
+#step{pointer-events:auto;flex:1;max-width:520px;padding:10px 14px 10px}
+#step .row{display:flex;align-items:center;gap:10px;width:100%;padding:0;border:0;background:none;text-align:left;cursor:pointer}
+#step .chev{margin-left:auto;flex:none;color:var(--muted);transition:transform .2s}
+#step.collapsed .chev{transform:rotate(-90deg)}
+#step.collapsed #stepText{display:none}
+#stepNum{font-size:13px;font-weight:600;color:var(--scrub);white-space:nowrap}
+#stepTitle{font-size:17px;font-weight:700;line-height:1.3}
+#stepText{margin:4px 0 8px;font-size:14px;line-height:1.55;color:var(--muted)}
+#stepText b{color:var(--ink);font-weight:600}
+.progrow{display:flex;align-items:center;gap:10px;margin-top:6px}
+#chkBtn{display:none;border:1px solid var(--panel-line);background:transparent;border-radius:999px;font-size:12px;padding:2px 9px;cursor:pointer;color:var(--ink);white-space:nowrap}
+#step.explore #chkBtn{display:inline-block}
+#checklist{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px;max-height:34vh;overflow:auto}
+#checklist[hidden]{display:none}
+#checklist button{font-size:12px;border-radius:999px;padding:3px 9px;border:1px dashed var(--panel-line);background:transparent;color:var(--muted);cursor:pointer}
+#checklist button.done{border-style:solid;background:var(--scrub-soft);color:var(--ink)}
+#checklist button.done::before{content:"✓ ";color:var(--scrub);font-weight:700}
+.prog{flex:1;height:5px;border-radius:3px;background:var(--scrub-soft);overflow:hidden}
+.prog i{display:block;height:100%;width:0;background:var(--scrub);border-radius:3px;transition:width .25s}
+#progLabel{font-size:12px;color:var(--muted);white-space:nowrap}
+
+#side{pointer-events:auto;margin-left:auto;display:flex;flex-direction:column;gap:8px}
+.sbtn{width:48px;height:48px;border-radius:14px;display:grid;place-items:center;cursor:pointer;
+  background:var(--panel);border:1px solid var(--panel-line);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px)}
+.sbtn svg{width:22px;height:22px}
+.sbtn.on{background:var(--scrub);color:var(--scrub-ink);border-color:transparent}
+.sbtn .txt{font-size:18px;font-weight:700;line-height:1}
+
+/* layer panel */
+#layerPanel{position:fixed;z-index:7;right:72px;top:calc(env(safe-area-inset-top,0px) + 10px);width:min(290px,calc(100vw - 92px));
+  padding:10px 6px 6px;display:none}
+#layerPanel.show{display:block}
+#layerPanel h4{margin:0 10px 4px;font-size:13px;color:var(--muted);font-weight:600}
+.lrow{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:10px;cursor:pointer}
+.lrow:hover{background:var(--scrub-soft)}
+.lrow .dot{width:12px;height:12px;border-radius:50%;flex:none;border:1px solid rgba(0,0,0,.15)}
+.lrow .txt{flex:1;min-width:0;line-height:1.3}
+.lrow .txt b{display:block;font-size:14px;font-weight:600}
+.lrow .txt small{font-size:11.5px;color:var(--muted)}
+.lrow input{appearance:none;-webkit-appearance:none;width:38px;height:22px;border-radius:11px;background:var(--panel-line);position:relative;flex:none;cursor:pointer;margin:0;transition:background .15s}
+.lrow input::after{content:"";position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.25);transition:transform .15s}
+.lrow input:checked{background:var(--scrub)}
+.lrow input:checked::after{transform:translateX(16px)}
+.lrow input:focus-visible{outline:3px solid var(--scrub);outline-offset:2px}
+.lsep{height:1px;background:var(--panel-line);margin:4px 10px}
+@media (max-width:600px){#layerPanel{right:56px;top:calc(env(safe-area-inset-top,0px) + 8px)}}
+
+/* microscope */
+#hots{position:fixed;inset:0;pointer-events:none;z-index:4;display:none}
+.hot{position:absolute;transform:translate(-50%,-50%);pointer-events:auto;display:flex;align-items:center;gap:6px;
+  border:0;background:none;padding:0;cursor:pointer}
+.hot i{width:22px;height:22px;border-radius:50%;background:var(--scrub);border:3px solid #fff;box-shadow:0 0 0 2px var(--scrub),0 2px 6px rgba(0,0,0,.35);position:relative;flex:none}
+.hot i::after{content:"";position:absolute;inset:-9px;border-radius:50%;border:2px solid var(--scrub);animation:hotp 1.8s ease-out infinite}
+@keyframes hotp{from{transform:scale(.6);opacity:.9}to{transform:scale(1.3);opacity:0}}
+@media (prefers-reduced-motion:reduce){.hot i::after{animation:none;opacity:.5}}
+.hot.left{flex-direction:row-reverse;transform:translate(calc(-100% + 14px),-50%)}
+.hot span{font-size:12px;font-weight:600;padding:2px 7px;border-radius:7px;background:var(--chip);color:var(--chip-ink);white-space:nowrap}
+#micro{position:fixed;inset:0;z-index:20;display:none;align-items:center;justify-content:center;background:rgba(8,12,10,.55);
+  padding:calc(env(safe-area-inset-top,0px) + 12px) 12px calc(env(safe-area-inset-bottom,0px) + 12px)}
+#micro.show{display:flex}
+#micro .mbox{position:relative;width:min(460px,100%);max-height:100%;overflow:auto;padding:14px 16px 14px}
+#micro h3{margin:0 40px 0 0;font-size:18px} #micro .en{font-style:italic;color:var(--muted);font-size:13px;margin-left:6px;font-weight:500}
+#micro .where{font-size:12px;color:var(--muted);margin:2px 0 10px}
+#micro .close{position:absolute;top:8px;right:8px;width:36px;height:36px;border:0;background:transparent;cursor:pointer;color:var(--muted);border-radius:10px}
+.mscope{position:relative;width:min(100%,340px);aspect-ratio:1;margin:0 auto;border-radius:50%;overflow:hidden;background:#111;
+  box-shadow:0 0 0 8px #1b1f1d,0 0 0 9px #444,inset 0 0 40px rgba(0,0,0,.65);touch-action:none;cursor:grab}
+.mscope::after{content:"";position:absolute;inset:0;border-radius:50%;box-shadow:inset 0 0 50px 12px rgba(0,0,0,.55);pointer-events:none}
+.lens{position:absolute;inset:0}
+.lens .slide{width:100%;height:100%;object-fit:cover;display:block;transition:transform .25s ease;transform-origin:50% 50%}
+.mags{display:flex;justify-content:center;gap:8px;margin:14px 0 8px}
+.mags button{min-width:56px;height:34px;border-radius:17px;border:1px solid var(--panel-line);background:transparent;cursor:pointer;font-weight:600}
+.mags button.on{background:var(--scrub);color:var(--scrub-ink);border-color:transparent}
+#microDesc{font-size:14px;line-height:1.6;margin:6px 0 8px}
+.keys{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
+.keys span{font-size:12px;padding:3px 9px;border-radius:999px;background:var(--scrub-soft)}
+#microSrc{font-size:11.5px;color:var(--muted)}
+@media (max-width:600px){#micro .mbox{padding:12px} .mscope{width:min(100%,300px)} #microDesc{font-size:13px}}
+
+/* bleeding */
+body.bleed::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:3;box-shadow:inset 0 0 140px 30px rgba(170,0,12,.6);animation:bleedp .7s ease-in-out infinite alternate}
+@keyframes bleedp{from{opacity:.45}to{opacity:1}}
+@media (prefers-reduced-motion:reduce){body.bleed::after{animation:none}}
+
+/* toast */
+#toast{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 76px);transform:translate(-50%,-6px);
+  z-index:7;max-width:min(88vw,460px);padding:10px 16px;border-radius:12px;font-size:14px;line-height:1.5;
+  background:var(--ink);color:var(--bench-1);opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;text-align:center}
+#toast.show{opacity:1;transform:translate(-50%,0)}
+
+/* info sheet */
+#info{position:fixed;z-index:6;left:12px;right:12px;bottom:calc(env(safe-area-inset-bottom,0px) + 104px);
+  max-width:520px;margin:0 auto;padding:14px 16px 14px;display:none}
+#info.show{display:block}
+#info h3{margin:0;font-size:19px;line-height:1.3;font-weight:700}
+#info .en{font-style:italic;color:var(--muted);font-size:14px;margin-left:6px;font-weight:500}
+#info p{margin:4px 0 6px;font-size:14px;line-height:1.55}
+#info.clamp p{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+#info .more{display:none;font-size:12px;color:var(--muted);margin-top:2px}
+#info.clamp .more{display:block}
+#info .move{font-size:13px;color:var(--scrub);font-weight:600;line-height:1.5}
+#info.mini{padding:7px 44px 7px 12px;width:auto;right:auto;max-width:min(360px,calc(100% - 16px));cursor:pointer}
+#info.mini p,#info.mini .move,#info.mini .more{display:none}
+#info.mini h3{font-size:15px}
+#info.mini .close{top:2px}
+#info .close{position:absolute;top:8px;right:8px;width:36px;height:36px;border:0;background:transparent;cursor:pointer;color:var(--muted);border-radius:10px}
+@media (min-width:900px) and (orientation:landscape){
+  #info{left:12px;right:auto;width:380px;margin:0;bottom:calc(env(safe-area-inset-bottom,0px) + 16px)}
+}
+
+/* tool dock: an instrument tray */
+#dock{position:fixed;z-index:6;left:50%;bottom:0;transform:translate3d(-50%,0,0);will-change:transform;-webkit-backface-visibility:hidden;
+  padding:0 0 calc(env(safe-area-inset-bottom,0px) + 12px);pointer-events:none}
+#dock .tray{pointer-events:auto;display:flex;gap:6px;padding:6px}
+.tool{width:84px;height:74px;border:0;border-radius:12px;background:transparent;cursor:pointer;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;position:relative}
+.tool svg{width:40px;height:30px}
+.tool span{font-size:13px;font-weight:600}
+.tool.on{background:var(--scrub);color:var(--scrub-ink)}
+.tool.suggest:not(.on)::after{content:"";position:absolute;inset:3px;border-radius:10px;border:2px solid var(--scrub);
+  animation:ring 1.4s ease-in-out infinite}
+@keyframes ring{0%,100%{opacity:.25}50%{opacity:1}}
+@media (prefers-reduced-motion:reduce){.tool.suggest:not(.on)::after{animation:none;opacity:.8}}
+
+/* labels */
+#labels{position:fixed;inset:0;pointer-events:none;z-index:4}
+.lbl{position:absolute;transform:translate(-50%,-130%);padding:3px 8px;border-radius:8px;font-size:12px;font-weight:600;
+  background:var(--chip);color:var(--chip-ink);white-space:nowrap}
+.lbl::after{content:"";position:absolute;left:50%;bottom:-4px;width:8px;height:8px;margin-left:-4px;background:var(--chip);transform:rotate(45deg)}
+
+#fail{position:fixed;inset:0;display:none;place-items:center;padding:24px;text-align:center;font-size:16px;line-height:1.6}
+
+@media (max-width:600px){
+  #top{padding:calc(env(safe-area-inset-top,0px) + 8px) 8px 0;gap:8px}
+  #step{padding:8px 12px;border-radius:14px}
+  #stepNum{font-size:12px} #stepTitle{font-size:15px} #stepText{font-size:13px;line-height:1.5}
+  #progLabel{font-size:11px}
+  #side{gap:6px}
+  .sbtn{width:40px;height:40px;border-radius:12px} .sbtn svg{width:19px;height:19px} .sbtn .txt{font-size:16px}
+  #dock{padding-bottom:calc(env(safe-area-inset-bottom,0px) + 8px)}
+  #dock .tray{padding:4px;gap:4px}
+  .tool{width:62px;height:54px;gap:2px;border-radius:10px} .tool svg{width:28px;height:21px} .tool span{font-size:11px}
+  #info{left:8px;right:8px;bottom:calc(env(safe-area-inset-bottom,0px) + 74px);padding:9px 40px 9px 12px;border-radius:14px}
+  #info h3{font-size:16px} #info .en{font-size:12px} #info p{font-size:13px} #info .move{font-size:12px}
+  #info .close{top:4px;right:4px}
+}
+
+.sbtn:disabled{opacity:.35;cursor:default}
+.lrow .solo{flex:none;border:1px solid var(--panel-line);background:transparent;border-radius:999px;font-size:11.5px;padding:3px 9px;cursor:pointer;color:var(--ink)}
+.lrow .solo:hover{background:var(--scrub-soft)}
+.lall{display:flex;gap:6px;margin:0 10px 6px}
+.lall button{flex:1;border:1px solid var(--panel-line);background:transparent;border-radius:10px;font-size:12.5px;padding:6px 8px;cursor:pointer;color:var(--ink);font-weight:600}
+.lall button:hover{background:var(--scrub-soft)}
+#layerPanel{max-height:calc(100% - 140px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px));overflow:auto}
+@media (max-width:600px){.tool{width:56px}}
+</style>
+</head>
+<body>
+<canvas id="c" class="t-view" tabindex="0" aria-label="โมเดลกุ้งก้ามกรามสามมิติ วางคว่ำบนถาดผ่าตัด"></canvas>
+<div id="labels"></div>
+
+<div id="top">
+  <section id="step" class="card" aria-live="polite">
+    <button class="row" id="stepHead" aria-expanded="true" aria-controls="stepText">
+      <span id="stepNum">1/3</span><span id="stepTitle"></span>
+      <svg class="chev" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+    </button>
+    <p id="stepText"></p>
+    <div class="progrow"><div class="prog"><i id="progBar"></i></div><span id="progLabel"></span><button id="chkBtn" aria-expanded="false" aria-controls="checklist">รายการ ▾</button></div>
+    <div id="checklist" hidden></div>
+  </section>
+  <div id="side">
+    <button class="sbtn" id="btnView" aria-label="เปลี่ยนมุมมอง" title="เปลี่ยนมุมมอง">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/><circle cx="12" cy="12" r="2.5"/></svg>
+    </button>
+    <button class="sbtn" id="btnLabels" aria-label="แสดงป้ายชื่ออวัยวะ" title="ป้ายชื่ออวัยวะ" aria-pressed="false">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M3 12V4h8l10 10-8 8L3 12z"/><circle cx="7.5" cy="8" r="1.5"/></svg>
+    </button>
+    <button class="sbtn" id="btnLayers" aria-label="เลือกระบบที่แสดง" title="ชั้นและระบบที่แสดง" aria-expanded="false" aria-controls="layerPanel">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M12 3l9 5-9 5-9-5 9-5z"/><path d="M3 13l9 5 9-5"/></svg>
+    </button>
+    <button class="sbtn" id="btnSex" aria-label="สลับเพศของกุ้ง" title="สลับเพศ: ตัวผู้"><span class="txt" id="sexTxt">♂</span></button>
+    <button class="sbtn" id="btnUndo" aria-label="ย้อนกลับ 1 ขั้น" title="ย้อนกลับ 1 ขั้น" disabled>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/></svg>
+    </button>
+    <button class="sbtn" id="btnRestart" aria-label="เริ่มผ่าใหม่" title="เริ่มผ่าใหม่">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12a8 8 0 1 0 2.4-5.7M4 4v4h4"/></svg>
+    </button>
+  </div>
+</div>
+
+<section id="layerPanel" class="card" aria-label="ชั้นและระบบที่แสดง"><h4>ชั้นและระบบที่แสดง</h4><div id="layerList"></div><p style="margin:8px 0 0 10px;font-size:11px;opacity:.55">ผ่ากุ้งก้ามกราม · เวอร์ชัน 6 (2026-10-26)</p></section>
+<div id="toast" role="status"></div>
+
+<section id="info" class="card" aria-live="polite">
+  <button class="close" id="infoClose" aria-label="ปิด">
+    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+  </button>
+  <h3><span id="infoTh"></span><span class="en" id="infoEn"></span></h3>
+  <p id="infoDesc"></p>
+  <div class="move" id="infoMove"></div>
+  <div class="more">แตะเพื่ออ่านต่อ</div>
+</section>
+
+<nav id="dock" aria-label="เครื่องมือ">
+  <div class="tray card">
+    <button class="tool on" data-tool="view" aria-label="มุมมอง">
+      <svg viewBox="0 0 40 30" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="20" cy="15" rx="15" ry="7"/><path d="M31 6l4 3-4 3"/><circle cx="20" cy="15" r="2.4"/></svg>
+      <span>มุมมอง</span>
+    </button>
+    <button class="tool" data-tool="scissors" aria-label="กรรไกร">
+      <svg viewBox="0 0 40 30" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="4.5"/><circle cx="8" cy="22" r="4.5"/><path d="M12 10l24 11M12 20l24-11"/></svg>
+      <span>กรรไกร</span>
+    </button>
+    <button class="tool" data-tool="pins" aria-label="เข็มหมุด">
+      <svg viewBox="0 0 40 30" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="20" cy="7" r="4.5" fill="currentColor" fill-opacity=".3"/><path d="M20 11.5v12"/><path d="M8 25h24"/></svg>
+      <span>เข็มหมุด</span>
+    </button>
+    <button class="tool" data-tool="forceps" aria-label="ปากคีบ">
+      <svg viewBox="0 0 40 30" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9c10 1 22 4 34 5M3 21c10-1 22-4 34-5"/><path d="M3 9v12"/></svg>
+      <span>ปากคีบ</span>
+    </button>
+    <button class="tool" data-tool="probe" aria-label="เข็มเขี่ย">
+      <svg viewBox="0 0 40 30" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 25l12-8" stroke-width="5"/><path d="M16 17L36 5"/></svg>
+      <span>เข็มเขี่ย</span>
+    </button>
+    <button class="tool" data-tool="scalpel" aria-label="มีดผ่าตัด">
+      <svg viewBox="0 0 40 30" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 25L20 13"/><path d="M20 13c4-3 9-6 15-8-2 6-7 10-12 12z" fill="currentColor" fill-opacity=".25"/></svg>
+      <span>มีดผ่าตัด</span>
+    </button>
+  </div>
+</nav>
+<div id="fail">โหลดไลบรารีสามมิติไม่สำเร็จ ตรวจสอบการเชื่อมต่ออินเทอร์เน็ตแล้วเปิดหน้านี้ใหม่</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function(){
+'use strict';
+if(typeof THREE==='undefined'){document.getElementById('fail').style.display='grid';return;}
+const V3=THREE.Vector3, UP=new V3(0,1,0), PI=Math.PI, DEG=PI/180;
+const V=(x,y,z)=>new V3(x,y,z);
+const $=id=>document.getElementById(id);
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const ease=t=>t<.5?2*t*t:1-Math.pow(-2*t+2,2)/2;
+const S=[1,-1];
+
+/* ================= renderer / scene (as in the fish app) ================= */
+const canvas=$('c');
+const SCROLL_OK='#checklist,#layerPanel,#info';
+canvas.addEventListener('touchstart',e=>e.preventDefault(),{passive:false});
+canvas.addEventListener('touchmove',e=>e.preventDefault(),{passive:false});
+document.addEventListener('touchmove',e=>{const t=e.target;if(!(t&&t.closest&&t.closest(SCROLL_OK)))e.preventDefault();},{passive:false});
+['gesturestart','gesturechange','gestureend'].forEach(t=>document.addEventListener(t,e=>e.preventDefault(),{passive:false}));
+document.addEventListener('dblclick',e=>e.preventDefault(),{passive:false});
+const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true});
+renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));
+renderer.outputEncoding=THREE.sRGBEncoding;
+renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.05;
+const scene=new THREE.Scene();
+const camera=new THREE.PerspectiveCamera(40,1,0.05,160);
+scene.add(new THREE.HemisphereLight(0xfffaf2,0x3b3734,0.7));
+const key=new THREE.DirectionalLight(0xffffff,0.85);
+key.position.set(3,12,4);key.castShadow=true;key.shadow.mapSize.set(2048,2048);
+Object.assign(key.shadow.camera,{left:-9,right:9,top:9,bottom:-9,near:1,far:32});key.shadow.bias=-0.0008;
+scene.add(key);
+const fill=new THREE.DirectionalLight(0xe2ecff,0.35);fill.position.set(-5,6,-6);scene.add(fill);
+try{
+  const c=document.createElement('canvas');c.width=256;c.height=128;const g=c.getContext('2d');
+  const gr=g.createLinearGradient(0,0,0,128);gr.addColorStop(0,'#ffffff');gr.addColorStop(.42,'#d3dbde');gr.addColorStop(.58,'#6f777b');gr.addColorStop(1,'#2a2c2e');
+  g.fillStyle=gr;g.fillRect(0,0,256,128);g.fillStyle='rgba(255,255,255,.95)';g.fillRect(36,8,64,26);g.fillRect(160,12,52,20);
+  const t=new THREE.CanvasTexture(c);t.mapping=THREE.EquirectangularReflectionMapping;t.encoding=THREE.sRGBEncoding;
+  const pm=new THREE.PMREMGenerator(renderer);scene.environment=pm.fromEquirectangular(t).texture;pm.dispose();
+}catch(_){}
+
+/* ================= materials ================= */
+const lc=c=>new THREE.Color(c).convertSRGBToLinear();
+function wet(color,o){o=Object.assign({},o||{});
+  return new THREE.MeshPhysicalMaterial(Object.assign({color:lc(color),roughness:.42,clearcoat:.5,clearcoatRoughness:.3,envMapIntensity:.6},o));}
+const MAT={
+  wax:new THREE.MeshStandardMaterial({color:lc(0x2c2e31),roughness:.88}),
+  rim:new THREE.MeshStandardMaterial({color:lc(0x9ea6ad),metalness:.75,roughness:.32}),
+  steel:new THREE.MeshStandardMaterial({color:lc(0xd5dbe0),metalness:.85,roughness:.22}),
+  pinHead:wet(0xd9302c,{roughness:.3}),
+  dash:new THREE.MeshBasicMaterial({color:0xffffff}),
+  marker:new THREE.MeshBasicMaterial({color:lc(0xd9302c)}),
+  incision:new THREE.MeshBasicMaterial({color:lc(0x23272a)})
+};
+const DASH_A=lc(0x0b2f57),DASH_B=lc(0x2a9bd8);
+const EMAT={};const emat=c=>EMAT[c]||(EMAT[c]=wet(c,{roughness:.38,clearcoat:.7}));
+const shellMat=wet(0x7d9aa0,{transparent:true,opacity:.92,side:THREE.DoubleSide,roughness:.3,clearcoat:.8});
+
+/* ================= prawn body: profile measured from the dorsal + lateral drawings =================
+   x: + toward head · y: up (tray top at y = 0) · z: lateral. T = dorsal height, B = lower shell edge, hz = half width.
+   carapace (eye to rear edge) : abdominal segments 1-6 : tail fan  ~  1 : 0.97 : 0.3 */
+function profile(KPa){return x=>{
+  if(x>=KPa[0][0])x=KPa[0][0]; if(x<=KPa[KPa.length-1][0])x=KPa[KPa.length-1][0];
+  let i=0; while(i<KPa.length-2&&x<KPa[i+1][0])i++;
+  const a=KPa[i],b=KPa[i+1]; let t=(a[0]-x)/(a[0]-b[0]); t=t*t*(3-2*t);
+  const T=a[1]+(b[1]-a[1])*t, B=a[2]+(b[2]-a[2])*t, hz=a[3]+(b[3]-a[3])*t, hy=(T-B)/1.86;
+  return {T,B,hz,hy,yc:T-hy};};}
+const P=profile([[2.35,1.0,0.32,0.45],[2.0,1.3,0.24,0.62],[1.6,1.5,0.2,0.74],[1.0,1.6,0.19,0.8],[0.3,1.6,0.19,0.8],
+  [-0.3,1.55,0.19,0.76],[-0.62,1.48,0.19,0.7],[-0.83,1.45,0.19,0.62],[-1.29,1.45,0.19,0.6],[-1.78,1.35,0.2,0.54],
+  [-2.23,1.22,0.21,0.47],[-2.65,1.08,0.22,0.41],[-3.17,0.92,0.24,0.34],[-3.48,0.8,0.26,0.29]]);
+const VMAX=0.8*PI, VH=0.55*PI, PWR=0.75, NV=14, FLAP_CLEAR=0.26;
+const spow=c=>Math.sign(c)*Math.pow(Math.abs(c),PWR);
+const PIECES=[{name:'carapace',xa:2.35,xb:-0.66,seg:false}];
+const SEGB=[-0.62,-1.04,-1.54,-2.02,-2.44,-2.86,-3.48];
+for(let i=0;i<6;i++)PIECES.push({name:'tergite'+(i+1),xa:SEGB[i]+0.05,xb:SEGB[i+1],seg:true});
+const segC=[...Array(6)].map((_,i)=>(SEGB[i]+SEGB[i+1])/2);
+const fBulge=(pc,x)=>{if(!pc.seg)return 1;const u=(pc.xa-x)/(pc.xa-pc.xb);return 0.9+0.1*Math.pow(Math.sin(PI*clamp(u,0,1)),0.5);};
+function shellTop(x){for(let k=PIECES.length-1;k>=0;k--){const pc=PIECES[k];if(x<=pc.xa&&x>=pc.xb){const q=P(x),f=fBulge(pc,x);return q.yc+q.hy*f;}}return P(x).T;}
+function shellGeo(pc,side,v0,v1){
+  const nu=pc.seg?14:30,pos=[],idx=[];
+  for(let i=0;i<=nu;i++){const x=pc.xa+(pc.xb-pc.xa)*i/nu,q=P(x),f=fBulge(pc,x);
+    for(let j=0;j<=NV;j++){const v=v0+(v1-v0)*j/NV;pos.push(x,q.yc+q.hy*f*spow(Math.cos(v)),side*q.hz*f*Math.pow(Math.sin(v),PWR));}}
+  for(let i=0;i<nu;i++)for(let j=0;j<NV;j++){const a=i*(NV+1)+j,b=a+NV+1;idx.push(a,b,a+1,b,b+1,a+1);}
+  const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));g.setIndex(idx);g.computeVertexNormals();g.userData.nu=nu;return g;}
+
+/* old (v2) frame -> current body, so organs keep their positions from the drawings */
+const Po=profile([[2.35,0.84,0.32,0.36],[2.0,1.05,0.24,0.5],[1.6,1.17,0.2,0.58],[1.0,1.22,0.19,0.62],[0.3,1.22,0.19,0.62],
+  [-0.35,1.18,0.19,0.6],[-0.62,1.12,0.19,0.57],[-0.9,1.08,0.19,0.58],[-1.45,1.1,0.19,0.57],[-2.0,1.04,0.2,0.52],
+  [-2.55,0.96,0.21,0.46],[-3.1,0.86,0.22,0.4],[-3.75,0.74,0.24,0.32],[-4.15,0.62,0.26,0.26]]);
+const SEGBo=[-0.62,-1.17,-1.72,-2.27,-2.82,-3.37,-4.15], segCo=[...Array(6)].map((_,i)=>(SEGBo[i]+SEGBo[i+1])/2);
+function mapX(x){if(x>-0.62)return x;let i=0;while(i<5&&x<SEGBo[i+1])i++;
+  if(x<SEGBo[6])return SEGB[6]+(x-SEGBo[6]);return SEGB[i]+(x-SEGBo[i])*(SEGB[i+1]-SEGB[i])/(SEGBo[i+1]-SEGBo[i]);}
+function MP(p){const x=mapX(p.x),qo=Po(p.x),qn=P(x),sy=(qn.T-qn.B)/(qo.T-qo.B),sz=qn.hz/qo.hz;
+  return {p:V(x,qn.B+(p.y-qo.B)*sy,p.z*sz),sy,sz,sx:p.x>-0.62?1:0.8};}
+
+/* ================= organ info ================= */
+const STAY='ยึดติดกับเนื้อเยื่อรอบข้าง · คีบขยับได้เล็กน้อย แล้วจะกลับที่เดิม (ดึงออกจากตัวไม่ได้)';
+const INFO={
+  heart:{th:'หัวใจ',en:'Heart',desc:'ถุงกล้ามเนื้ออยู่ด้านหลัง ส่วนท้ายของส่วนหัว-อก ชิดใต้เปลือก ในโพรงเพริคาร์เดียล (pericardial sinus) เลือด (ฮีโมลิมฟ์) ที่ฟอกจากเหงือกแล้วไหลเข้าหัวใจทางรูออสเตีย (ostia) แล้วถูกบีบออกไปตามหลอดเลือดแดง กุ้งมีระบบหมุนเวียนเลือดแบบเปิด',move:'ยึดด้วยเยื่อและหลอดเลือดแดงหลายเส้น · คีบพลิกดูได้เล็กน้อย'},
+  ophthalmic:{th:'หลอดเลือดแดงออฟทาลมิก',en:'Ophthalmic artery',desc:'ออกจากด้านหน้าของหัวใจ วิ่งไปทางหัวตามแนวกลางหลัง ผ่านเหนือกระเพาะ ไปเลี้ยงตาและสมอง',move:STAY},
+  gastricA:{th:'หลอดเลือดแดงกระเพาะ',en:'Gastric artery',desc:'แขนงที่ลงไปเลี้ยงกระเพาะส่วนหน้า',move:STAY},
+  antennalA:{th:'หลอดเลือดแดงหนวด',en:'Antennal arteries',desc:'มี 1 คู่ ออกจากหัวใจไปทางหน้า เลี้ยงหนวด ต่อมเขียว และกล้ามเนื้อกระเพาะ',move:STAY},
+  hepaticA:{th:'หลอดเลือดแดงตับ',en:'Hepatic arteries',desc:'มี 1 คู่ ออกจากด้านล่างของหัวใจ ลงไปเลี้ยงตับและตับอ่อน',move:STAY},
+  dorsalA:{th:'หลอดเลือดแดงหลังส่วนท้อง',en:'Dorsal abdominal artery',desc:'ออกจากด้านท้ายของหัวใจ วิ่งตามแนวกลางหลังเหนือลำไส้ไปจนถึงแพนหาง แตกแขนงเลี้ยงกล้ามเนื้อทุกปล้อง',move:STAY},
+  sternalA:{th:'หลอดเลือดแดงสเตอร์นัล',en:'Sternal artery',desc:'ดิ่งลงจากหัวใจ เลี่ยงข้างทางเดินอาหาร ลอดผ่านแนวเส้นประสาทด้านท้อง แล้วแยกเป็นหลอดเลือดแดงอกด้านท้องและหลอดเลือดแดงท้อง',move:STAY},
+  vThorA:{th:'หลอดเลือดแดงอกด้านท้อง',en:'Ventral thoracic artery',desc:'อยู่ใต้ปมประสาทอก วิ่งไปทางหัว แตกแขนงเข้าขาเดินและรยางค์ปาก',move:STAY},
+  vAbdA:{th:'หลอดเลือดแดงท้อง',en:'Ventral abdominal artery',desc:'อยู่ใต้เส้นประสาทด้านท้องในส่วนท้อง มีแขนงแยกเข้าทุกปล้องและขาว่ายน้ำ',move:STAY},
+  vsinus:{th:'แอ่งเลือดด้านท้อง',en:'Ventral sinus',desc:'แอ่งรวบรวมเลือดที่ใช้แล้วที่พื้นด้านท้องของอก ส่งเลือดเข้าเหงือกทางหลอดเลือดเหงือก (branchial vessels) เพื่อฟอกก่อนกลับเข้าหัวใจ',move:STAY},
+  gills:{th:'เหงือก',en:'Gills (phyllobranchiae)',desc:'แผ่นเหงือกซ้อนกันเป็นพวง อยู่ในช่องเหงือกด้านข้าง ใต้เปลือกส่วนข้าง (branchiostegite) แลกเปลี่ยนแก๊สกับน้ำที่ไหลผ่าน',move:'ยึดกับโคนขาและผนังลำตัว · คีบขยับได้เล็กน้อย'},
+  esophagus:{th:'หลอดอาหาร',en:'Oesophagus',desc:'ท่อสั้นจากปากขึ้นไปยังกระเพาะส่วนหน้า',move:STAY},
+  cardiac:{th:'กระเพาะส่วนหน้า',en:'Cardiac stomach',desc:'ถุงใหญ่ด้านหน้าสุดของส่วนหัว-อก หลังตา เก็บอาหารและบดด้วยชุดฟันในกระเพาะ (gastric mill)',move:STAY},
+  pyloric:{th:'กระเพาะส่วนท้าย',en:'Pyloric stomach',desc:'กรองอาหารที่บดละเอียดแล้วส่งเข้าตับและตับอ่อน ส่วนกากส่งต่อไปยังลำไส้',move:STAY},
+  hepato:{th:'ตับและตับอ่อน',en:'Hepatopancreas',desc:'ต่อมขนาดใหญ่ 1 คู่ สีส้มน้ำตาล กินพื้นที่ส่วนใหญ่ของส่วนหัว-อก สร้างน้ำย่อย ดูดซึมและสะสมอาหาร (ส่วนที่เรียกกันว่า “มันกุ้ง”)',move:'ต่อกับกระเพาะด้วยท่อ · คีบยกขอบได้เล็กน้อย'},
+  intestine:{th:'ลำไส้',en:'Intestine',desc:'ท่อตรงวิ่งตามแนวกลางหลังผ่านส่วนท้อง อยู่ใต้หลอดเลือดแดงหลัง ระหว่างกล้ามเนื้อสองซีก ไปเปิดที่ทวารหนักใต้แพนหางกลาง (ที่เรียกกันว่า “เส้นดำ”)',move:'ปลายหน้าต่อกับกระเพาะ ปลายท้ายต่อกับทวารหนัก · ขยับได้เล็กน้อย'},
+  brain:{th:'สมอง',en:'Brain (supraoesophageal ganglion)',desc:'ปมประสาทเหนือหลอดอาหาร อยู่หน้าสุดหลังตา มีเส้นประสาทอ้อมหลอดอาหารลงไปต่อกับปมประสาทด้านท้อง',move:STAY},
+  thoracic:{th:'ปมประสาทอก',en:'Thoracic ganglionic mass',desc:'ปมประสาทส่วนอกหลอมรวมเป็นก้อนยาวก้อนเดียวที่พื้นด้านท้อง ควบคุมขาเดินและรยางค์ปาก',move:STAY},
+  nerve:{th:'เส้นประสาทด้านท้อง',en:'Ventral nerve cord',desc:'วิ่งตามพื้นด้านท้องของส่วนท้อง ใต้กล้ามเนื้องอ มีปมประสาทปล้องละ 1 ปม รวม 6 ปม ควบคุมการดีดหาง',move:'ใช้มีดผ่าตัดกรีดกล้ามเนื้อตามเส้นประ 3 ครั้ง ยิ่งกรีดลึก เนื้อที่บังยิ่งบาง เส้นประสาทยิ่งเห็นชัด'},
+  green:{th:'ต่อมเขียว',en:'Antennal (green) gland',desc:'ต่อมขับถ่าย 1 คู่ ที่ฐานหนวดคู่ที่ 2 ควบคุมสมดุลน้ำและเกลือแร่',move:STAY},
+  testis:{th:'อัณฑะ',en:'Testes',desc:'อยู่ใต้และหน้าหัวใจ วางบนตับและตับอ่อน มีท่อนำอสุจิไปเปิดที่โคนขาเดินคู่ที่ 5',move:STAY},
+  ovary:{th:'รังไข่',en:'Ovaries',desc:'อยู่ด้านหลังเหนือตับและตับอ่อน แผ่ไปทางหน้าถึงเหนือกระเพาะ เมื่อไข่สุกจะขยายใหญ่สีส้มจนมองเห็นทะลุเปลือก ท่อนำไข่ไปเปิดที่โคนขาเดินคู่ที่ 3',move:STAY},
+  flexor:{th:'กล้ามเนื้องอ',en:'Abdominal flexor muscles',desc:'มัดกล้ามเนื้อใหญ่ต่อเนื่องจากท้ายส่วนอกถึงปล้องที่ 6 (เนื้อกุ้งส่วนใหญ่) หดตัวทำให้ดีดหางพุ่งถอยหลังหนีศัตรู',move:'ยึดกับเปลือกทุกปล้อง · ใช้มีดผ่าตัดกรีดตามเส้นประ เนื้อจะแยกเปิดออกด้านข้าง'},
+  extensor:{th:'กล้ามเนื้อเหยียด',en:'Abdominal extensor muscles',desc:'แถบกล้ามเนื้อบางใต้เปลือกด้านหลัง ทำงานตรงข้ามกับกล้ามเนื้องอ ใช้ยืดหางกลับ',move:'ยึดกับเปลือกทุกปล้อง · ใช้มีดผ่าตัดเลาะออกด้านข้างได้'},
+  shell:{th:'เปลือก',en:'Exoskeleton',desc:'เปลือกแข็งจากไคตินและแคลเซียม ส่วนหัว-อกคลุมด้วยแผ่นเดียว (carapace) ส่วนท้องแบ่งเป็น 6 ปล้อง (tergites) · แผ่นข้างของปล้องที่ 2 (pleuron) ใหญ่และคร่อมทับปล้องที่ 1 และ 3 เป็นลักษณะเด่นของกุ้งกลุ่มนี้ (Caridea) ต่างจากกุ้งทะเลกลุ่มกุ้งกุลาดำที่แผ่นข้างเรียงซ้อนกันตามลำดับ',move:'ตัดตามแนวกลางหลัง แล้วพลิกออกด้านข้างและปักหมุด'}
+};
+const COMMON=['heart','cardiac','pyloric','hepato','intestine','gills','brain','thoracic','nerve','green','dorsalA','sternalA','vsinus','flexor'];
+const keysFor=sex=>COMMON.concat(sex==='male'?['testis']:['ovary']);
+
+/* ================= state ================= */
+const state={step:0,tool:'view',sex:'male',labels:false,seen:new Set(),allSeenToast:false};
+let world,prawn,organs,shells,extMeshes,pins,dashes,marker,cutMesh,cutFront,hist,selected=null,musStrokes=0,musOpen=0,musMeshes=[],musDash=[];
+const CUT_START=2.15, CUT_END=-3.42;
+
+/* ----- tray ----- */
+function buildTray(){
+  const wax=new THREE.Mesh(new THREE.BoxGeometry(16,.3,8.4),MAT.wax);wax.position.set(1.2,-.15,0);wax.receiveShadow=true;world.add(wax);
+  const rim=new THREE.Mesh(new THREE.BoxGeometry(16.5,.5,8.9),MAT.rim);rim.position.set(1.2,-.36,0);rim.receiveShadow=true;world.add(rim);}
+
+/* ----- exoskeleton: split along the dorsal midline, each half hinged at the widest point ----- */
+function buildShell(){
+  PIECES.forEach(pc=>S.forEach(side=>{
+    const xm=(pc.xa+pc.xb)/2,q=P(xm),hp=V(xm,q.yc+q.hy*spow(Math.cos(VH)),side*q.hz*Math.pow(Math.sin(VH),PWR));
+    const low=new THREE.Mesh(shellGeo(pc,side,VH,VMAX),shellMat);prawn.add(low);extMeshes.push(low);
+    const g=shellGeo(pc,side,0,VH);g.translate(-hp.x,-hp.y,-hp.z);
+    const pa=g.attributes.position.array;let maxAng=0;
+    for(let a=0;a<=2.3;a+=0.02){const th=side*a,c=Math.cos(th),s=Math.sin(th);let mn=1e9;
+      for(let k=0;k<pa.length;k+=3)mn=Math.min(mn,pa[k+1]*c-pa[k+2]*s);
+      if(hp.y+mn<FLAP_CLEAR)break;maxAng=a;}
+    const hinge=new THREE.Group();hinge.position.copy(hp);prawn.add(hinge);
+    const m=new THREE.Mesh(g,shellMat);hinge.add(m);
+    const mid=Math.floor(g.userData.nu/2)*(NV+1),pinLocal=V(pa[mid*3],pa[mid*3+1],pa[mid*3+2]).multiplyScalar(.85);
+    const s={name:pc.name,side,hinge,m,xmin:pc.xb,open:0,pinned:false,grab:false,maxAng,pinLocal};m.userData.shell=s;shells.push(s);
+  }));}
+
+/* ----- exterior: rostrum, eyes, antennae, jointed pereiopods splayed on the tray, tail fan ----- */
+function ext(geo,c,p){const m=new THREE.Mesh(geo,emat(c));if(p)m.position.copy(p);prawn.add(m);extMeshes.push(m);return m;}
+const extTube=(pts,r,c)=>ext(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts),80,r,6,false),c);
+function seg(a,b,r1,r2,c){const d=b.clone().sub(a),L=d.length();const m=ext(new THREE.CylinderGeometry(r2,r1,L,10),c);
+  m.position.copy(a).addScaledVector(d,.5);m.quaternion.setFromUnitVectors(UP,d.normalize());return m;}
+function limb(pts,radii,c){const jc=new THREE.Color(c).multiplyScalar(.62).getHex();
+  pts.forEach((p,i)=>{if(i<pts.length-1)seg(p,pts[i+1],radii[i]*.92,radii[i+1]*.92,c);
+    if(i>0&&i<pts.length-1)ext(new THREE.SphereGeometry(radii[i]*1.06,10,8),jc,p);});}
+function flat(pts,thick,c,pos,rotY,vertical){const sh=new THREE.Shape();pts.forEach(([u,w],i)=>i?sh.lineTo(u,w):sh.moveTo(u,w));
+  const g=new THREE.ExtrudeGeometry(sh,{depth:thick,bevelEnabled:false});g.translate(0,0,-thick/2);if(!vertical)g.rotateX(-PI/2);
+  const m=ext(g,c,pos);m.rotation.y=rotY||0;return m;}
+const SHELL=0x7d9aa0,LEG=0x86a0a3,CLAW=0x2f5d8c;
+/* pereiopod: coxa, basis, ischium, merus, carpus, propodus, dactyl (7 podomeres) */
+function pereiopod(x0,s,spec,c,r0){
+  const pts=[V(x0,.24,s*.34),V(x0,.15,s*.44),V(x0,.07,s*.55)],rad=[r0,r0*.95,r0*.9];let p=pts[2].clone();
+  spec.forEach(([L,h,r])=>{p=p.clone().add(V(Math.sin(h*DEG)*L,0,Math.cos(h*DEG)*L*s));p.y=Math.max(r,.012);pts.push(p);rad.push(r);});
+  limb(pts,rad,c);return pts;}
+function chela(base,h,L,r,s,c){const d=V(Math.sin(h*DEG),0,Math.cos(h*DEG)*s),n=V(d.z,0,-d.x);
+  [-1,1].forEach(k=>{const mid=base.clone().addScaledVector(d,L*.5).addScaledVector(n,r*.7*k),tip=base.clone().addScaledVector(d,L);
+    mid.y=tip.y=r;seg(base,mid,r*.8,r*.6,c);seg(mid,tip,r*.6,r*.12,c);});}
+function buildExterior(){
+  /* pleuron of abdominal segment 2: a large rounded side plate that overlaps the rear of segment 1 and the front of segment 3 (caridean shrimp) */
+  S.forEach(side=>{const xa=SEGB[1]+.24,xb=SEGB[2]-.22,NU=26,NW=12,K=1.05,vB=.88*PI,pos=[],idx=[];
+    for(let i=0;i<=NU;i++){const u=i/NU,x=xa+(xb-xa)*u,q=P(x),ve=VH+(vB-VH)*Math.pow(Math.sin(PI*u),.35);
+      for(let j=0;j<=NW;j++){const v=VH+(ve-VH)*j/NW;pos.push(x,q.yc+q.hy*K*spow(Math.cos(v)),side*q.hz*K*Math.pow(Math.sin(v),PWR));}}
+    for(let i=0;i<NU;i++)for(let j=0;j<NW;j++){const a=i*(NW+1)+j,b=a+NW+1;idx.push(a,b,a+1,b,b+1,a+1);}
+    const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));g.setIndex(idx);g.computeVertexNormals();
+    const m=new THREE.Mesh(g,shellMat);prawn.add(m);extMeshes.push(m);});
+  const bot=[[1.9,1.2],[2.35,.96],[3.0,.99],[3.35,1.05],[3.45,1.02],[3.55,1.1],[3.62,1.08],[3.75,1.25]],top=[];
+  for(let k=0;k<11;k++){const x=3.6-k*.15,yb=1.27+(3.6-x)*.1;top.push([x,yb],[x+.04,yb+.1]);}
+  flat([...bot,...top,[1.9,1.5]],.05,SHELL,V(0,0,0),0,true);
+  S.forEach(s=>{
+    seg(V(2.2,.98,s*.2),V(2.45,1.0,s*.4),.065,.075,0x6d7f7c);
+    ext(new THREE.SphereGeometry(.13,16,12),0x111111,V(2.52,1.0,s*.44));
+    flat([[0,0],[.3,.11],[.75,.13],[.95,.05],[1.0,-.02],[.6,-.09],[0,-.07]],.025,SHELL,V(2.3,.78,s*.36),-s*.15);
+    limb([V(2.35,.85,s*.12),V(2.6,.87,s*.14),V(2.85,.88,s*.16),V(3.05,.88,s*.18)],[.045,.04,.035,.03],LEG);
+    extTube([V(3.05,.88,s*.18),V(3.7,.8,s*.32),V(4.6,.4,s*.6),V(5.2,.05,s*.8)],.01,0x9a7f6a);
+    extTube([V(3.05,.88,s*.18),V(3.8,.75,s*.16),V(4.8,.3,s*.28),V(5.4,.04,s*.35)],.01,0x9a7f6a);
+    limb([V(2.25,.6,s*.3),V(2.5,.55,s*.36),V(2.8,.5,s*.42)],[.05,.045,.04],LEG);
+    extTube([V(2.8,.5,s*.42),V(3.4,.35,s*.7),V(3.8,.12,s*1.3),V(3.4,.025,s*2.2),V(1.2,.025,s*3.0),V(-1.5,.025,s*3.35),V(-3.8,.025,s*3.4)],.013,0x9a7f6a);
+    let L=pereiopod(1.8,s,[[.25,40,.03],[.65,60,.03],[.62,72,.027],[.26,78,.03]],LEG,.04);chela(L[L.length-1],80,.17,.026,s,LEG);
+    L=pereiopod(1.45,s,[[.45,30,.075],[1.7,45,.085],[1.5,60,.09],[2.0,80,.115]],CLAW,.08);chela(L[L.length-1],95,1.1,.085,s,CLAW);
+    [[1.05,1.0,0],[.65,1.07,-6],[.25,1.14,-12]].forEach(([x,k,dh])=>pereiopod(x,s,
+      [[.22*k,10+dh,.045],[.75*k,25+dh,.045],[.33*k,-15+dh,.038],[.6*k,-35+dh,.032],[.18*k,-42+dh,.012]],LEG,.05));
+    /* pleopods (swimmerets) on abdominal segments 1-5: a basal protopod + 2 paddle rami (exopod, endopod), splayed on the tray */
+    segC.slice(0,5).forEach((x,i)=>{const L=1-.08*i,b=V(x+.02,.2,s*.24),pr=V(x-.06,.07,s*.5);seg(b,pr,.04,.032,LEG);ext(new THREE.SphereGeometry(.034,8,6),0x5d7476,pr);
+      [[-30,.52],[-58,.42]].forEach(([h,len])=>{len*=L;const th=Math.atan2(-s*Math.cos(h*DEG),Math.sin(h*DEG));
+        flat([[0,-.035],[len*.35,-.06],[len*.85,-.05],[len,0],[len*.85,.05],[len*.35,.06],[0,.035]],.018,LEG,V(pr.x,.05,pr.z),th);});});
+    const uro=[[0,-.1],[.4,-.18],[.85,-.16],[1.0,-.02],[.93,.13],[.5,.17],[0,.08]];
+    flat(uro,.03,SHELL,V(-3.42,.16,s*.14),PI+s*.45);
+    flat(uro.map(([u,w])=>[u*.88,w*.85]),.03,SHELL,V(-3.42,.19,s*.08),PI+s*.2);
+  });
+  /* telson: one long triangular piece from the rear of segment 6 to the tail tip (closes the segment, no hole) */
+  {const q=P(SEGB[6]),x0=SEGB[6]+.03,x1=-4.36,NX=30,NR=32,pos=[],idx=[];
+    for(let i=0;i<=NX;i++){const u=i/NX,x=x0+(x1-x0)*u,t=Math.min(1,u/.4),e=t*t*(3-2*t),
+        kw=i===NX?.004:.9*Math.pow(1-u,.85),hyk=i===NX?.004:(.9*q.hy*(1-e)+.04*(1-.6*u)),cy=q.yc+(.21-q.yc)*e;
+      for(let j=0;j<NR;j++){const v=j/NR*2*PI,sv=Math.sin(v);pos.push(x,cy+hyk*spow(Math.cos(v)),Math.sign(sv)*q.hz*kw*Math.pow(Math.abs(sv),PWR));}}
+    for(let i=0;i<NX;i++)for(let j=0;j<NR;j++){const a=i*NR+j,b=a+NR,a2=i*NR+(j+1)%NR,b2=a2+NR;idx.push(a,b,a2,b,b2,a2);}
+    const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));g.setIndex(idx);g.computeVertexNormals();
+    const cone=new THREE.Mesh(g,shellMat);prawn.add(cone);extMeshes.push(cone);}}
+
+/* ----- organs (grab = small displacement with a spring back to the resting place) ----- */
+function organ(key,sys,maxD,opt){opt=opt||{};const g=new THREE.Group();prawn.add(g);
+  const o=Object.assign({key,sys,g,maxD,lim:maxD,vel:V(0,0,0),grab:false,meshes:[],anchor:V(0,0,0),n:0,op:1},opt);organs.push(o);return o;}
+function addMesh(o,m,anchor){m.userData.organ=o;o.g.add(m);o.meshes.push(m);o.anchor.add(anchor);o.n++;return m;}
+const omat=(c,t)=>wet(c,t?{transparent:true}:{});
+function addEll(o,c,p,r){const t=MP(p),m=new THREE.Mesh(new THREE.SphereGeometry(1,24,16),omat(c));
+  m.scale.set(r[0]*t.sx,r[1]*t.sy,r[2]*t.sz);m.position.copy(t.p);return addMesh(o,m,t.p);}
+function addTube(o,c,pts,r){const cv=new THREE.CatmullRomCurve3(pts.map(p=>MP(p).p));
+  return addMesh(o,new THREE.Mesh(new THREE.TubeGeometry(cv,Math.max(16,pts.length*12),r,8,false),omat(c)),cv.getPoint(.5));}
+const RED=0xd62828,MAG=0xd63384,YEL=0xf4d03f,GRN=0x1e9e4a;
+function art(key,paths,r){const o=organ(key,'circ',.04);paths.forEach(p=>addTube(o,RED,p,r||.022));return o;}
+function buildOrgans(){
+  const Q=segCo.map(Po),sc=segCo;
+  let o=organ('heart','circ',.05);
+  addEll(o,0xff8c1a,V(.05,1.04,0),[.26,.1,.19]);
+  [[.12,.04],[-.02,.06],[-.12,.02]].forEach(([dx,dy])=>S.forEach(s=>addEll(o,0x6b3000,V(.05+dx,1.04+dy,s*.16),[.028,.02,.022])));
+  {const t=MP(V(.05,1.03,0)),m=new THREE.Mesh(new THREE.SphereGeometry(1,20,12),new THREE.MeshStandardMaterial({color:lc(0xffd0a0),transparent:true,opacity:.18,depthWrite:false}));
+    m.scale.set(.36,.14*t.sy,.28*t.sz);m.position.copy(t.p);m.userData.noShadow=true;o.g.add(m);}
+  art('ophthalmic',[[V(.3,1.07,0),V(.9,1.13,0),V(1.6,1.1,0),V(2.0,.95,0),V(2.2,.78,0)]]);
+  art('gastricA',[[V(1.3,1.12,0),V(1.6,1.08,.02),V(1.75,1.04,.03)]],.014);
+  art('antennalA',S.map(s=>[V(.3,1.02,s*.05),V(1.0,1.02,s*.3),V(1.9,.8,s*.32),V(2.15,.5,s*.22)]),.016);
+  art('hepaticA',S.map(s=>[V(.15,.95,s*.06),V(.45,.8,s*.2),V(.7,.68,s*.26)]),.018);
+  art('dorsalA',[[V(-.2,1.03,0),V(-.5,1.02,0),...Q.map((q,i)=>V(sc[i],q.T-.13,0)),V(-4.2,.48,0)]]);
+  art('sternalA',[[V(-.05,.95,.05),V(.1,.65,.14),V(.35,.35,.06),V(.42,.22,0)]]);
+  art('vThorA',[[V(.42,.22,0),V(1.2,.22,0),V(1.9,.25,0),V(2.15,.32,0)],...[.25,.65,1.05,1.45,1.8].flatMap(x=>S.map(s=>[V(x,.22,0),V(x,.23,s*.25),V(x,.24,s*.45)]))],.014);
+  art('vAbdA',[[V(.42,.22,0),V(-.4,.22,0),...Q.map((q,i)=>V(sc[i],q.B+.035,0)),V(-4.1,.3,0)],...Q.flatMap((q,i)=>S.map(s=>[V(sc[i],q.B+.035,0),V(sc[i],q.B+.08,s*.18),V(sc[i],q.B+.16,s*.28)]))],.014);
+  const GX=[0,1,2,3,4,5,6].map(k=>.35+k*.2);
+  o=organ('vsinus','circ',.04);addEll(o,MAG,V(1.0,.33,0),[.75,.035,.2]);GX.forEach(x=>S.forEach(s=>addTube(o,MAG,[V(x,.33,s*.18),V(x,.42,s*.36),V(x,.5,s*.45)],.012)));
+  o=organ('gills','res',.04);GX.forEach(x=>S.forEach(s=>addEll(o,0xd9d2c3,V(x,.58,s*.48),[.09,.22,.03])));
+  o=organ('esophagus','dig',.04);addTube(o,YEL,[V(1.95,.28,0),V(1.95,.45,0),V(1.85,.65,0)],.045);
+  o=organ('cardiac','dig',.08);addEll(o,0xf7dc6f,V(1.7,.8,0),[.36,.24,.26]);
+  o=organ('pyloric','dig',.06);addEll(o,0xf1c40f,V(1.25,.74,0),[.17,.12,.12]);
+  o=organ('hepato','dig',.1);S.forEach(s=>addEll(o,0xc0592b,V(.8,.56,s*.27),[.65,.3,.2]));
+  o=organ('intestine','dig',.05);addTube(o,YEL,[V(1.25,.75,0),V(.6,.78,0),V(-.3,.84,0),...Q.map((q,i)=>V(sc[i],q.yc+.62*q.hy,0)),V(-4.15,.42,0),V(-4.3,.3,0)],.04);
+  o=organ('brain','ner',.04);addEll(o,GRN,V(2.2,.68,0),[.1,.08,.14]);S.forEach(s=>addTube(o,GRN,[V(2.18,.63,s*.09),V(2.08,.45,s*.1),V(1.95,.3,s*.04)],.015));
+  o=organ('thoracic','ner',.03);addEll(o,GRN,V(1.15,.27,0),[.8,.05,.09]);
+  o=organ('nerve','ner',.03);addTube(o,GRN,[V(.4,.28,0),V(-.3,.27,0),...Q.map((q,i)=>V(sc[i],q.B+.085,0)),V(-4.05,.34,0)],.02);
+  Q.forEach((q,i)=>addEll(o,GRN,V(sc[i],q.B+.085,0),[.06,.025,.045]));
+  o=organ('green','exc',.03);S.forEach(s=>addEll(o,0x3cb8a0,V(2.12,.45,s*.22),[.09,.07,.08]));
+  o=organ('testis','rep',.06,{sex:'male'});
+  S.forEach(s=>{addEll(o,0xeef0d8,V(.5,.93,s*.08),[.26,.045,.055]);addTube(o,0xe3e6c6,[V(.3,.92,s*.1),V(.2,.65,s*.38),V(.25,.32,s*.45),V(.25,.24,s*.47)],.015);});
+  addEll(o,0xeef0d8,V(.72,.93,0),[.06,.035,.09]);
+  o=organ('ovary','rep',.06,{sex:'female'});
+  S.forEach(s=>{addEll(o,0xf08a24,V(.7,.95,s*.1),[.62,.07,.11]);addEll(o,0xf08a24,V(1.4,1.0,s*.07),[.22,.05,.07]);
+    addTube(o,0xe0781a,[V(.6,.9,s*.14),V(.9,.62,s*.38),V(1.05,.32,s*.45),V(1.05,.24,s*.47)],.016);});
+}
+/* ----- abdominal muscles: continuous lofted bundles, not blocks ----- */
+function loft(x0,x1,section,nx,nr){nx=nx||90;nr=nr||22;const pos=[],idx=[];
+  for(let i=0;i<=nx;i++){const x=x0+(x1-x0)*i/nx,ring=section(x,i/nx);
+    for(let j=0;j<nr;j++){const a=j/nr*2*PI;pos.push(x,ring.cy+ring.ry*Math.sin(a),ring.cz+ring.rz*Math.cos(a));}}
+  for(let i=0;i<nx;i++)for(let j=0;j<nr;j++){const a=i*nr+j,b=a+nr,a2=i*nr+(j+1)%nr,b2=a2+nr;idx.push(a,a2,b,b,a2,b2);}
+  const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));g.setIndex(idx);g.computeVertexNormals();return g;}
+const groove=x=>1-.09*SEGB.slice(1,6).reduce((m,b)=>Math.max(m,Math.exp(-(((x-b)/.05)**2))),0);
+const endTaper=u=>Math.pow(Math.sin(PI*Math.min(1,u*5.5,(1-u)*14)/2),.5);
+/* abdominal muscle in layers: per side an extensor band plus three stacked flexor layers (top, middle, bottom).
+   Each scalpel stroke cuts one layer along the incision line; that layer then folds outward to the side about its
+   lateral edge, like the shell, exposing the next layer and finally the ventral nerve cord. Muscle is opaque. */
+const MUS_TILT=.08,MUS_X0=-.5,MUS_X1=-3.35,MUS_ANG=[1.95,1.55,1.15];
+const MUS_COL=[0xf2d6cc,0xedcdc0,0xe7c3b5];
+function bands(x){const q=P(x),yTop=q.yc+.6*q.hy,yBot=q.B+.13,h=(yTop-yBot)/3;return {q,yTop,yBot,h};}
+const musTopY=x=>{const b=bands(x);return b.yTop-Math.min(musStrokes,2)*b.h+.03;};
+function buildMuscles(){
+  S.forEach(s=>{
+    const f=organ('flexor','mus',.03,{muscle:true,noLabel:s<0});
+    for(let k=0;k<3;k++){
+      const g=loft(-.4,-3.45,(x,u)=>{const b=bands(x),q=b.q,t=groove(x)*endTaper(u),y1=b.yTop-k*b.h;
+        return {cy:y1-b.h/2,cz:s*.41*q.hz,ry:b.h*.54*t,rz:.43*q.hz*t};});
+      const m=addMesh(f,new THREE.Mesh(g,wet(MUS_COL[k],{roughness:.55,clearcoat:.3})),V(-1.8,bands(-1.8).yTop-(k+.5)*bands(-1.8).h,s*.3));
+      musMeshes.push({mesh:m,s,k,base:Float32Array.from(g.attributes.position.array)});}
+    const e=organ('extensor','mus',.03,{muscle:true,noLabel:s<0});
+    const ge=loft(-.45,-3.42,(x,u)=>{const b=bands(x),q=b.q,t=groove(x)*endTaper(u);return {cy:b.yTop+.06*q.hy,cz:s*.32*q.hz,ry:.11*q.hy*t,rz:.26*q.hz*t};});
+    const me=addMesh(e,new THREE.Mesh(ge,wet(0xe3b5a6,{roughness:.55,clearcoat:.3})),V(-1.8,bands(-1.8).yTop+.05,s*.25));
+    musMeshes.push({mesh:me,s,k:0,base:Float32Array.from(ge.attributes.position.array)});
+  });
+  /* muscle floor: a thin bed of ventral flexor that stays in place under the nerve cord (never cut) */
+  {const fo=organs.find(o=>o.key==='flexor');
+    const gF=loft(-.42,-3.45,(x,u)=>{const q=P(x),t=groove(x)*endTaper(u);return {cy:q.B+.035,cz:0,ry:.042*t,rz:.62*q.hz*t};});
+    addMesh(fo,new THREE.Mesh(gF,wet(0xe0b8a9,{roughness:.55,clearcoat:.3})),V(-1.8,P(-1.8).B+.04,0));}
+  for(let x=MUS_X0;x>MUS_X1;x-=.13){const m=new THREE.Mesh(new THREE.CylinderGeometry(.022,.022,1,6),MAT.dash);m.userData.x=x;m.userData.noShadow=true;m.visible=false;prawn.add(m);musDash.push(m);}
+  placeMusDash();}
+function placeMusDash(){musDash.forEach(m=>{const x=m.userData.x,x2=x-.075,a=V(x,musTopY(x),MUS_TILT),b=V(x2,musTopY(x2),MUS_TILT),d=b.clone().sub(a);
+  m.scale.y=d.length();m.position.copy(a).addScaledVector(d,.5);m.quaternion.setFromUnitVectors(UP,d.normalize());});}
+/* fold each layer outward about its lateral-bottom edge (hinge varies along the body with the profile) */
+function musDeform(){
+  musMeshes.forEach(({mesh,s,k,base})=>{const pa=mesh.geometry.attributes.position.array,t=clamp(musOpen-k,0,1),e=t*t*(3-2*t);
+    for(let i=0;i<pa.length;i+=3){const x=base[i],y=base[i+1],z=base[i+2];
+      const wx=clamp((-.35-x)/.3,0,1)*clamp((x+3.45)/.25,0,1),th=s*MUS_ANG[k]*e*wx;
+      if(!th){pa[i+1]=y;pa[i+2]=z;continue;}
+      const b=bands(x),yh=b.yTop-(k+1)*b.h,zh=s*.84*b.q.hz,dy=y-yh,dz=z-zh,c=Math.cos(th),sn=Math.sin(th);
+      pa[i+1]=yh+dy*c-dz*sn;pa[i+2]=zh+dy*sn+dz*c;}
+    mesh.geometry.attributes.position.needsUpdate=true;mesh.geometry.computeVertexNormals();mesh.geometry.computeBoundingSphere();});}
+const onMusLine=pt=>pt.x<=MUS_X0+.25&&pt.x>=MUS_X1-.25&&Math.abs(pt.z-MUS_TILT)<.45;
+function showMusScalpel(pt){showTool('scalpel',pt);tools.scalpel.quaternion.setFromUnitVectors(UP,V(.3,1,.38).normalize());}
+function finishMusStroke(a){const span=a.xmax-a.xmin;
+  if(span>=1.2){
+    if(musStrokes<3){musStrokes++;placeMusDash();
+      if(musStrokes===1)toast('กรีดครั้งที่ 1 จาก 3 · กล้ามเนื้อชั้นบนแยกแผ่ออกด้านข้าง ลากมีดซ้ำตามเส้นประเพื่อกรีดชั้นถัดไป');
+      else if(musStrokes===2)toast('กรีดครั้งที่ 2 จาก 3 · ชั้นกลางแผ่ออกด้านข้างแล้ว อีกชั้นเดียวจะถึงเส้นประสาท');
+      else{toast('กรีดครั้งที่ 3 · ชั้นล่างแผ่ออกแล้ว เห็นเส้นประสาทด้านท้องและปมประสาทครบ 6 ปม วางอยู่บนพื้นกล้ามเนื้อชั้นล่างสุด');showInfo('nerve');}}
+    else toast('กรีดถึงแนวเส้นประสาทแล้ว ระวังอย่ากรีดโดนเส้นประสาท');}
+  else if(span>.12)toast('ลากมีดให้ยาวตลอดแนวเส้นประ จากหน้าไปหลังของส่วนท้อง');}
+
+/* ----- dashed guide along the dorsal midline (fish-app style) ----- */
+function buildGuide(){dashes=[];
+  for(let x=CUT_START;x>CUT_END+.02;x-=.13){const x2=Math.max(CUT_END,x-.075);
+    const a=V(x,shellTop(x)+.025,0),b=V(x2,shellTop(x2)+.025,0),d=b.clone().sub(a),L=d.length();
+    const m=new THREE.Mesh(new THREE.CylinderGeometry(.026,.026,L,6),MAT.dash);m.position.copy(a).addScaledVector(d,.5);
+    m.quaternion.setFromUnitVectors(UP,d.normalize());m.userData.x=x;m.userData.noShadow=true;prawn.add(m);dashes.push(m);}
+  marker=new THREE.Mesh(new THREE.SphereGeometry(.07,16,12),MAT.marker);marker.userData.noShadow=true;prawn.add(marker);}
+function updateCut(){
+  if(cutMesh){prawn.remove(cutMesh);cutMesh.geometry.dispose();cutMesh=null;}
+  dashes.forEach(m=>m.visible=m.userData.x<=cutFront+.01);
+  marker.position.set(cutFront,shellTop(cutFront)+.04,0);
+  if(CUT_START-cutFront<.06)return;
+  const pts=[];for(let x=CUT_START;x>cutFront;x-=.04)pts.push(V(x,shellTop(x)+.012,0));pts.push(V(cutFront,shellTop(cutFront)+.012,0));
+  cutMesh=new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts),pts.length*2,.016,5,false),MAT.incision);prawn.add(cutMesh);}
+const cutFrac=()=>clamp((CUT_START-cutFront)/(CUT_START-CUT_END),0,1);
+
+function build(){
+  if(world)scene.remove(world);
+  world=new THREE.Group();scene.add(world);prawn=new THREE.Group();world.add(prawn);
+  organs=[];shells=[];extMeshes=[];pins=[];hist=[];cutMesh=null;cutFront=CUT_START;selected=null;musStrokes=0;musOpen=0;musMeshes=[];musDash=[];
+  Object.assign(state,{step:0,seen:new Set(),allSeenToast:false});
+  buildTray();buildShell();buildExterior();buildOrgans();buildMuscles();buildGuide();
+  organs.forEach(o=>o.anchor.divideScalar(o.n));
+  $('labels').innerHTML='';
+  organs.forEach(o=>{if(o.noLabel)return;const d=document.createElement('div');d.className='lbl';d.textContent=INFO[o.key].th;d.style.display='none';$('labels').appendChild(d);o.el=d;});
+  world.traverse(m=>{if(m.isMesh){m.castShadow=!m.userData.noShadow;m.receiveShadow=true;}});
+  updateCut();applyLayers();applySex();hideInfo();setTool('view',true);updateUndo();updateHUD();}
+
+/* ----- layers ----- */
+const LAYERS=[
+  {id:'circ',th:'ระบบไหลเวียนเลือด',sub:'หัวใจ หลอดเลือดแดง แอ่งเลือดด้านท้อง',dot:'#d62828'},
+  {id:'dig',th:'ระบบย่อยอาหาร',sub:'หลอดอาหาร กระเพาะ ตับและตับอ่อน ลำไส้',dot:'#f4d03f'},
+  {id:'ner',th:'ระบบประสาท',sub:'สมอง ปมประสาทอก เส้นประสาทด้านท้อง',dot:'#1e9e4a'},
+  {id:'res',th:'ระบบหายใจ',sub:'เหงือกในช่องเหงือกด้านข้าง',dot:'#d9d2c3'},
+  {id:'exc',th:'ระบบขับถ่าย',sub:'ต่อมเขียวที่ฐานหนวด',dot:'#3cb8a0'},
+  {id:'rep',th:'ระบบสืบพันธุ์',sub:'อัณฑะ ♂ / รังไข่ ♀ (สลับเพศได้)',dot:'#f08a24'},
+  {id:'mus',th:'กล้ามเนื้อส่วนท้อง',sub:'กล้ามเนื้องอและกล้ามเนื้อเหยียด',dot:'#f3dcd4'},
+  {id:'exo',th:'เปลือกและรยางค์',sub:'เปลือก ขา หนวด แพนหาง',dot:'#7d9aa0',sep:true},
+  {id:'ghost',th:'เปลือกโปร่งแสง',sub:'มองทะลุเปลือกเพื่อดูตำแหน่งอวัยวะ',dot:''}];
+const SYSIDS=['circ','dig','ner','res','exc','rep','mus'];
+const layerOn={circ:true,dig:true,ner:true,res:true,exc:true,rep:true,mus:true,exo:true,ghost:false};
+function applyLayers(){
+  organs.forEach(o=>o.g.visible=layerOn[o.sys]&&(!o.sex||o.sex===state.sex));
+  shells.forEach(s=>s.hinge.visible=layerOn.exo);extMeshes.forEach(m=>m.visible=layerOn.exo);
+  const g=layerOn.ghost;shellMat.opacity=g?.15:.92;shellMat.depthWrite=!g;shellMat.needsUpdate=true;
+  document.querySelectorAll('#layerPanel input').forEach(i=>i.checked=!!layerOn[i.dataset.layer]);
+  if(selected&&!selected.g.visible)clearSel();}
+function setLayer(id,on){layerOn[id]=on;applyLayers();}
+function soloLayer(id){SYSIDS.forEach(k=>layerOn[k]=k===id);layerOn.exo=false;applyLayers();
+  toast('แสดงเฉพาะ'+LAYERS.find(l=>l.id===id).th+' · กด “ทั้งหมด” เพื่อแสดงทุกระบบ');}
+function allLayers(){SYSIDS.forEach(k=>layerOn[k]=true);layerOn.exo=true;applyLayers();}
+
+/* ================= camera ================= */
+const cam={target:new V3(1.2,.5,0),theta:.45,phi:.78,r:15};let tween=null,viewIdx=0;
+function fitR(kind){const a=camera.aspect||1,v=2*Math.tan(camera.fov*PI/360);
+  if(kind==='top')return clamp(Math.max(5.2/v,9.4/(v*a)),4,30);
+  if(kind==='side')return clamp(Math.max(3.4/v,9.4/(v*a)),4,30);
+  return clamp(Math.max(8/v,12.6/(v*a)),6,40);}
+function viewPreset(kind){
+  if(kind==='top')return {target:new V3(-.2,.6,0),theta:0,phi:.1,r:fitR('top')};
+  if(kind==='side')return {target:new V3(-.2,.7,0),theta:0,phi:1.3,r:fitR('side')};
+  return {target:new V3(1.4,.4,0),theta:.45,phi:.78,r:fitR('full')};}
+function goView(kind,instant){const p=viewPreset(kind);if(instant){cam.target.copy(p.target);cam.theta=p.theta;cam.phi=p.phi;cam.r=p.r;tween=null;return;}
+  const dt=((p.theta-cam.theta+PI)%(2*PI)+2*PI)%(2*PI)-PI;tween={t0:performance.now(),dur:900,from:{target:cam.target.clone(),theta:cam.theta,phi:cam.phi,r:cam.r},to:Object.assign(p,{theta:cam.theta+dt})};}
+function updateCam(){const s=Math.sin(cam.phi);camera.position.set(cam.target.x+cam.r*s*Math.sin(cam.theta),cam.target.y+cam.r*Math.cos(cam.phi),cam.target.z+cam.r*s*Math.cos(cam.theta));camera.lookAt(cam.target);}
+function resize(){const w=window.innerWidth,h=window.innerHeight;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();}
+
+/* ================= 3D instruments (from the fish app) ================= */
+const tools={};
+(function(){
+  const sc=new THREE.Group();const blade=new THREE.Mesh(new THREE.ConeGeometry(.07,.42,4),MAT.steel);blade.scale.z=.25;blade.position.y=.21;sc.add(blade);
+  const hdl=new THREE.Mesh(new THREE.CylinderGeometry(.05,.06,1.5,12),MAT.steel);hdl.position.y=1.15;sc.add(hdl);tools.scalpel=sc;
+  const fc=new THREE.Group(),arms=[];for(const s of[-1,1]){const piv=new THREE.Group();piv.position.y=1.7;const arm=new THREE.Mesh(new THREE.BoxGeometry(.05,1.7,.09),MAT.steel);arm.position.y=-.85;piv.add(arm);fc.add(piv);arms.push({piv,s});}
+  fc.userData.arms=arms;tools.forceps=fc;
+  /* dissecting scissors: two pointed blades on a pivot screw + finger rings; the halves snip open and shut while cutting */
+  const ss=new THREE.Group(),halves=[];
+  [-1,1].forEach(s=>{const h=new THREE.Group();h.position.set(0,.78,s*.014);h.userData.s=s;
+    const sh=new THREE.Shape();[[0,0],[.05*s,.32],[.06*s,.78],[-.012*s,.8],[-.008*s,.3]].forEach(([x,y],i)=>i?sh.lineTo(x,y):sh.moveTo(x,y));
+    const bg=new THREE.ExtrudeGeometry(sh,{depth:.022,bevelEnabled:false});bg.translate(0,-.78,-.011);h.add(new THREE.Mesh(bg,MAT.steel));
+    const a=V(0,0,0),b=V(-.2*s,.62,0),d=b.clone().sub(a);const shank=new THREE.Mesh(new THREE.CylinderGeometry(.026,.03,d.length(),8),MAT.steel);
+    shank.position.copy(a).addScaledVector(d,.5);shank.quaternion.setFromUnitVectors(UP,d.clone().normalize());h.add(shank);
+    const ring=new THREE.Mesh(new THREE.TorusGeometry(.13,.03,8,22),MAT.steel);ring.position.set(-.27*s,.76,0);h.add(ring);
+    ss.add(h);halves.push(h);});
+  const screw=new THREE.Mesh(new THREE.CylinderGeometry(.035,.035,.06,12),MAT.steel);screw.rotation.x=PI/2;screw.position.y=.78;ss.add(screw);
+  ss.userData.halves=halves;tools.scissors=ss;
+  const pr=new THREE.Group();const nd=new THREE.Mesh(new THREE.CylinderGeometry(.012,.022,.9,8),MAT.steel);nd.position.y=.45;pr.add(nd);
+  const ph=new THREE.Mesh(new THREE.CylinderGeometry(.06,.06,1.0,12),wet(0x2f6f73));ph.position.y=1.4;pr.add(ph);tools.probe=pr;
+  [sc,fc,ss,pr].forEach(g=>{g.visible=false;g.traverse(o=>{if(o.isMesh)o.castShadow=true;});scene.add(g);});
+})();
+/* scissors lie along the cut: tips point toward the tail, handles up toward the head, blades open in the vertical plane (lower blade under the shell) */
+const SC_BASIS=(()=>{const yv=V(1,.55,0).normalize(),xv=V(-.55,1,0).normalize(),zv=new V3().crossVectors(xv,yv).normalize();return new THREE.Matrix4().makeBasis(xv,yv,zv);})();
+function showTool(name,p,closed){const g=tools[name];if(!g)return;g.visible=true;g.position.copy(p);
+  if(name==='scissors'){g.quaternion.setFromRotationMatrix(SC_BASIS);return;}
+  const dir=camera.position.clone().sub(p).normalize().multiplyScalar(.55).add(new V3(0,.75,0)).normalize();g.quaternion.setFromUnitVectors(UP,dir);
+  if(name==='forceps')g.userData.arms.forEach(a=>a.piv.rotation.z=a.s*(closed?.012:.08));}
+function hideTools(){Object.values(tools).forEach(g=>g.visible=false);}
+
+/* ================= undo ================= */
+const stateKey=()=>JSON.stringify([state.step,cutFront.toFixed(3),shells.map(s=>[s.open.toFixed(2),s.pinned]),musStrokes,pins.length]);
+function snap(){hist.push({step:state.step,cut:cutFront,sh:shells.map(s=>[s.open,s.pinned]),mus:musStrokes,pins:pins.length,key:stateKey()});
+  if(hist.length>80)hist.shift();updateUndo();}
+function updateUndo(){$('btnUndo').disabled=!hist.length;}
+function undo(){const h=hist.pop();if(!h){toast('ยังไม่มีขั้นตอนให้ย้อนกลับ');return;}
+  endAction();cutFront=h.cut;state.step=h.step;
+  shells.forEach((s,i)=>{s.open=h.sh[i][0];s.pinned=h.sh[i][1];s.grab=false;});
+  musStrokes=h.mus;
+  while(pins.length>h.pins)prawn.remove(pins.pop());
+  updateCut();updateUndo();updateHUD();
+  toast(hist.length?'ย้อนกลับแล้ว 1 ขั้น (ย้อนได้อีก '+hist.length+' ขั้น)':'ย้อนกลับจนถึงจุดเริ่มต้นแล้ว');}
+
+/* ================= interaction ================= */
+const rc=new THREE.Raycaster();
+function ndc(x,y){const r=canvas.getBoundingClientRect();return new THREE.Vector2((x-r.left)/r.width*2-1,-((y-r.top)/r.height)*2+1);}
+function cast(x,y,objs){rc.setFromCamera(ndc(x,y),camera);const h=rc.intersectObjects(objs,false);return h[0]||null;}
+function rayPlane(x,y,point,normal){rc.setFromCamera(ndc(x,y),camera);const pl=new THREE.Plane().setFromNormalAndCoplanarPoint(normal,point),o=new V3();return rc.ray.intersectPlane(pl,o)?o:null;}
+function visibleDeep(o){while(o){if(!o.visible)return false;o=o.parent;}return true;}
+function toScreen(v){const p=v.clone().project(camera),r=canvas.getBoundingClientRect();return {x:(p.x+1)/2*r.width,y:(1-p.y)/2*r.height,z:p.z};}
+const camDir=()=>camera.getWorldDirection(new V3());
+const shellMeshes=()=>layerOn.exo?shells.map(s=>s.m):[];
+function pickList(){const L=shellMeshes().slice();organs.forEach(o=>{if(visibleDeep(o.g))L.push(...o.meshes);});return L;}
+const pointers=new Map();let action=null,gesture=null,lastWarn=0;
+canvas.addEventListener('contextmenu',e=>e.preventDefault());
+canvas.addEventListener('pointerdown',e=>{canvas.setPointerCapture(e.pointerId);pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  if(pointers.size===2){endAction();const [a,b]=[...pointers.values()];gesture={d:Math.hypot(a.x-b.x,a.y-b.y),m:{x:(a.x+b.x)/2,y:(a.y+b.y)/2}};}
+  else if(pointers.size===1)startAction(e);});
+canvas.addEventListener('pointermove',e=>{if(!pointers.has(e.pointerId))return;pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  if(gesture&&pointers.size>=2){const [a,b]=[...pointers.values()];const d=Math.hypot(a.x-b.x,a.y-b.y)||1,m={x:(a.x+b.x)/2,y:(a.y+b.y)/2};
+    cam.r=clamp(cam.r*gesture.d/d,2.5,40);pan(m.x-gesture.m.x,m.y-gesture.m.y);gesture.d=d;gesture.m=m;tween=null;}
+  else if(action&&action.id===e.pointerId)moveAction(e);});
+function up(e){if(!pointers.has(e.pointerId))return;pointers.delete(e.pointerId);if(pointers.size<2)gesture=null;if(action&&action.id===e.pointerId)endAction();}
+canvas.addEventListener('pointerup',up);canvas.addEventListener('pointercancel',up);
+canvas.addEventListener('wheel',e=>{e.preventDefault();cam.r=clamp(cam.r*Math.exp(e.deltaY*.0012),2.5,40);tween=null;},{passive:false});
+
+const FLOW=[{key:'cut',tool:'scissors',ok:['scissors']},{key:'open',tool:'pins',ok:['pins','forceps','probe']},{key:'explore',tool:'forceps',ok:['forceps','probe','scalpel']}];
+const EXPLORE=2,TOOLNAME={scalpel:'มีดผ่าตัด',scissors:'กรรไกร',forceps:'ปากคีบ',probe:'เข็มเขี่ย',pins:'เข็มหมุด'};
+function wrongToolMsg(){return state.step===0?(state.tool==='scalpel'?'เปลือกกุ้งแข็ง ต้องใช้กรรไกรตัด ไม่ใช้มีดผ่าตัด':'ขั้นนี้ใช้กรรไกรตัดเปลือกตามเส้นประก่อน'):state.step===1?'ขั้นนี้ใช้เข็มหมุดแตะเปลือกเพื่อพลิกออกและปัก (หรือใช้ปากคีบพลิกเอง)':'ใช้ปากคีบหรือเข็มเขี่ยศึกษาอวัยวะ · มีดผ่าตัดใช้เลาะกล้ามเนื้อส่วนท้อง';}
+const nearFront=pt=>Math.abs(pt.z)<.28&&pt.x<=cutFront+.25&&pt.x>=cutFront-.6;
+function startAction(e){
+  const p={x:e.clientX,y:e.clientY},id=e.pointerId,tool=state.tool;scene.updateMatrixWorld();
+  if(e.pointerType==='mouse'&&e.button!==0){action={type:'pan',id,last:p};return;}
+  if(tool!=='view'){
+    if(!FLOW[state.step].ok.includes(tool)){toast(wrongToolMsg());}
+    else if(tool==='scissors'){const h=cast(p.x,p.y,shellMeshes());
+      if(h&&nearFront(h.point)){snap();action={type:'cut',id,last:p,off:0,snap:true};doCut(h.point);if(action)showTool('scissors',h.point);return;}
+      if(h)toast(cutFront>=CUT_START-1e-3?'เริ่มตัดที่จุดแดงบนหลังส่วนหัว แล้วลากตามเส้นประไปทางหาง':'ตัดต่อจากจุดแดง ตามเส้นประไปทางหาง');
+      action={type:'cutPending',id,last:p,start:p};return;}
+    else if(tool==='pins'){const h=cast(p.x,p.y,shellMeshes()),s=h&&h.object.userData.shell;
+      if(s){if(s.pinned)toast('เปลือกชิ้นนี้ปักหมุดไว้แล้ว');else{snap();pinFlap(s);}action={type:'none',id,last:p};return;}}
+    else if(tool==='scalpel'){const h=cast(p.x,p.y,pickList()),o=h&&h.object.userData.organ;
+      if(h&&o&&onMusLine(h.point)){snap();action={type:'mus',id,last:p,xmin:h.point.x,xmax:h.point.x,snap:true,plane:V(0,musTopY(h.point.x),0)};showMusScalpel(V(h.point.x,musTopY(h.point.x),MUS_TILT));return;}
+      if(o){showTool('scalpel',h.point);toast(o.muscle?'กรีดตามเส้นประบนกล้ามเนื้อ ลากมีดยาวตลอดแนวส่วนท้อง':'ระวัง อย่ากรีดอวัยวะ ใช้ปากคีบหรือเข็มเขี่ยแทน');action={type:'none',id,last:p};return;}
+      if(h&&h.object.userData.shell){toast('เปลือกพลิกออกแล้ว ใช้มีดเลาะกล้ามเนื้อส่วนท้อง');}}
+    else{ /* forceps / probe */
+      const h=cast(p.x,p.y,pickList());
+      if(h){const s=h.object.userData.shell,o=h.object.userData.organ;
+        if(s){if(tool==='probe'){showInfo('shell');showTool('probe',h.point);action={type:'none',id,last:p};return;}
+          if(s.pinned){toast('เปลือกชิ้นนี้ปักหมุดไว้แล้ว · ถอนหมุดได้ด้วยปุ่มย้อนกลับ');action={type:'none',id,last:p};return;}
+          snap();s.grab=true;action={type:'flap',s,id,last:p,start:p,o0:s.open,snap:true};showTool('forceps',h.point,true);return;}
+        if(o){select(o);showInfo(o.key);o.grab=true;o.lim=o.maxD*(tool==='probe'?.5:1);
+          action={type:'organ',o,tool,id,last:p,plane:h.point.clone(),normal:camDir(),p0:h.point.clone().sub(o.g.position)};showTool(tool,h.point,true);return;}}}}
+  action={type:'orbit',id,last:p};}
+function moveAction(e){
+  const p={x:e.clientX,y:e.clientY},dx=p.x-action.last.x,dy=p.y-action.last.y;
+  if(action.type==='mus'){const t=rayPlane(p.x,p.y,action.plane,UP);if(t&&onMusLine(t)){const x=clamp(t.x,MUS_X1,MUS_X0);action.xmin=Math.min(action.xmin,x);action.xmax=Math.max(action.xmax,x);showMusScalpel(V(x,musTopY(x),MUS_TILT));}}
+  if(action.type==='cutPending'){const h=cast(p.x,p.y,shellMeshes());
+    if(h&&nearFront(h.point)){snap();action={type:'cut',id:action.id,last:p,off:0,snap:true};doCut(h.point);if(action)showTool('scissors',h.point);return;}
+    if(Math.hypot(p.x-action.start.x,p.y-action.start.y)>28)action.type='orbit';}
+  if(action.type==='orbit'){cam.theta-=dx*.0075;cam.phi=clamp(cam.phi-dy*.0075,.06,1.45);tween=null;}
+  else if(action.type==='pan')pan(dx,dy);
+  else if(action.type==='cut'){const h=cast(p.x,p.y,shellMeshes());if(h){doCut(h.point);if(action)showTool('scissors',h.point);}else tools.scissors.visible=false;}
+  else if(action.type==='flap'){action.s.open=clamp(action.o0+Math.hypot(p.x-action.start.x,p.y-action.start.y)/180,0,1);
+    action.s.hinge.rotation.x=action.s.side*action.s.open*action.s.maxAng;action.s.m.updateMatrixWorld(true);showTool('forceps',action.s.m.localToWorld(action.s.pinLocal.clone()),true);}
+  else if(action.type==='organ'){const o=action.o,t=rayPlane(p.x,p.y,action.plane,action.normal);
+    if(t){const d=t.sub(action.p0),L=d.length();
+      if(L>o.lim){d.multiplyScalar(o.lim/L);if(L>o.lim*2.5&&performance.now()-lastWarn>2200){lastWarn=performance.now();toast(INFO[o.key].th+' ยังยึดติดกับเนื้อเยื่อ ขยับได้เพียงเล็กน้อย ดึงออกจากตัวไม่ได้');}}
+      o.g.position.copy(d);showTool(action.tool,action.p0.clone().add(d),true);}}
+  if(action)action.last=p;}
+function endAction(){if(!action)return;
+  if(action.type==='mus')finishMusStroke(action);
+  if(action.snap&&hist.length&&hist[hist.length-1].key===stateKey()){hist.pop();updateUndo();}
+  if(action.o)action.o.grab=false;if(action.s)action.s.grab=false;action=null;hideTools();}
+function doCut(pt){
+  if(Math.abs(pt.z)<.3&&pt.x<cutFront&&pt.x>cutFront-.6){cutFront=Math.max(CUT_END,pt.x);updateCut();action.off=0;
+    try{navigator.vibrate&&navigator.vibrate(4);}catch(_){}updateHUD();if(cutFront<=CUT_END+1e-3)finishCut();}
+  else if(Math.abs(pt.z)>.3){action.off++;if(action.off>10&&performance.now()-lastWarn>2500){lastWarn=performance.now();toast('ลากกรรไกรให้ตรงตามแนวเส้นประ');action.off=0;}}}
+function finishCut(){endAction();state.step=1;setTool('pins',true);goView('top');
+  toast('ตัดเปลือกครบแล้ว ต่อไปเลือกเข็มหมุด แตะเปลือกทีละชิ้นเพื่อพลิกออกและปักไว้กับถาด');updateHUD();
+  try{navigator.vibrate&&navigator.vibrate(20);}catch(_){}}
+function pinFlap(s){
+  const r0=s.hinge.rotation.x;s.hinge.rotation.x=s.side*s.maxAng;s.hinge.updateMatrixWorld(true);
+  const p=s.m.localToWorld(s.pinLocal.clone());s.hinge.rotation.x=r0;s.hinge.updateMatrixWorld(true);
+  s.pinned=true;
+  const g=new THREE.Group();g.position.set(p.x,0,p.z);const top=p.y+.3;
+  const sh=new THREE.Mesh(new THREE.CylinderGeometry(.013,.013,top+.12,6),MAT.steel);sh.position.y=(top-.12)/2;sh.castShadow=true;
+  const hd=new THREE.Mesh(new THREE.SphereGeometry(.055,12,10),MAT.pinHead);hd.position.y=top;hd.castShadow=true;g.add(sh,hd);g.userData.delay=performance.now();
+  g.position.y=3;g.userData.t0=performance.now();prawn.add(g);pins.push(g);
+  const left=shells.filter(x=>!x.pinned).length;
+  if(left){toast('ปักหมุดแล้ว เหลือเปลือกอีก '+left+' ชิ้น');updateHUD();}
+  else{state.step=EXPLORE;setTool('forceps',true);goView('top');
+    toast('เปิดเปลือกครบแล้ว ใช้ปากคีบแตะค้างที่อวัยวะเพื่อคีบ ขยับได้เล็กน้อยแล้วอวัยวะจะกลับที่เดิม');updateHUD();}}
+
+/* ================= HUD ================= */
+const STEPS=[
+  {title:'ตัดเปลือกตามแนวกลางหลัง',text:'เลือก <b>กรรไกร</b> วางนิ้วที่<b>จุดแดง</b>บนหลังส่วนหัว แล้วลากตาม<b>เส้นประ</b>ไปทางหางจนถึงปล้องที่ 6 · งัดปลายกรรไกรขึ้นเสมอ เพราะหัวใจอยู่ชิดใต้เปลือก'},
+  {title:'เปิดเปลือกและปักหมุด',text:'เลือก <b>เข็มหมุด</b> แล้วแตะเปลือกทีละชิ้น เปลือกจะพลิกออกด้านข้างและถูกปักไว้กับถาด · หรือใช้ <b>ปากคีบ</b> ลากพลิกเปลือกดูก่อนปัก'},
+  {title:'ศึกษาอวัยวะในตำแหน่งเดิม',text:'<b>ปากคีบ</b> แตะค้างที่อวัยวะเพื่อคีบ ขยับได้เล็กน้อยแล้วกลับที่เดิม (ดึงออกจากตัวไม่ได้) · <b>เข็มเขี่ย</b> แตะอ่านข้อมูล · <b>มีดผ่าตัด</b> กรีดตามเส้นประบนกล้ามเนื้อส่วนท้อง 2–3 ครั้ง ลึกลงจนถึงเส้นประสาทด้านท้อง · เปิดปิดแต่ละระบบได้ที่ปุ่มชั้น'}];
+let lastStep=-1,stepTimer=0;const narrow=()=>window.innerWidth<700;
+function setStepOpen(open){$('step').classList.toggle('collapsed',!open);$('stepHead').setAttribute('aria-expanded',open);}
+function openStep(auto){setStepOpen(true);clearTimeout(stepTimer);if(auto&&narrow())stepTimer=setTimeout(()=>setStepOpen(false),6000);}
+function updateHUD(){
+  const s=STEPS[state.step];$('stepNum').textContent=(state.step+1)+'/3';if(state.step!==lastStep){lastStep=state.step;openStep(true);}
+  $('stepTitle').textContent=s.title;$('stepText').innerHTML=s.text;let frac=0,lbl='';
+  if(state.step===0){frac=cutFrac();lbl='ตัดแล้ว '+Math.round(frac*100)+'%';}
+  else if(state.step===1){const n=shells.filter(x=>x.pinned).length;frac=n/shells.length;lbl='ปักหมุดแล้ว '+n+' จาก '+shells.length+' ชิ้น';}
+  else{const keys=keysFor(state.sex),n=keys.filter(k=>state.seen.has(k)).length;frac=n/keys.length;lbl='ศึกษาแล้ว '+n+' จาก '+keys.length+' อวัยวะ';
+    if(n===keys.length&&!state.allSeenToast){state.allSeenToast=true;setTimeout(()=>toast('ศึกษาอวัยวะครบแล้ว ลองสลับเพศของกุ้งเพื่อดูอวัยวะสืบพันธุ์อีกแบบ'),600);}}
+  $('progBar').style.width=Math.round(frac*100)+'%';$('progLabel').textContent=lbl;
+  const ex=state.step===EXPLORE;$('step').classList.toggle('explore',ex);
+  if(!ex){$('checklist').hidden=true;$('chkBtn').setAttribute('aria-expanded',false);}
+  else{const cl=$('checklist');cl.innerHTML='';keysFor(state.sex).forEach(k=>{const b=document.createElement('button'),done=state.seen.has(k);b.textContent=INFO[k].th;b.className=done?'done':'';
+    b.addEventListener('click',()=>{if(done)showInfo(k);else toast(k==='nerve'?'เส้นประสาทอยู่ใต้กล้ามเนื้องอ เลือกมีดผ่าตัดแล้วกรีดตามเส้นประบนกล้ามเนื้อจนถึงเส้นประสาท':'ยังไม่ได้ศึกษา '+INFO[k].th+' ลองหาแล้วคีบดู');});cl.appendChild(b);});}
+  document.querySelectorAll('.tool').forEach(b=>b.classList.toggle('suggest',b.dataset.tool===FLOW[state.step].tool));}
+let toastTimer=0,infoTimer=0;
+function toast(msg){const t=$('toast');t.textContent=msg;t.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('show'),2800);}
+function showInfo(key){const i=INFO[key];if(!i)return;$('infoTh').textContent=i.th;$('infoEn').textContent=i.en;$('infoDesc').textContent=i.desc;$('infoMove').textContent=i.move;
+  $('info').classList.add('show');$('info').classList.remove('mini');$('info').classList.toggle('clamp',narrow());
+  if(key!=='shell'){state.seen.add(key);updateHUD();}
+  clearTimeout(infoTimer);infoTimer=setTimeout(()=>$('info').classList.add('mini'),narrow()?2500:5000);}
+/* move the tray in the screen plane (two-finger drag, or right-drag with a mouse) */
+function pan(dx,dy){const h=canvas.clientHeight||window.innerHeight,k=2*cam.r*Math.tan(camera.fov*PI/360)/h;
+  camera.updateMatrixWorld();const right=new V3().setFromMatrixColumn(camera.matrixWorld,0),upv=new V3().setFromMatrixColumn(camera.matrixWorld,1);
+  cam.target.addScaledVector(right,-dx*k).addScaledVector(upv,dy*k);
+  cam.target.set(clamp(cam.target.x,-7,9),clamp(cam.target.y,-3,4),clamp(cam.target.z,-6,6));tween=null;}
+function hideInfo(){$('info').classList.remove('show');clearSel();}
+function select(o){clearSel();selected=o;o.meshes.forEach(m=>m.material.emissive&&m.material.emissive.setHex(0x2a2a2a));}
+function clearSel(){if(selected)selected.meshes.forEach(m=>m.material.emissive&&m.material.emissive.setHex(0));selected=null;}
+function setTool(t,silent){state.tool=t;document.querySelectorAll('.tool').forEach(b=>{const on=b.dataset.tool===t;b.classList.toggle('on',on);b.setAttribute('aria-pressed',on);});
+  canvas.className='t-'+t;if(silent)return;if(TOOLNAME[t]&&!FLOW[state.step].ok.includes(t))toast(wrongToolMsg());updateHUD();}
+function applySex(){$('sexTxt').textContent=state.sex==='male'?'♂':'♀';$('btnSex').title='สลับเพศ: '+(state.sex==='male'?'ตัวผู้':'ตัวเมีย');applyLayers();}
+
+document.querySelectorAll('.tool').forEach(b=>b.addEventListener('click',()=>setTool(b.dataset.tool)));
+const VIEWS=[['full','มุมมองรวม'],['top','มุมบน'],['side','มุมข้าง']];
+$('btnView').addEventListener('click',()=>{viewIdx=(viewIdx+1)%VIEWS.length;goView(VIEWS[viewIdx][0]);toast(VIEWS[viewIdx][1]);});
+$('btnLabels').addEventListener('click',()=>{state.labels=!state.labels;$('btnLabels').classList.toggle('on',state.labels);$('btnLabels').setAttribute('aria-pressed',state.labels);
+  if(state.labels&&state.step<EXPLORE&&!layerOn.ghost)toast('ป้ายชื่อจะแสดงเมื่อเปิดเปลือกแล้ว หรือเปิด “เปลือกโปร่งแสง” ในเมนูชั้น');});
+$('btnSex').addEventListener('click',()=>{state.sex=state.sex==='male'?'female':'male';if(selected&&selected.sex)hideInfo();applySex();state.allSeenToast=false;updateHUD();
+  toast(state.sex==='male'?'กุ้งตัวผู้: อัณฑะสีขาวครีม ท่อนำอสุจิเปิดที่โคนขาคู่ที่ 5':'กุ้งตัวเมีย: รังไข่สีส้ม ท่อนำไข่เปิดที่โคนขาคู่ที่ 3');});
+$('btnUndo').addEventListener('click',()=>undo());
+$('btnRestart').addEventListener('click',()=>{endAction();build();goView('full');viewIdx=0;toast('เริ่มผ่าใหม่');});
+{const r=document.createElement('div');r.className='lall';r.innerHTML='<button id="lyAll">แสดงทั้งหมด</button><button id="lyIn">ซ่อนเปลือก</button>';$('layerList').appendChild(r);}
+LAYERS.forEach(L=>{if(L.sep){const sp=document.createElement('div');sp.className='lsep';$('layerList').appendChild(sp);}
+  const row=document.createElement('label');row.className='lrow';
+  row.innerHTML=(L.dot?`<span class="dot" style="background:${L.dot}"></span>`:'<span class="dot" style="background:transparent;border-style:dashed"></span>')+
+    `<span class="txt"><b>${L.th}</b><small>${L.sub}</small></span>`+(SYSIDS.includes(L.id)?`<button class="solo" type="button">เดี่ยว</button>`:'')+`<input type="checkbox" data-layer="${L.id}" aria-label="${L.th}">`;
+  row.querySelector('input').addEventListener('change',e=>setLayer(L.id,e.target.checked));
+  const sb=row.querySelector('.solo');if(sb)sb.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();soloLayer(L.id);});
+  $('layerList').appendChild(row);});
+$('lyAll').addEventListener('click',allLayers);
+$('lyIn').addEventListener('click',()=>{layerOn.exo=false;applyLayers();});
+$('btnLayers').addEventListener('click',()=>{const open=!$('layerPanel').classList.contains('show');$('layerPanel').classList.toggle('show',open);$('btnLayers').classList.toggle('on',open);$('btnLayers').setAttribute('aria-expanded',open);});
+canvas.addEventListener('pointerdown',()=>{
+  if(narrow()){if($('info').classList.contains('show')){clearTimeout(infoTimer);$('info').classList.add('mini');}clearTimeout(stepTimer);setStepOpen(false);}
+  if($('layerPanel').classList.contains('show')){$('layerPanel').classList.remove('show');$('btnLayers').classList.remove('on');$('btnLayers').setAttribute('aria-expanded',false);}},true);
+$('chkBtn').addEventListener('click',e=>{e.stopPropagation();const c=$('checklist');c.hidden=!c.hidden;$('chkBtn').setAttribute('aria-expanded',!c.hidden);$('chkBtn').textContent=c.hidden?'รายการ ▾':'ซ่อน ▴';setStepOpen(true);});
+$('infoClose').addEventListener('click',e=>{e.stopPropagation();hideInfo();});
+$('info').addEventListener('click',()=>{const el=$('info');clearTimeout(infoTimer);if(el.classList.contains('mini')){el.classList.remove('mini');el.classList.remove('clamp');}else el.classList.toggle('clamp');});
+$('stepHead').addEventListener('click',()=>{clearTimeout(stepTimer);setStepOpen($('step').classList.contains('collapsed'));});
+
+/* ================= labels ================= */
+function updateLabels(){const show=state.labels&&(state.step>=EXPLORE||layerOn.ghost);
+  organs.forEach(o=>{if(!o.el)return;if(!show||!visibleDeep(o.g)){o.el.style.display='none';return;}
+    const p=o.anchor.clone().add(o.g.position);p.y+=.14;const s=toScreen(p);if(s.z>1){o.el.style.display='none';return;}
+    o.el.style.display='block';o.el.style.left=s.x+'px';o.el.style.top=s.y+'px';});}
+
+/* ================= loop ================= */
+let last=performance.now();
+function frame(now){
+  requestAnimationFrame(frame);const dt=Math.min(.05,(now-last)/1000);last=now;
+  if(tween){const u=clamp((now-tween.t0)/tween.dur,0,1),k=ease(u),f=tween.from,t=tween.to;cam.target.lerpVectors(f.target,t.target,k);cam.theta=f.theta+(t.theta-f.theta)*k;cam.phi=f.phi+(t.phi-f.phi)*k;cam.r=f.r+(t.r-f.r)*k;if(u>=1)tween=null;}
+  updateCam();
+  if(tools.scissors.visible){const a=(action&&action.type==='cut')?.04+.2*(.5+.5*Math.sin(now/75)):.12;tools.scissors.userData.halves.forEach(h=>h.rotation.z=h.userData.s*a);}
+  organs.forEach(o=>{if(o.grab)return;const p=o.g.position;if(p.lengthSq()<1e-9&&o.vel.lengthSq()<1e-9)return;
+    o.vel.addScaledVector(p,-60*dt).multiplyScalar(Math.exp(-8*dt));p.addScaledVector(o.vel,dt);});
+  let anyOpen=false;
+  shells.forEach(s=>{if(s.pinned)s.open+=(1-s.open)*Math.min(1,dt*5);
+    else if(!s.grab){const tg=state.step>=1?Math.min(s.open,.3):0;s.open+=(tg-s.open)*Math.min(1,dt*4);}
+    s.hinge.rotation.x=s.side*s.open*s.maxAng;if(s.open>.4)anyOpen=true;});
+  pins.forEach(g=>{if(g.position.y>0){const u=clamp((now-g.userData.t0)/450,0,1);g.position.y=3*(1-u*u);}});
+  const musOn=state.step===EXPLORE&&state.tool==='scalpel'&&layerOn.mus&&musStrokes<3;musDash.forEach(m=>m.visible=musOn);
+  {const tg=musStrokes;if(Math.abs(musOpen-tg)>1e-4){musOpen+=(tg-musOpen)*Math.min(1,dt*2.2);if(Math.abs(musOpen-tg)<.004)musOpen=tg;musDeform();}}
+  if(musDash.length&&musDash._s!==musStrokes){musDash._s=musStrokes;placeMusDash();}
+  const guideOn=state.step===0&&layerOn.exo;dashes.forEach(m=>m.visible=guideOn&&m.userData.x<=cutFront+.01);marker.visible=guideOn&&cutFront>CUT_END+.02;
+  if(cutMesh)cutMesh.visible=layerOn.exo&&state.step===0;
+  if(guideOn||musOn)MAT.dash.color.lerpColors(DASH_A,DASH_B,.5+.5*Math.sin(now/260));
+  if(guideOn){marker.scale.setScalar(1+.4*Math.abs(Math.sin(now/260)));}
+  updateLabels();renderer.render(scene,camera);}
+window.addEventListener('resize',()=>{resize();});
+function relayout(){resize();const d=$('dock');d.style.display='none';void d.offsetHeight;d.style.display='';}
+if(window.visualViewport)visualViewport.addEventListener('resize',relayout);
+window.addEventListener('orientationchange',()=>setTimeout(relayout,250));
+window.addEventListener('pageshow',()=>setTimeout(relayout,60));
+[120,500,1200].forEach(t=>setTimeout(relayout,t));
+resize();build();goView('full',true);requestAnimationFrame(frame);
+setTimeout(()=>toast('เริ่มจากเลือกกรรไกรในถาดเครื่องมือด้านล่าง · ใช้สองนิ้วลากเพื่อเลื่อนถาด หยิกเพื่อซูม'),700);
+})();
+</script>
+</body>
+</html>

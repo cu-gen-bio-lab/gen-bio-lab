@@ -1,0 +1,348 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Random Number Reels</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;700&family=Sarabun:wght@400;600&display=swap">
+<style>
+/* Layout: one-screen machine — digit control on top, reel window centered, spin lever-button at the bottom, history below */
+:root {
+  --bg: #e7ebee;
+  --cabinet: #12343b;
+  --cabinet-2: #1b4a53;
+  --window: #fbfaf6;
+  --ink: #18242a;
+  --muted: #5d6c72;
+  --brass: #c4912f;
+  --brass-hi: #e2b357;
+  --line: #c9d1d5;
+  --chip: #ffffff;
+  --font-display: "Chakra Petch", "Sarabun", system-ui, sans-serif;
+  --font-body: "Sarabun", system-ui, sans-serif;
+  --cell: clamp(56px, 13vw, 92px);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0c1416; --cabinet: #0f2b31; --cabinet-2: #173f47; --window: #eeece4;
+    --ink: #e3eaec; --muted: #93a4aa; --brass: #d3a243; --brass-hi: #ecc272;
+    --line: #2a3b40; --chip: #142226; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0c1416; --cabinet: #0f2b31; --cabinet-2: #173f47; --window: #eeece4;
+  --ink: #e3eaec; --muted: #93a4aa; --brass: #d3a243; --brass-hi: #ecc272;
+  --line: #2a3b40; --chip: #142226; color-scheme: dark;
+}
+html, body { height: 100%; }
+body {
+  background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 15px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 24px;
+  box-sizing: border-box;
+}
+.wrap { max-width: 980px; margin: 0 auto; display: grid; gap: 20px; }
+header { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 12px; }
+h1 { font-family: var(--font-display); font-weight: 700; font-size: 1.6rem; margin: 0; letter-spacing: .01em; text-wrap: balance; }
+.sub { color: var(--muted); margin: 4px 0 0; font-size: .9rem; }
+
+.machine {
+  background: linear-gradient(180deg, var(--cabinet-2), var(--cabinet));
+  border-radius: 22px; padding: 22px clamp(14px, 3vw, 28px) 26px;
+  display: grid; gap: 22px; justify-items: center;
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--brass) 45%, transparent), 0 14px 40px rgb(0 0 0 / .18);
+}
+
+/* digit control */
+.control { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 12px; color: #e8efe9; }
+.control label { font-family: var(--font-display); font-weight: 500; letter-spacing: .06em; font-size: .9rem; }
+.stepper { display: flex; align-items: center; background: rgb(0 0 0 / .25); border-radius: 999px; padding: 4px; gap: 4px; }
+.stepper button {
+  width: 40px; height: 40px; border-radius: 50%; border: 0; cursor: pointer;
+  background: var(--brass); color: #1a1405; font: 700 1.3rem/1 var(--font-display);
+}
+.stepper button:hover { background: var(--brass-hi); }
+.stepper button:disabled { opacity: .35; cursor: default; }
+.stepper input {
+  width: 3.2ch; text-align: center; border: 0; background: transparent; color: #fff;
+  font: 700 1.4rem var(--font-display); font-variant-numeric: tabular-nums; -moz-appearance: textfield;
+}
+.stepper input::-webkit-inner-spin-button, .stepper input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+.presets { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }
+.presets button {
+  border: 1px solid color-mix(in srgb, var(--brass) 60%, transparent); background: transparent; color: #f3e6c8;
+  border-radius: 999px; padding: 4px 12px; font: 500 .85rem var(--font-display); cursor: pointer;
+}
+.presets button[aria-pressed="true"] { background: var(--brass); color: #1a1405; border-color: var(--brass); }
+
+/* reels */
+.window-frame {
+  max-width: 100%; overflow-x: auto; padding: 10px; border-radius: 16px;
+  background: linear-gradient(180deg, #0a1f23, #06171a);
+  box-shadow: inset 0 0 0 3px var(--brass), inset 0 6px 14px rgb(0 0 0 / .6);
+}
+.reels { display: flex; gap: clamp(4px, 1vw, 8px); padding: 4px; }
+.reel {
+  position: relative; width: calc(var(--cell) * .78); height: calc(var(--cell) * 1.5);
+  overflow: hidden; border-radius: 8px; background: var(--window); flex: 0 0 auto;
+}
+.reel::after { /* drum shading */
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(180deg, rgb(0 0 0 / .38), rgb(0 0 0 / 0) 30%, rgb(0 0 0 / 0) 70%, rgb(0 0 0 / .38));
+}
+.strip { position: absolute; left: 0; right: 0; top: calc(var(--cell) * .25); will-change: transform; }
+.strip span {
+  display: grid; place-items: center; height: var(--cell);
+  font: 700 calc(var(--cell) * .78)/1 var(--font-display); color: #18242a; font-variant-numeric: tabular-nums;
+}
+.reel.blur .strip span { filter: blur(1.2px); }
+.payline { display: flex; align-items: center; gap: 10px; color: var(--brass-hi); font: 500 .78rem var(--font-display); letter-spacing: .14em; }
+.payline::before, .payline::after { content: ""; height: 1px; width: 40px; background: currentColor; opacity: .6; }
+
+/* spin */
+.spin {
+  border: 0; cursor: pointer; border-radius: 999px; padding: 16px 48px; min-width: 220px;
+  background: radial-gradient(circle at 50% 30%, var(--brass-hi), var(--brass) 70%);
+  color: #1a1405; font: 700 1.35rem var(--font-display); letter-spacing: .08em;
+  box-shadow: 0 6px 0 #7d5a17, 0 10px 18px rgb(0 0 0 / .3);
+  transition: transform .08s, box-shadow .08s;
+}
+.spin:active:not(:disabled) { transform: translateY(5px); box-shadow: 0 1px 0 #7d5a17, 0 3px 8px rgb(0 0 0 / .3); }
+.spin:disabled { filter: saturate(.4) brightness(.9); cursor: progress; }
+.hint { color: #b9cacd; font-size: .82rem; margin-top: -10px; }
+.hint kbd { font-family: var(--font-display); border: 1px solid #5f7f85; border-radius: 4px; padding: 0 5px; }
+:focus-visible { outline: 3px solid var(--brass-hi); outline-offset: 3px; }
+
+/* result + history */
+.panel { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; }
+@media (max-width: 640px) { .panel { grid-template-columns: minmax(0, 1fr); } }
+.card { background: var(--chip); border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px; min-width: 0; }
+.card h2 { font: 600 .8rem var(--font-display); letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin: 0 0 10px; }
+.result-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.result { font: 700 1.9rem var(--font-display); font-variant-numeric: tabular-nums; letter-spacing: .08em; word-break: break-all; min-width: 0; }
+.ghost {
+  border: 1px solid var(--line); background: transparent; color: var(--ink); border-radius: 8px;
+  padding: 6px 12px; font: 500 .85rem var(--font-body); cursor: pointer;
+}
+.ghost:hover { border-color: var(--brass); }
+.meta { color: var(--muted); font-size: .85rem; margin: 8px 0 0; }
+ol.history { margin: 0; padding: 0; list-style: none; display: grid; gap: 4px; max-height: 220px; overflow-y: auto; }
+ol.history li { display: flex; justify-content: space-between; gap: 12px; font-variant-numeric: tabular-nums; border-bottom: 1px dashed var(--line); padding: 4px 0; }
+ol.history li b { font-family: var(--font-display); letter-spacing: .06em; word-break: break-all; }
+ol.history li small { color: var(--muted); flex: 0 0 auto; }
+.empty { color: var(--muted); font-size: .9rem; }
+.opts { display: flex; align-items: center; gap: 8px; color: #d7e3e5; font-size: .88rem; }
+</style>
+
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Random Number Reels</h1>
+      <p class="sub">A replacement for a random number table. Each digit is drawn independently from 0–9 with equal probability 1/10.</p>
+    </div>
+  </header>
+
+  <section class="machine" aria-label="Random number machine">
+    <div class="control">
+      <label for="digits">DIGITS</label>
+      <div class="stepper">
+        <button id="minus" type="button" aria-label="Fewer digits">−</button>
+        <input id="digits" type="number" min="1" max="10" value="3" inputmode="numeric">
+        <button id="plus" type="button" aria-label="More digits">+</button>
+      </div>
+      <div class="presets" id="presets" aria-label="Common digit counts"></div>
+    </div>
+
+    <div class="window-frame">
+      <div class="reels" id="reels" aria-live="polite"></div>
+    </div>
+    <div class="payline">RESULT</div>
+
+    <button class="spin" id="spin" type="button">SPIN</button>
+    <div class="hint">Press <kbd>Space</kbd> or <kbd>Enter</kbd> to spin</div>
+    <label class="opts"><input type="checkbox" id="unique"> No repeats (sampling without replacement)</label>
+  </section>
+
+  <section class="panel">
+    <div class="card">
+      <h2>Latest result</h2>
+      <div class="result-row">
+        <div class="result" id="result">—</div>
+        <button class="ghost" id="copy" type="button">Copy</button>
+      </div>
+      <p class="meta" id="meta">Example: press Spin to start</p>
+    </div>
+    <div class="card">
+      <div class="result-row" style="margin-bottom:10px">
+        <h2 style="margin:0">History (<span id="count">0</span>)</h2>
+        <div style="display:flex;gap:6px">
+          <button class="ghost" id="copyAll" type="button">Copy all</button>
+          <button class="ghost" id="clear" type="button">Clear</button>
+        </div>
+      </div>
+      <ol class="history" id="history"><li class="empty">No numbers drawn yet</li></ol>
+    </div>
+  </section>
+</div>
+
+<script>
+(() => {
+  const MIN = 1, MAX = 10;
+  const $ = id => document.getElementById(id);
+  const reelsEl = $('reels'), digitsEl = $('digits'), spinBtn = $('spin');
+  let n = 3, spinning = false, history = [], used = new Set();
+
+  // Uniform integer in [0, k) from the CSPRNG, using rejection sampling to avoid modulo bias.
+  function randInt(k) {
+    const limit = Math.floor(0x100000000 / k) * k;
+    const buf = new Uint32Array(1);
+    let x;
+    do { crypto.getRandomValues(buf); x = buf[0]; } while (x >= limit);
+    return x % k;
+  }
+  const randDigits = len => Array.from({ length: len }, () => randInt(10));
+
+  function cellPx() { return reelsEl.querySelector('.strip span')?.offsetHeight || 80; }
+
+  function buildReels() {
+    reelsEl.innerHTML = '';
+    for (let i = 0; i < n; i++) {
+      const reel = document.createElement('div');
+      reel.className = 'reel';
+      reel.innerHTML = '<div class="strip"><span>0</span></div>';
+      reelsEl.appendChild(reel);
+    }
+    fitReels();
+    reelsEl.setAttribute('aria-label', n + '-digit reels');
+  }
+
+  // shrink the reels so every digit fits on one screen width
+  function fitReels() {
+    const machine = reelsEl.closest('.machine');
+    const avail = machine.clientWidth - 60;
+    const cell = Math.max(26, Math.min(92, (avail - n * 8) / (n * 0.78)));
+    reelsEl.style.setProperty('--cell', cell + 'px');
+  }
+  addEventListener('resize', () => { if (!spinning) fitReels(); });
+
+  function setDigits(v) {
+    v = Math.max(MIN, Math.min(MAX, parseInt(v, 10) || MIN));
+    if (v === n && reelsEl.children.length === n) { digitsEl.value = v; return; }
+    n = v; digitsEl.value = v;
+    $('minus').disabled = v <= MIN; $('plus').disabled = v >= MAX;
+    document.querySelectorAll('#presets button').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.v === v)));
+    used = new Set(history.filter(h => h.length === n));
+    buildReels();
+    updateMeta();
+  }
+
+  function updateMeta(last) {
+    const total = 10 ** n;
+    let txt = 'Range ' + '0'.repeat(n) + ' – ' + '9'.repeat(n) + ' · ' + total.toLocaleString('en-US') + ' possible values · each has probability 1/' + total.toLocaleString('en-US');
+    if ($('unique').checked) txt += ' · used ' + used.size.toLocaleString('en-US');
+    $('meta').textContent = last ? txt : 'Example: press Spin to start · ' + txt;
+  }
+
+  function drawTarget() {
+    if (!$('unique').checked) return randDigits(n);
+    const total = 10 ** n;
+    if (used.size >= total) return null;
+    let d;
+    do { d = randDigits(n); } while (used.has(d.join('')));
+    return d;
+  }
+
+  function spin() {
+    if (spinning) return;
+    const target = drawTarget();
+    if (!target) { $('meta').textContent = 'Every value has been drawn. Press "Clear" to start over.'; return; }
+    spinning = true; spinBtn.disabled = true;
+    const h = cellPx();
+    const reels = [...reelsEl.children];
+    let pending = reels.length;
+
+    reels.forEach((reel, i) => {
+      const strip = reel.querySelector('.strip');
+      const current = strip.lastElementChild.textContent;
+      const done = () => {
+        strip.style.transition = 'none';
+        strip.style.transform = 'translateY(0)';
+        strip.innerHTML = '<span>' + target[i] + '</span>';
+        reel.classList.remove('blur');
+        if (--pending === 0) finish(target);
+      };
+      const fillers = 14 + i * 3;
+      let html = '<span>' + current + '</span>';
+      for (let k = 0; k < fillers; k++) html += '<span>' + randInt(10) + '</span>';
+      html += '<span>' + target[i] + '</span>';
+      strip.innerHTML = html;
+      strip.style.transition = 'none';
+      strip.style.transform = 'translateY(0)';
+      strip.offsetHeight; // reflow
+      reel.classList.add('blur');
+      // every reel stops within 1 second total; left reel first, right reel last at 1000ms
+      const dur = reels.length > 1 ? 600 + i * (400 / (reels.length - 1)) : 1000;
+      // frame-by-frame animation (independent of OS animation settings and CSS transitions)
+      const dist = (fillers + 1) * h;
+      const ease = t => 1 - Math.pow(1 - t, 3); // ease-out cubic
+      const t0 = performance.now();
+      const step = now => {
+        const t = Math.min(1, (now - t0) / dur);
+        strip.style.transform = 'translateY(' + (-dist * ease(t)) + 'px)';
+        if (t > 0.7) reel.classList.remove('blur');
+        if (t < 1) requestAnimationFrame(step); else done();
+      };
+      requestAnimationFrame(step);
+    });
+  }
+
+  function finish(target) {
+    const s = target.join('');
+    history.unshift(s); used.add(s);
+    $('result').textContent = s;
+    renderHistory(); updateMeta(true);
+    spinning = false; spinBtn.disabled = false; spinBtn.focus({ preventScroll: true });
+  }
+
+  function renderHistory() {
+    const ol = $('history');
+    $('count').textContent = history.length;
+    if (!history.length) { ol.innerHTML = '<li class="empty">No numbers drawn yet</li>'; return; }
+    ol.innerHTML = history.map((s, i) => '<li><b>' + s + '</b><small>#' + (history.length - i) + '</small></li>').join('');
+  }
+
+  async function copy(text, btn) {
+    const old = btn.textContent;
+    try { await navigator.clipboard.writeText(text); btn.textContent = 'Copied'; }
+    catch { btn.textContent = 'Copy failed'; }
+    setTimeout(() => btn.textContent = old, 1400);
+  }
+
+  // presets
+  [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].forEach(v => {
+    const b = document.createElement('button');
+    b.type = 'button'; b.dataset.v = v; b.textContent = v + (v === 1 ? ' digit' : ' digits');
+    b.addEventListener('click', () => setDigits(v));
+    $('presets').appendChild(b);
+  });
+
+  $('minus').addEventListener('click', () => setDigits(n - 1));
+  $('plus').addEventListener('click', () => setDigits(n + 1));
+  digitsEl.addEventListener('change', () => setDigits(digitsEl.value));
+  spinBtn.addEventListener('click', spin);
+  $('unique').addEventListener('change', () => updateMeta(history.length > 0));
+  $('copy').addEventListener('click', e => history[0] && copy(history[0], e.currentTarget));
+  $('copyAll').addEventListener('click', e => history.length && copy([...history].reverse().join('\n'), e.currentTarget));
+  $('clear').addEventListener('click', () => { history = []; used = new Set(); $('result').textContent = '—'; renderHistory(); updateMeta(); });
+  document.addEventListener('keydown', e => {
+    if ((e.key === ' ' || e.key === 'Enter') && !e.target.closest('input, button')) { e.preventDefault(); spin(); }
+  });
+
+  n = 0; setDigits(3);
+  // opening frame shows a sample draw on the reels (not recorded in history)
+  const sample = randDigits(3);
+  [...reelsEl.children].forEach((r, i) => r.querySelector('.strip').innerHTML = '<span>' + sample[i] + '</span>');
+})();
+</script>
+
+</body></html>

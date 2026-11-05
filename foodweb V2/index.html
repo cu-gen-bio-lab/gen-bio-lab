@@ -1,0 +1,929 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>สายใยอาหารในแหล่งน้ำ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Mitr:wght@400;500&family=Sarabun:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#e6efee; --paper:#ffffff; --ink:#17323a; --muted:#5b7279;
+  --accent:#0f7c86; --accent-ink:#ffffff; --line:#17323a; --danger:#c43d2f;
+  --hl:rgba(15,124,134,.14); --used:#a9b8bb; --dot:rgba(23,50,58,.09); --btn:#d5e3e2;
+  --frame:#9fbcbd;
+  color-scheme: light;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0f1b1e; --paper:#172629; --ink:#e3eeec; --muted:#8fa6a9;
+    --accent:#3fb6bf; --accent-ink:#06262a; --line:#d8e6e4; --danger:#ff7a6b;
+    --hl:rgba(63,182,191,.2); --used:#4a5d61; --dot:rgba(255,255,255,.06); --btn:#22373b;
+    --frame:#3e5d61;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0f1b1e; --paper:#172629; --ink:#e3eeec; --muted:#8fa6a9;
+  --accent:#3fb6bf; --accent-ink:#06262a; --line:#d8e6e4; --danger:#ff7a6b;
+  --hl:rgba(63,182,191,.2); --used:#4a5d61; --dot:rgba(255,255,255,.06); --btn:#22373b;
+  --frame:#3e5d61;
+  color-scheme: dark;
+}
+*,*::before,*::after{box-sizing:border-box}
+html{height:100%;scroll-padding-top:env(safe-area-inset-top,0px)}
+body{
+  height:100%;margin:0;background:var(--bg);color:var(--ink);
+  font-family:'Sarabun','Leelawadee UI','Thonburi','Noto Sans Thai',Tahoma,sans-serif;
+  overflow:hidden;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;
+}
+#app{position:relative;height:100%;overflow:hidden}
+.view{
+  position:absolute;inset:0;display:flex;flex-direction:column;
+  transition:transform .28s ease;
+}
+#app[data-view="info"] #infoView{transform:translateX(0)}
+#app[data-view="info"] #listView{transform:translateX(100%)}
+#app[data-view="info"] #boardView{transform:translateX(200%)}
+#app[data-view="list"] #infoView{transform:translateX(-100%)}
+#app[data-view="list"] #listView{transform:translateX(0)}
+#app[data-view="list"] #boardView{transform:translateX(100%)}
+#app[data-view="board"] #infoView{transform:translateX(-200%)}
+#app[data-view="board"] #listView{transform:translateX(-100%)}
+#app[data-view="board"] #boardView{transform:translateX(0)}
+
+/* Student info page */
+#infoView{overflow-y:auto;align-items:center;justify-content:center;padding:1.5rem 1rem}
+.form{width:100%;max-width:26rem;display:flex;flex-direction:column;gap:1rem}
+.form h1{margin:0 0 .3rem;font-size:clamp(1.6rem,4.5vw,2.2rem)}
+.form .lead{margin:0 0 .4rem;color:var(--muted)}
+.field{display:flex;flex-direction:column;gap:.3rem}
+.field label{font-weight:600}
+.field input{
+  font:inherit;font-size:1.15rem;color:var(--ink);background:var(--paper);
+  border:2px solid var(--btn);border-radius:12px;padding:.6rem .8rem;
+  -webkit-user-select:text;user-select:text;
+}
+.field input:focus{outline:none;border-color:var(--accent)}
+.field input.bad{border-color:var(--danger)}
+#formMsg{margin:0;min-height:1.4em;color:var(--danger)}
+.form button{align-self:stretch;font-size:1.1rem;min-height:50px}
+.who{background:transparent;color:var(--muted);padding:.4rem .6rem;text-decoration:underline;text-underline-offset:3px}
+@media (prefers-reduced-motion: reduce){.view{transition:none}}
+
+.bar{
+  display:flex;flex-wrap:wrap;align-items:center;gap:.5rem;
+  padding:.7rem max(.8rem, env(safe-area-inset-left,0px)) .5rem;
+}
+h1{
+  font-family:'Mitr','Sarabun',sans-serif;font-weight:500;
+  font-size:clamp(1.25rem,2.6vw,1.7rem);margin:0;margin-right:auto;
+}
+button{
+  font:inherit;font-size:1rem;color:var(--ink);background:var(--btn);
+  border:0;border-radius:999px;padding:.5rem 1rem;cursor:pointer;
+  min-height:44px;touch-action:manipulation;
+}
+button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+button.primary{background:var(--accent);color:var(--accent-ink);font-weight:600}
+button:disabled{opacity:.45;cursor:default}
+.spacer{flex:1}
+#clear.confirm{background:var(--danger);color:#fff}
+
+.hint{margin:0;padding:0 1rem .4rem;color:var(--muted);font-size:.95rem}
+
+/* List page: names in framed chips */
+.names{
+  flex:1;overflow-y:auto;padding:.6rem 1rem 2rem;
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(9.5em,1fr));
+  gap:.6rem;align-content:start;
+  font-size:clamp(18px,2.4vw,26px);
+  -webkit-overflow-scrolling:touch;overscroll-behavior:contain;
+}
+.name{
+  display:flex;align-items:center;justify-content:center;text-align:center;
+  min-height:2.6em;padding:.35em .5em;cursor:grab;
+  touch-action:pan-y;line-height:1.25;
+  background:var(--paper);border:1.5px solid var(--frame);border-radius:12px;
+  transition:opacity .15s, background-color .15s, border-color .15s;
+}
+.name.used{color:var(--used);cursor:default;background:transparent;border-style:dashed;border-color:var(--btn)}
+.name.held{background:var(--hl);border-color:var(--accent);color:var(--accent);font-weight:600}
+.name.lifting{opacity:.3}
+@media (max-width:600px){
+  .names{grid-template-columns:repeat(2,minmax(0,1fr));font-size:17px;gap:.5rem;padding:.4rem .7rem 2rem}
+  .name{min-height:2.9em}
+}
+
+/* Board page */
+#board{
+  position:relative;flex:1;margin:0 .6rem .6rem;border-radius:16px;overflow:hidden;
+  background-color:var(--paper);
+  background-image:radial-gradient(var(--dot) 1.2px, transparent 1.2px);
+  background-size:26px 26px;touch-action:none;
+  transition:box-shadow .15s;
+}
+#board.drop{box-shadow:inset 0 0 0 3px var(--accent)}
+#board.placing{cursor:copy}
+#edges{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible}
+.edge{fill:none;stroke:var(--line);stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}
+.edge.dim{opacity:.25}
+.edge.focus{stroke:var(--danger)}
+.arrowhead{fill:var(--line)}
+.arrowhead-focus{fill:var(--danger)}
+#temp{fill:none;stroke:var(--accent);stroke-width:2.6;stroke-dasharray:7 6;stroke-linecap:round;stroke-linejoin:round}
+.arrowhead-temp{fill:var(--accent)}
+#nodes{position:absolute;inset:0;pointer-events:none}
+.node{
+  position:absolute;transform:translate(-50%,-50%);pointer-events:auto;
+  white-space:nowrap;font-size:clamp(19px,2.5vw,27px);line-height:1.25;
+  padding:.15em .45em;border-radius:10px;background:var(--paper);
+  touch-action:none;cursor:pointer;
+}
+.node.src,.node.target,.node.selected{background:var(--hl)}
+.node.armed{background:var(--hl);color:var(--accent);font-weight:600;cursor:grab}
+
+/* Node menu */
+.menu{
+  position:absolute;z-index:5;display:flex;gap:4px;padding:5px;
+  background:var(--paper);border-radius:999px;
+  box-shadow:0 6px 20px rgba(10,40,45,.18),0 0 0 1px var(--btn);
+}
+.menu[hidden]{display:none}
+.menu button{min-height:42px;padding:.4rem .9rem;white-space:nowrap}
+.menu button[data-act="edges"]{color:var(--danger)}
+
+/* X buttons on lines */
+#xs{position:absolute;inset:0;pointer-events:none}
+.xbtn{
+  position:absolute;transform:translate(-50%,-50%);pointer-events:auto;
+  width:38px;height:38px;min-height:0;padding:0;border-radius:50%;
+  background:var(--danger);color:#fff;font-size:1.25rem;line-height:38px;font-weight:600;
+  box-shadow:0 0 0 3px var(--paper);
+}
+#empty{
+  position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  margin:0;padding:1rem;text-align:center;color:var(--muted);font-size:1.15rem;pointer-events:none;
+}
+#empty[hidden]{display:none}
+
+#ghost{
+  position:fixed;left:0;top:0;z-index:50;pointer-events:none;white-space:nowrap;
+  font-size:clamp(22px,3vw,30px);font-weight:600;color:var(--accent);
+  transform:translate(-50%,-120%);
+}
+#ghost[hidden]{display:none}
+</style>
+</head>
+<body>
+<div id="app" data-view="info">
+
+  <section id="infoView" class="view" aria-label="ข้อมูลนิสิต">
+    <form id="infoForm" class="form" novalidate>
+      <h1>สายใยอาหารในแหล่งน้ำ</h1>
+      <p class="lead">กรอกข้อมูลก่อนเริ่มทำกิจกรรม</p>
+      <div class="field"><label for="fFirst">ชื่อ</label><input id="fFirst" autocomplete="off" required></div>
+      <div class="field"><label for="fLast">นามสกุล</label><input id="fLast" autocomplete="off" required></div>
+      <div class="field"><label for="fId">รหัสนิสิต</label><input id="fId" inputmode="numeric" autocomplete="off" required></div>
+      <p id="formMsg" role="alert"></p>
+      <button type="submit" class="primary">เริ่มทำกิจกรรม</button>
+    </form>
+  </section>
+
+  <section id="listView" class="view" aria-label="รายชื่อสิ่งมีชีวิต">
+    <header class="bar">
+      <h1>สิ่งมีชีวิตในแหล่งน้ำ</h1>
+      <button id="toInfo" class="who" title="แก้ไขข้อมูลนิสิต"></button>
+      <button id="toBoard" class="primary">ไปหน้าวาง</button>
+    </header>
+    <p class="hint">แตะชื่อ แล้วแตะตำแหน่งที่ต้องการวาง หรือกดค้างที่ชื่อแล้วลากไปวาง</p>
+    <div id="names" class="names"></div>
+  </section>
+
+  <section id="boardView" class="view" aria-label="หน้าวาง">
+    <header class="bar">
+      <button id="toList" class="primary">รายชื่อ <span id="remain"></span></button>
+      <span class="spacer"></span>
+      <button id="undo" disabled>↶ ย้อนกลับ</button>
+      <button id="clear">ล้างทั้งหมด</button>
+      <button id="exportBtn" class="primary">บันทึกเป็น JPG</button>
+    </header>
+    <p id="status" class="hint"></p>
+    <div id="board">
+      <svg id="edges" aria-hidden="true">
+        <defs>
+          <marker id="head" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+            <path class="arrowhead" d="M0,0 L10,5 L0,10 z"/>
+          </marker>
+          <marker id="headFocus" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+            <path class="arrowhead-focus" d="M0,0 L10,5 L0,10 z"/>
+          </marker>
+          <marker id="headTemp" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+            <path class="arrowhead-temp" d="M0,0 L10,5 L0,10 z"/>
+          </marker>
+        </defs>
+        <g id="edgeG"></g>
+        <path id="temp" marker-end="url(#headTemp)" d=""/>
+      </svg>
+      <div id="nodes"></div>
+      <div id="xs"></div>
+      <div id="menu" class="menu" hidden>
+        <button data-act="move">เคลื่อนย้าย</button>
+        <button data-act="edges">ลบเส้น</button>
+        <button data-act="return">ส่งกลับ</button>
+      </div>
+      <p id="empty">ลากชื่อจากหน้ารายชื่อมาวางที่นี่</p>
+    </div>
+  </section>
+
+  <div id="ghost" hidden></div>
+</div>
+
+<script>
+/* ===== รายชื่อสิ่งมีชีวิต: เพิ่ม/ลบชื่อได้ที่นี่ ===== */
+const NAMES = [
+  'แพลงตอนพืช','สาหร่ายหางกระรอก','ตะไคร่น้ำ','แพลงตอนสัตว์',
+  'หอยโข่ง','หอยเชอรี่','กุ้งฝอย','ลูกน้ำยุง',
+  'ด้วงดิ่ง','มวนกรรเชียง','ปลานิล','ปลาหางนกยูง',
+  'ปลาสอด','ปลาดุก','ปลาเข็ม','ลูกอ๊อดกบบัว',
+  'เขียดน้ำนอง','เต่านา','เต่าแก้มแดง','ตะพาบ','นกยางกรอก'
+];
+
+const KEY = 'foodweb-v1';
+const $ = s => document.querySelector(s);
+const app = $('#app'), namesEl = $('#names'), board = $('#board'), nodesEl = $('#nodes');
+const edgeG = $('#edgeG'), temp = $('#temp'), ghost = $('#ghost'), emptyEl = $('#empty');
+const menu = $('#menu'), xs = $('#xs');
+const SVGNS = 'http://www.w3.org/2000/svg';
+
+// nodes: name -> {fx, fy} (สัดส่วน 0–1 ของพื้นที่วาง)
+// edges: {a, b, pts:[[fx,fy],...]} จุดกลางทางของเส้นที่วาด
+let state = { nodes: {}, edges: [] };
+let drag = null;
+let menuFor = null;      // ชื่อที่เปิดเมนูอยู่
+let edgeDelFor = null;   // ชื่อที่กำลังลบเส้น
+let moveArmed = null;    // ชื่อที่กดเคลื่อนย้ายไว้
+const hist = [];
+const nodeEls = {};
+let edgeEls = [];
+
+const HINTS = {
+  idle: 'ลากจากชื่อหนึ่งไปยังผู้บริโภคลำดับถัดไปเพื่อวาดลูกศร ลากเป็นเส้นโค้งได้ แตะที่ชื่อเพื่อเคลื่อนย้าย ลบเส้น หรือส่งกลับ',
+  move: 'ลากชื่อ หรือแตะตำแหน่งใหม่บนหน้าวาง เส้นที่โยงกับชื่อนี้จะถูกลบ',
+  edges: 'แตะ ✕ บนเส้นที่ต้องการลบ แตะที่ว่างเมื่อเสร็จ'
+};
+function setHint(k){ $('#status').textContent = HINTS[k]; }
+
+/* ---------- save / load ---------- */
+function load(){
+  try{
+    const s = JSON.parse(localStorage.getItem(KEY));
+    if(s && s.nodes && Array.isArray(s.edges)){
+      const nodes = {};
+      for(const n of Object.keys(s.nodes)){
+        const p = s.nodes[n];
+        if(NAMES.includes(n) && p && isFinite(p.fx) && isFinite(p.fy)) nodes[n] = {fx:+p.fx, fy:+p.fy};
+      }
+      const edges = [];
+      for(const e of s.edges){
+        let ed = null;
+        if(Array.isArray(e)) ed = { a:e[0], b:e[1], pts:[] };
+        else if(e && typeof e === 'object'){
+          const pts = Array.isArray(e.pts) ? e.pts.filter(p => Array.isArray(p) && isFinite(p[0]) && isFinite(p[1])).map(p => [+p[0], +p[1]]) : [];
+          ed = { a:e.a, b:e.b, pts };
+        }
+        if(ed && nodes[ed.a] && nodes[ed.b] && ed.a !== ed.b && !edges.some(x => x.a === ed.a && x.b === ed.b)) edges.push(ed);
+      }
+      state = { nodes, edges };
+    }
+  }catch(e){}
+}
+function save(){}
+function snapshot(){
+  hist.push(JSON.stringify(state));
+  if(hist.length > 80) hist.shift();
+  $('#undo').disabled = false;
+}
+
+/* ---------- views ---------- */
+function showView(v){ app.dataset.view = v; }
+$('#toBoard').onclick = () => showView('board');
+$('#toList').onclick = () => { clearUI(); showView('list'); };
+
+/* ---------- list ---------- */
+function buildList(){
+  namesEl.innerHTML = '';
+  NAMES.forEach(n => {
+    const d = document.createElement('div');
+    d.className = 'name'; d.textContent = n; d.dataset.name = n;
+    namesEl.appendChild(d);
+  });
+}
+function updateList(){
+  let left = 0;
+  namesEl.querySelectorAll('.name').forEach(d => {
+    const used = !!state.nodes[d.dataset.name];
+    d.classList.toggle('used', used);
+    if(!used) left++;
+  });
+  $('#remain').textContent = left ? `(เหลือ ${left})` : '(ครบแล้ว)';
+}
+
+/* ---------- geometry ---------- */
+function boxOf(name){
+  const n = state.nodes[name], el = nodeEls[name];
+  if(!n || !el) return null;
+  const W = board.clientWidth, H = board.clientHeight;
+  const hw = el.offsetWidth/2, hh = el.offsetHeight/2;
+  const cx = Math.min(Math.max(n.fx*W, hw), Math.max(hw, W-hw));
+  const cy = Math.min(Math.max(n.fy*H, hh), Math.max(hh, H-hh));
+  return { cx, cy, hw: hw+4, hh: hh+3 };
+}
+function inBox(B, x, y, pad = 0){ return Math.abs(x - B.cx) <= B.hw + pad && Math.abs(y - B.cy) <= B.hh + pad; }
+function edgePt(B, dx, dy){
+  const ax = Math.abs(dx), ay = Math.abs(dy);
+  if(!ax && !ay) return { x:B.cx, y:B.cy };
+  const t = Math.min(ax ? B.hw/ax : Infinity, ay ? B.hh/ay : Infinity);
+  return { x: B.cx + dx*t, y: B.cy + dy*t };
+}
+// เส้นโค้งเรียบผ่านทุกจุด (Catmull-Rom → Bézier)
+function smooth(P){
+  if(P.length < 3) return { d:`M${P[0].x} ${P[0].y} L${P[1].x} ${P[1].y}`, end:P[1], tail:P[0] };
+  let d = `M${P[0].x} ${P[0].y}`, tail = P[0];
+  for(let i = 0; i < P.length - 1; i++){
+    const p0 = P[i-1] || P[i], p1 = P[i], p2 = P[i+1], p3 = P[i+2] || P[i+1];
+    const c1 = { x: p1.x + (p2.x - p0.x)/6, y: p1.y + (p2.y - p0.y)/6 };
+    const c2 = { x: p2.x - (p3.x - p1.x)/6, y: p2.y - (p3.y - p1.y)/6 };
+    d += ` C${c1.x} ${c1.y} ${c2.x} ${c2.y} ${p2.x} ${p2.y}`;
+    tail = (Math.hypot(p2.x - c2.x, p2.y - c2.y) > 0.5) ? c2 : p1;
+  }
+  return { d, end:P[P.length-1], tail };
+}
+function edgeGeom(e){
+  const A = boxOf(e.a), B = boxOf(e.b);
+  if(!A || !B) return null;
+  const W = board.clientWidth, H = board.clientHeight;
+  const mid = (e.pts || []).map(p => ({ x:p[0]*W, y:p[1]*H })).filter(p => !inBox(A, p.x, p.y, 2) && !inBox(B, p.x, p.y, 2));
+  // ตัดจุดที่ชิดชื่อเกินไป เพื่อไม่ให้ปลายเส้นหักงอ
+  while(mid.length > 1){ const q = edgePt(A, mid[0].x - A.cx, mid[0].y - A.cy); if(Math.hypot(mid[0].x - q.x, mid[0].y - q.y) < 22) mid.shift(); else break; }
+  while(mid.length > 1){ const m = mid[mid.length-1], q = edgePt(B, m.x - B.cx, m.y - B.cy); if(Math.hypot(m.x - q.x, m.y - q.y) < 22) mid.pop(); else break; }
+  if(mid.length){
+    const s = edgePt(A, mid[0].x - A.cx, mid[0].y - A.cy);
+    const t = edgePt(B, mid[mid.length-1].x - B.cx, mid[mid.length-1].y - B.cy);
+    return smooth([s, ...mid, t]);
+  }
+  const dx = B.cx - A.cx, dy = B.cy - A.cy, len = Math.hypot(dx,dy) || 1;
+  const rev = state.edges.some(x => x.a === e.b && x.b === e.a && !(x.pts && x.pts.length));
+  if(rev){
+    const off = Math.min(70, len*0.3), nx = -dy/len, ny = dx/len;
+    const mx = (A.cx+B.cx)/2 + nx*off, my = (A.cy+B.cy)/2 + ny*off;
+    const p1 = edgePt(A, mx-A.cx, my-A.cy), p2 = edgePt(B, mx-B.cx, my-B.cy);
+    return { d:`M${p1.x} ${p1.y} Q${mx} ${my} ${p2.x} ${p2.y}`, end:p2, tail:{x:mx, y:my} };
+  }
+  const p1 = edgePt(A, dx, dy), p2 = edgePt(B, -dx, -dy);
+  return { d:`M${p1.x} ${p1.y} L${p2.x} ${p2.y}`, end:p2, tail:p1 };
+}
+
+/* ---------- board render ---------- */
+function renderBoard(){
+  for(const n of Object.keys(nodeEls)){
+    if(!state.nodes[n]){ nodeEls[n].remove(); delete nodeEls[n]; }
+  }
+  for(const n of Object.keys(state.nodes)){
+    if(!nodeEls[n]){
+      const el = document.createElement('div');
+      el.className = 'node'; el.textContent = n; el.dataset.name = n;
+      nodesEl.appendChild(el); nodeEls[n] = el;
+    }
+  }
+  for(const n of Object.keys(state.nodes)){
+    const b = boxOf(n);
+    nodeEls[n].style.left = b.cx + 'px';
+    nodeEls[n].style.top = b.cy + 'px';
+    nodeEls[n].classList.toggle('selected', n === menuFor || n === edgeDelFor);
+    nodeEls[n].classList.toggle('armed', n === moveArmed);
+  }
+  drawEdges();
+  emptyEl.hidden = Object.keys(state.nodes).length > 0;
+  if(menuFor) placeMenu();
+}
+function drawEdges(){
+  edgeG.innerHTML = ''; edgeEls = [];
+  state.edges.forEach((e, i) => {
+    const G = edgeGeom(e);
+    if(!G) return;
+    const p = document.createElementNS(SVGNS, 'path');
+    const linked = edgeDelFor && (e.a === edgeDelFor || e.b === edgeDelFor);
+    p.setAttribute('class', 'edge' + (edgeDelFor ? (linked ? ' focus' : ' dim') : ''));
+    p.setAttribute('d', G.d);
+    p.setAttribute('marker-end', linked ? 'url(#headFocus)' : 'url(#head)');
+    edgeG.appendChild(p);
+    edgeEls[i] = p;
+  });
+  drawXs();
+}
+function drawXs(){
+  xs.innerHTML = '';
+  if(!edgeDelFor) return;
+  state.edges.forEach((e, i) => {
+    if(e.a !== edgeDelFor && e.b !== edgeDelFor) return;
+    const p = edgeEls[i]; if(!p) return;
+    const L = p.getTotalLength(), q = p.getPointAtLength(L/2);
+    const b = document.createElement('button');
+    b.className = 'xbtn'; b.textContent = '✕';
+    b.setAttribute('aria-label', `ลบเส้น ${e.a} ไป ${e.b}`);
+    b.style.left = q.x + 'px'; b.style.top = q.y + 'px';
+    b.onclick = () => {
+      snapshot();
+      state.edges = state.edges.filter(x => x !== e);
+      save();
+      if(!state.edges.some(x => x.a === edgeDelFor || x.b === edgeDelFor)) clearUI();
+      else drawEdges();
+    };
+    xs.appendChild(b);
+  });
+}
+
+/* ---------- node menu ---------- */
+let placing = null;      // ชื่อที่แตะเลือกไว้ รอวางบนหน้าวาง
+function startPlacing(name){
+  clearUI();
+  placing = name;
+  board.classList.add('placing');
+  $('#status').textContent = `แตะตำแหน่งบนหน้าวางเพื่อวาง “${name}”`;
+  showView('board');
+}
+function clearUI(){
+  menuFor = null; edgeDelFor = null; moveArmed = null; placing = null;
+  menu.hidden = true;
+  board.classList.remove('placing');
+  setHint('idle');
+  renderBoard();
+}
+function openMenu(name){
+  clearUI();
+  menuFor = name;
+  menu.querySelector('[data-act="edges"]').disabled = !state.edges.some(e => e.a === name || e.b === name);
+  menu.hidden = false;
+  renderBoard();
+}
+function placeMenu(){
+  const B = boxOf(menuFor); if(!B){ menu.hidden = true; return; }
+  const W = board.clientWidth, H = board.clientHeight;
+  const mw = menu.offsetWidth, mh = menu.offsetHeight;
+  let top = B.cy + B.hh + 8;
+  if(top + mh > H - 6) top = B.cy - B.hh - 8 - mh;
+  const left = Math.min(Math.max(B.cx - mw/2, 6), Math.max(6, W - mw - 6));
+  menu.style.left = left + 'px'; menu.style.top = Math.max(6, top) + 'px';
+}
+function removeLinks(name){ state.edges = state.edges.filter(e => e.a !== name && e.b !== name); }
+menu.addEventListener('pointerdown', e => e.stopPropagation());
+menu.addEventListener('click', e => {
+  const btn = e.target.closest('button'); if(!btn || !menuFor) return;
+  const name = menuFor, act = btn.dataset.act;
+  if(act === 'move'){
+    clearUI(); moveArmed = name;
+    board.classList.add('placing'); setHint('move'); renderBoard();
+  }else if(act === 'edges'){
+    clearUI(); edgeDelFor = name; setHint('edges'); renderBoard();
+  }else if(act === 'return'){
+    snapshot();
+    delete state.nodes[name]; removeLinks(name);
+    save(); clearUI(); updateList();
+  }
+});
+xs.addEventListener('pointerdown', e => { if(e.target.closest('.xbtn')) e.stopPropagation(); });
+
+/* ---------- undo / clear ---------- */
+$('#undo').onclick = () => {
+  if(!hist.length) return;
+  state = JSON.parse(hist.pop());
+  $('#undo').disabled = !hist.length;
+  save(); clearUI(); updateList();
+};
+let clearTimer = null;
+$('#clear').onclick = () => {
+  const btn = $('#clear');
+  if(!btn.classList.contains('confirm')){
+    btn.classList.add('confirm'); btn.textContent = 'แตะอีกครั้งเพื่อล้าง';
+    clearTimeout(clearTimer);
+    clearTimer = setTimeout(() => { btn.classList.remove('confirm'); btn.textContent = 'ล้างทั้งหมด'; }, 3000);
+    return;
+  }
+  clearTimeout(clearTimer);
+  btn.classList.remove('confirm'); btn.textContent = 'ล้างทั้งหมด';
+  if(!Object.keys(state.nodes).length) return;
+  snapshot(); state = { nodes:{}, edges:[] };
+  save(); clearUI(); updateList();
+};
+
+/* ---------- pointer: list → board ---------- */
+namesEl.addEventListener('pointerdown', e => {
+  const el = e.target.closest('.name');
+  if(!el || el.classList.contains('used') || drag) return;
+  if(e.pointerType === 'mouse') e.preventDefault();
+  drag = { kind:'list', id:e.pointerId, name:el.dataset.name, el, sx:e.clientX, sy:e.clientY,
+           started:false, held:false, touch: e.pointerType !== 'mouse' };
+  // กดค้าง = หยิบชื่อขึ้นมา ลากไปทิศไหนก็ได้โดยไม่เลื่อนหน้า
+  drag.timer = setTimeout(() => {
+    if(drag && drag.kind === 'list' && !drag.started){
+      drag.held = true; el.classList.add('held');
+      if(navigator.vibrate) try{ navigator.vibrate(15); }catch(err){}
+    }
+  }, 350);
+});
+// เมื่อหยิบชื่อแล้ว ห้ามหน้ารายชื่อเลื่อน
+namesEl.addEventListener('touchmove', e => {
+  if(drag && drag.kind === 'list' && (drag.held || drag.started)) e.preventDefault();
+}, { passive:false });
+
+/* ---------- pointer: board ---------- */
+function local(e){ const r = board.getBoundingClientRect(); return { x:e.clientX - r.left, y:e.clientY - r.top, r }; }
+function setPos(name, x, y){
+  const W = board.clientWidth, H = board.clientHeight;
+  state.nodes[name].fx = Math.min(1, Math.max(0, x / W));
+  state.nodes[name].fy = Math.min(1, Math.max(0, y / H));
+}
+
+board.addEventListener('pointerdown', e => {
+  if(drag) return;
+  const nodeEl = e.target.closest('.node');
+  const L = local(e);
+  if(placing){
+    const name = placing;
+    snapshot();
+    state.nodes[name] = { fx:0, fy:0 };
+    setPos(name, L.x, L.y);
+    save(); clearUI(); updateList();
+    return;
+  }
+  if(!nodeEl){
+    if(moveArmed){
+      const name = moveArmed;
+      snapshot(); removeLinks(name); setPos(name, L.x, L.y);
+      save(); clearUI();
+    }else if(menuFor || edgeDelFor){
+      clearUI();
+    }
+    return;
+  }
+  e.preventDefault();
+  drag = { kind:'pending', id:e.pointerId, name:nodeEl.dataset.name, sx:e.clientX, sy:e.clientY, pts:[{x:L.x, y:L.y}] };
+});
+
+function overBoard(x, y){
+  const r = board.getBoundingClientRect();
+  return x >= r.left && x <= r.right && y >= r.top && y <= r.bottom;
+}
+// หาชื่อที่ใกล้จุดที่สุด (เผื่อปล่อยนิ้วไม่ตรงตัวอักษรพอดี)
+const SNAP = 44;
+function nearestNode(x, y, exclude){
+  let best = null, bd = Infinity;
+  for(const n of Object.keys(state.nodes)){
+    if(n === exclude) continue;
+    const B = boxOf(n); if(!B) continue;
+    const dx = Math.max(0, Math.abs(x - B.cx) - B.hw), dy = Math.max(0, Math.abs(y - B.cy) - B.hh);
+    const dist = Math.hypot(dx, dy);
+    if(dist < bd){ bd = dist; best = n; }
+  }
+  return bd <= SNAP ? best : null;
+}
+function nodeAt(x, y){
+  const el = document.elementFromPoint(x, y);
+  return el ? el.closest('.node') : null;
+}
+// จุดของเส้นที่อยู่นอกกรอบชื่อต้นทาง/ปลายทาง แล้วลดจำนวนจุดให้เส้นเรียบ
+function strokeMid(pts, A, B){
+  let i = 0; while(i < pts.length && inBox(A, pts[i].x, pts[i].y, 2)) i++;
+  let j = pts.length - 1; while(j >= i && B && inBox(B, pts[j].x, pts[j].y, 2)) j--;
+  const raw = pts.slice(i, j + 1).filter(p => !inBox(A, p.x, p.y, 2) && !(B && inBox(B, p.x, p.y, 2)));
+  return smoothStroke(raw);
+}
+// ทำให้เส้นที่ลากด้วยมือเรียบ: เว้นระยะจุด → เกลี่ยความสั่น → ลดจุดให้เหลือเท่าที่จำเป็น
+const SMOOTH_PASSES = 12;   // ยิ่งมาก เส้นยิ่งเรียบ
+const SIMPLIFY_PX = 8;      // ยิ่งมาก เส้นยิ่งโค้งกว้างและเกลี้ยง
+function smoothStroke(raw){
+  let P = [];
+  for(const p of raw){
+    const l = P[P.length-1];
+    if(!l || Math.hypot(p.x - l.x, p.y - l.y) >= 5) P.push({ x:p.x, y:p.y });
+  }
+  if(P.length < 3) return P;
+  for(let pass = 0; pass < SMOOTH_PASSES; pass++){
+    const Q = [P[0]];
+    for(let i = 1; i < P.length - 1; i++){
+      Q.push({ x:(P[i-1].x + 2*P[i].x + P[i+1].x)/4, y:(P[i-1].y + 2*P[i].y + P[i+1].y)/4 });
+    }
+    Q.push(P[P.length-1]); P = Q;
+  }
+  return rdp(P, SIMPLIFY_PX);
+}
+function rdp(P, eps){
+  if(P.length < 3) return P;
+  const a = P[0], b = P[P.length-1];
+  const dx = b.x - a.x, dy = b.y - a.y, len = Math.hypot(dx, dy) || 1;
+  let idx = -1, md = 0;
+  for(let i = 1; i < P.length - 1; i++){
+    const d = Math.abs((P[i].x - a.x)*dy - (P[i].y - a.y)*dx) / len;
+    if(d > md){ md = d; idx = i; }
+  }
+  if(md > eps){
+    const L = rdp(P.slice(0, idx + 1), eps), R = rdp(P.slice(idx), eps);
+    return L.slice(0, -1).concat(R);
+  }
+  return [a, b];
+}
+// เส้นที่เกือบตรงไม่ต้องเก็บจุดกลาง
+function isStraight(mid, s, t){
+  const dx = t.x - s.x, dy = t.y - s.y, len = Math.hypot(dx, dy) || 1;
+  return mid.every(p => Math.abs((p.x - s.x)*dy - (p.y - s.y)*dx) / len < 10);
+}
+
+window.addEventListener('pointermove', e => {
+  if(!drag || e.pointerId !== drag.id) return;
+  const x = e.clientX, y = e.clientY;
+
+  if(drag.kind === 'list'){
+    if(!drag.started){
+      const dx = x - drag.sx, dy = y - drag.sy;
+      if(Math.hypot(dx, dy) < 8) return;
+      // ปัดขึ้น-ลงโดยไม่ได้กดค้าง = เลื่อนหน้ารายชื่อตามปกติ
+      if(drag.touch && !drag.held && Math.abs(dy) > Math.abs(dx)){
+        clearTimeout(drag.timer); drag = null; return;
+      }
+      clearTimeout(drag.timer);
+      drag.started = true;
+      clearUI();
+      ghost.textContent = drag.name; ghost.hidden = false;
+      drag.el.classList.add('lifting');
+      showView('board');
+    }
+    ghost.style.left = x + 'px'; ghost.style.top = y + 'px';
+    board.classList.toggle('drop', overBoard(x, y));
+    return;
+  }
+
+  const L = local(e);
+  if(drag.kind === 'pending'){
+    if(Math.hypot(x - drag.sx, y - drag.sy) < 8){ drag.pts.push({x:L.x, y:L.y}); return; }
+    if(moveArmed === drag.name){
+      const B = boxOf(drag.name);
+      snapshot(); removeLinks(drag.name);
+      drag.kind = 'move'; drag.ox = drag.pts[0].x - B.cx; drag.oy = drag.pts[0].y - B.cy;
+      menu.hidden = true;
+      drawEdges();
+    }else{
+      if(menuFor || edgeDelFor || moveArmed) clearUI();
+      drag.kind = 'arrow'; drag.target = null;
+      nodeEls[drag.name].classList.add('src');
+    }
+  }
+
+  if(drag.kind === 'move'){
+    setPos(drag.name, L.x - drag.ox, L.y - drag.oy);
+    const b = boxOf(drag.name);
+    nodeEls[drag.name].style.left = b.cx + 'px';
+    nodeEls[drag.name].style.top = b.cy + 'px';
+  }
+
+  else if(drag.kind === 'arrow'){
+    const last = drag.pts[drag.pts.length-1];
+    if(Math.hypot(L.x - last.x, L.y - last.y) >= 3) drag.pts.push({x:L.x, y:L.y});
+    drag.last = { x:L.x, y:L.y };
+    const tName = nearestNode(L.x, L.y, drag.name);
+    if(drag.target !== tName){
+      if(drag.target && nodeEls[drag.target]) nodeEls[drag.target].classList.remove('target');
+      drag.target = tName;
+      if(tName) nodeEls[tName].classList.add('target');
+    }
+    const A = boxOf(drag.name), B = tName ? boxOf(tName) : null;
+    const mid = strokeMid(drag.pts, A, B);
+    let end;
+    if(B){
+      const ref = mid.length ? mid[mid.length-1] : {x:A.cx, y:A.cy};
+      end = edgePt(B, ref.x - B.cx, ref.y - B.cy);
+    }else{
+      end = { x:L.x, y:L.y };
+      if(mid.length && Math.hypot(end.x - mid[mid.length-1].x, end.y - mid[mid.length-1].y) < 14) mid.pop();
+    }
+    const first = mid.length ? mid[0] : end;
+    if(inBox(A, end.x, end.y)){ temp.setAttribute('d', ''); return; }
+    const start = edgePt(A, first.x - A.cx, first.y - A.cy);
+    temp.setAttribute('d', smooth([start, ...mid, end]).d);
+  }
+});
+
+function endDrag(e, cancelled){
+  if(!drag || e.pointerId !== drag.id) return;
+  const d = drag; drag = null;
+
+  if(d.kind === 'list'){
+    clearTimeout(d.timer);
+    d.el.classList.remove('lifting', 'held');
+    if(!d.started && !cancelled){ startPlacing(d.name); return; }
+    board.classList.remove('drop');
+    ghost.hidden = true;
+    if(d.started && !cancelled && overBoard(e.clientX, e.clientY)){
+      const L = local(e);
+      snapshot();
+      state.nodes[d.name] = { fx:0, fy:0 };
+      setPos(d.name, L.x, L.y);
+      save(); renderBoard(); updateList();
+    }
+  }
+
+  else if(d.kind === 'pending'){
+    if(cancelled) return;
+    if(moveArmed === d.name) clearUI();
+    else if(menuFor === d.name) clearUI();
+    else openMenu(d.name);
+  }
+
+  else if(d.kind === 'move'){
+    save(); clearUI();
+  }
+
+  else if(d.kind === 'arrow'){
+    temp.setAttribute('d', '');
+    if(nodeEls[d.name]) nodeEls[d.name].classList.remove('src');
+    if(d.target && nodeEls[d.target]) nodeEls[d.target].classList.remove('target');
+    // หาปลายทางอีกครั้งตอนปล่อย และไม่ทิ้งเส้นแม้เบราว์เซอร์ยกเลิกการสัมผัส (pointercancel)
+    if(!cancelled){
+      const L = local(e);
+      if(Math.hypot(L.x, L.y) > 0 || !d.last){ d.pts.push({ x:L.x, y:L.y }); d.target = nearestNode(L.x, L.y, d.name) || d.target; }
+    }
+    if(d.target){
+      const A = boxOf(d.name), B = boxOf(d.target);
+      let mid = strokeMid(d.pts, A, B);
+      if(mid.length){
+        const s = edgePt(A, mid[0].x - A.cx, mid[0].y - A.cy);
+        const t = edgePt(B, mid[mid.length-1].x - B.cx, mid[mid.length-1].y - B.cy);
+        if(isStraight(mid, s, t)) mid = [];
+      }
+      const W = board.clientWidth, H = board.clientHeight;
+      snapshot();
+      state.edges = state.edges.filter(x => !(x.a === d.name && x.b === d.target));
+      state.edges.push({ a:d.name, b:d.target, pts: mid.map(p => [+(p.x/W).toFixed(4), +(p.y/H).toFixed(4)]) });
+      save(); drawEdges();
+    }
+  }
+}
+window.addEventListener('pointerup', e => endDrag(e, false));
+window.addEventListener('pointercancel', e => endDrag(e, true));
+namesEl.addEventListener('contextmenu', e => e.preventDefault());
+board.addEventListener('contextmenu', e => e.preventDefault());
+
+let rz = null;
+window.addEventListener('resize', () => { cancelAnimationFrame(rz); rz = requestAnimationFrame(renderBoard); });
+
+/* ---------- student info ---------- */
+const SKEY = 'foodweb-student';
+let student = { first:'', last:'', id:'' };
+function loadStudent(){
+  try{
+    const s = JSON.parse(localStorage.getItem(SKEY));
+    if(s && typeof s.first === 'string') student = { first:s.first, last:s.last||'', id:s.id||'' };
+  }catch(e){}
+}
+function hasStudent(){ return !!(student.first && student.last && student.id); }
+function showStudent(){
+  $('#toInfo').textContent = `${student.first} ${student.last}  ${student.id}`;
+}
+$('#infoForm').addEventListener('submit', e => {
+  e.preventDefault();
+  const f = { first:$('#fFirst').value.trim(), last:$('#fLast').value.trim(), id:$('#fId').value.trim() };
+  const inputs = { first:$('#fFirst'), last:$('#fLast'), id:$('#fId') };
+  let ok = true;
+  for(const k in inputs){ const bad = !f[k]; inputs[k].classList.toggle('bad', bad); if(bad) ok = false; }
+  if(!ok){ $('#formMsg').textContent = 'กรุณากรอกชื่อ นามสกุล และรหัสนิสิตให้ครบ'; return; }
+  $('#formMsg').textContent = '';
+  student = f;
+  showStudent();
+  document.activeElement && document.activeElement.blur();
+  showView('list');
+});
+$('#toInfo').onclick = () => {
+  $('#fFirst').value = student.first; $('#fLast').value = student.last; $('#fId').value = student.id;
+  showView('info');
+};
+
+/* ---------- export JPG ---------- */
+let downloads = null;
+if(window.claude && typeof window.claude.use === 'function'){
+  window.claude.use('downloads').then(d => {
+    downloads = d;
+  }).catch(() => {});
+}
+function drawHead(ctx, tip, dir){
+  const L = 17, hw = 8.4, ux = dir.x, uy = dir.y;
+  const tx = tip.x + ux*2.5, ty = tip.y + uy*2.5;
+  const bx = tx - ux*L, by = ty - uy*L;
+  ctx.beginPath();
+  ctx.moveTo(tx, ty);
+  ctx.lineTo(bx - uy*hw, by + ux*hw);
+  ctx.lineTo(bx + uy*hw, by - ux*hw);
+  ctx.closePath(); ctx.fill();
+}
+function renderJpg(){
+  const W = board.clientWidth, H = board.clientHeight;
+  const PAD = 28, HEAD = 130, S = 2;
+  const cw = W + PAD*2, ch = H + HEAD + PAD;
+  const cv = document.createElement('canvas');
+  cv.width = Math.round(cw*S); cv.height = Math.round(ch*S);
+  const ctx = cv.getContext('2d');
+  ctx.scale(S, S);
+  const INK = '#17323a', MUTED = '#5b7279';
+  ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, cw, ch);
+
+  // header
+  ctx.fillStyle = INK; ctx.textBaseline = 'alphabetic'; ctx.textAlign = 'left';
+  ctx.font = "500 26px Mitr, Sarabun, sans-serif";
+  ctx.fillText('สายใยอาหารในแหล่งน้ำ', PAD, 46);
+  ctx.font = "600 19px Sarabun, sans-serif";
+  ctx.fillText(`ชื่อ ${student.first}  นามสกุล ${student.last}`, PAD, 80);
+  ctx.font = "400 19px Sarabun, sans-serif";
+  ctx.fillStyle = MUTED;
+  const idText = `รหัสนิสิต ${student.id}`;
+  ctx.fillText(idText, PAD, 104);
+  ctx.textAlign = 'right';
+  ctx.fillText(new Date().toLocaleDateString('th-TH', {year:'numeric', month:'long', day:'numeric'}), cw - PAD, 104);
+
+  // board frame
+  ctx.strokeStyle = '#d5e3e2'; ctx.lineWidth = 1.5;
+  ctx.strokeRect(PAD - 6, HEAD - 6, W + 12, H + 12);
+
+  ctx.save();
+  ctx.translate(PAD, HEAD);
+  // edges
+  ctx.strokeStyle = INK; ctx.fillStyle = INK; ctx.lineWidth = 2.6; ctx.lineCap = 'round';
+  state.edges.forEach(e => {
+    const G = edgeGeom(e);
+    if(!G) return;
+    ctx.stroke(new Path2D(G.d));
+    const dx = G.end.x - G.tail.x, dy = G.end.y - G.tail.y;
+    const l = Math.hypot(dx, dy) || 1;
+    drawHead(ctx, G.end, { x:dx/l, y:dy/l });
+  });
+  // nodes
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  for(const n of Object.keys(state.nodes)){
+    const el = nodeEls[n], B = boxOf(n);
+    if(!el || !B) continue;
+    const fs = parseFloat(getComputedStyle(el).fontSize) || 24;
+    const w = el.offsetWidth, h = el.offsetHeight;
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(B.cx - w/2, B.cy - h/2, w, h);
+    ctx.fillStyle = INK;
+    ctx.font = `400 ${fs}px Sarabun, sans-serif`;
+    ctx.fillText(n, B.cx, B.cy + fs*0.06);
+  }
+  ctx.restore();
+  return new Promise(res => cv.toBlob(res, 'image/jpeg', 0.92));
+}
+function safePart(t){ return String(t).replace(/[\\/:*?"<>|\s]+/g, '_').replace(/^_+|_+$/g, ''); }
+$('#exportBtn').onclick = async () => {
+  if(!hasStudent()){ $('#toInfo').click(); return; }
+  if(!Object.keys(state.nodes).length){ $('#status').textContent = 'ยังไม่มีชื่อบนหน้าวาง ลากชื่อมาวางก่อนบันทึก'; return; }
+  const btn = $('#exportBtn');
+  btn.disabled = true;
+  try{
+    if(document.fonts && document.fonts.ready) await document.fonts.ready;
+    const blob = await renderJpg();
+    const filename = `สายใยอาหาร_${safePart(student.id)}_${safePart(student.first)}_${safePart(student.last)}.jpg`;
+    if(downloads){
+      await downloads.save({ filename, data: blob });
+    }else{
+      // เมื่อเปิดจากเว็บไซต์อื่น (เช่นเซิร์ฟเวอร์ของคณะ) ใช้การดาวน์โหลดปกติของเบราว์เซอร์
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = filename; a.rel = 'noopener';
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
+    }
+    $('#status').textContent = 'บันทึกไฟล์ JPG แล้ว';
+  }catch(err){
+    const code = err && err.code;
+    if(code === 'declined') setHint('idle');
+    else if(code === 'rate_limited') $('#status').textContent = 'มีหน้าต่างบันทึกเปิดอยู่ ลองกดอีกครั้งในอีกสักครู่';
+    else $('#status').textContent = 'บันทึกไฟล์ไม่สำเร็จ ลองกดอีกครั้ง';
+  }finally{
+    btn.disabled = false;
+  }
+};
+
+/* ---------- start ---------- */
+// เริ่มใหม่ทุกครั้งที่เปิดแอป: ไม่จำข้อมูลนิสิตและงานเดิม
+try{ localStorage.removeItem(KEY); localStorage.removeItem(SKEY); }catch(e){}
+showView('info');
+buildList();
+updateList();
+setHint('idle');
+renderBoard();
+if(document.fonts && document.fonts.ready) document.fonts.ready.then(renderBoard);
+</script>
+</body>
+</html>
