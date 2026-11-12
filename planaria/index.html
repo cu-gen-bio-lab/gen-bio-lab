@@ -1,13 +1,15 @@
 <!DOCTYPE html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Planaria Habituation Simulation</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-body{background:#e8e8e8;font-family:sans-serif;padding:12px}
+body{background:#e8e8e8;font-family:sans-serif;
+  padding:max(12px,env(safe-area-inset-top)) max(12px,env(safe-area-inset-right)) max(12px,env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left))}
 #app{display:flex;flex-direction:column;gap:10px;max-width:720px;margin:auto}
 #hdr{display:flex;align-items:center;justify-content:space-between;gap:6px}
 #rl{font-size:15px;font-weight:600}
 #sm{font-size:12px;color:#555}
+#stage{position:relative;width:100%}
 canvas{display:block;width:100%;border:1.5px solid #999;border-radius:3px}
 #row1,#row2,#row3{display:flex;align-items:center;gap:8px}
 .btn{padding:7px 18px;border-radius:6px;border:1px solid #bbb;background:#fff;font-size:13px;font-weight:500;cursor:pointer}
@@ -22,6 +24,25 @@ canvas{display:block;width:100%;border:1.5px solid #999;border-radius:3px}
 #tf{height:100%;width:0%;background:#3B6D11;border-radius:2px;transition:width .05s linear}
 #tl{font-size:13px;color:#777;min-width:32px}
 #hint{font-size:11px;color:#b45309;margin-top:2px}
+#brs{margin-left:auto}
+#opt{font-size:12px;color:#777}
+
+/* Phone held sideways: pond fills the left, controls in a column on the right */
+@media (orientation:landscape) and (max-height:540px){
+  html,body{height:100%;overflow:hidden}
+  body{padding:max(6px,env(safe-area-inset-top)) max(8px,env(safe-area-inset-right)) max(6px,env(safe-area-inset-bottom)) max(8px,env(safe-area-inset-left))}
+  #app{max-width:none;height:100%;display:grid;grid-template-columns:minmax(0,1fr) 168px;
+       grid-template-rows:auto auto auto auto 1fr;column-gap:10px;row-gap:10px}
+  #stage{grid-column:1;grid-row:1 / -1;min-height:0;height:100%}
+  #stage canvas{position:absolute;inset:0;margin:auto}
+  #hdr,#row1,#row2,#hint{grid-column:2}
+  #hdr{flex-direction:column;align-items:flex-start;gap:4px}
+  #row1,#row2{flex-wrap:wrap}
+  #bst,#brs,#bsh{flex:1 1 100%;padding-left:8px;padding-right:8px}
+  #brs{margin-left:0}
+  #bsh{font-size:13px;padding-top:8px;padding-bottom:8px}
+  #opt{font-size:11px}
+}
 </style>
 </head><body>
 <div id="app">
@@ -29,21 +50,22 @@ canvas{display:block;width:100%;border:1.5px solid #999;border-radius:3px}
     <div id="rl">Trial <span id="rn">1</span> / 6</div>
     <div id="sm">Planaria at position 0 — press Start</div>
   </div>
-  <canvas id="cv"></canvas>
+  <div id="stage"><canvas id="cv"></canvas></div>
 
   <!-- Row 1: start + timer + reset -->
-  <div id="row1" style="display:flex;align-items:center;gap:8px">
+  <div id="row1">
     <button class="btn" id="bst">&#9654; Start Trial 1</button>
     <div id="tw"><div id="tf"></div></div>
     <div id="tl">30s</div>
-    <button class="btn" id="brs" style="margin-left:auto">&#8635; Reset All</button>
+    <button class="btn" id="brs">&#8635; Reset All</button>
   </div>
 
   <!-- Row 2: shake -->
   <div id="row2" style="display:none">
-    <button class="btn" id="bsh">&#128243; Shake (Trial 6)</button>
+    <button class="btn" id="bsh">&#128243; Shake before Trial 6</button>
+    <span id="opt">Optional &mdash; skip it and just press Start</span>
   </div>
-  <div id="hint" style="display:none;font-size:11px;color:#b45309">&#128241; Or shake your phone (gyroscope)</div>
+  <div id="hint" style="display:none">&#128241; Or shake your phone (gyroscope)</div>
 </div>
 
 
@@ -52,16 +74,24 @@ canvas{display:block;width:100%;border:1.5px solid #999;border-radius:3px}
 (function(){
   var CV=document.getElementById('cv');
   var cx=CV.getContext('2d');
+  /* PW is always 150 mm wide in drawing units. PH (pond height) follows the
+     screen shape in landscape, so the pond fills the space it has. */
   var PW=660, PH=330;
-  CV.width=PW; CV.height=PH;
   var S=PW/150;
+  var landscapeMQ=window.matchMedia('(orientation:landscape) and (max-height:540px)');
 
-  var N=15, DUR=30000;
-  var FLEE_PCT=[0,0.875,0.80,0.70,0.625,0.525,0.825];
-  var FLEE_MM =[0,132,104,80,64,48,132];
+  var N=10, DUR=30000;
+  /* Habituation curve: response weakens each trial with no new stimulus */
+  var FLEE_PCT=[0,0.875,0.80,0.70,0.625,0.525,0.42];
+  var FLEE_MM =[0,132,104,80,64,48,40];
+  /* Dishabituation: a shake restores a strong response for that trial */
+  var DISHAB_PCT=0.825, DISHAB_MM=132;
+  var SHAKE_TRIALS=[6];   /* shake only between Trial 5 and Trial 6 */
   var WL=4*S, WH=1.3*S;
 
-  var trial=1,running=false,elapsed=0,lastT=null,afId=null,shaken=false,allDone=false,lastGyro=0;
+  var trial=1,running=false,elapsed=0,lastT=null,afId=null,allDone=false,lastGyro=0;
+  var pendingShake=false; /* shaken, waiting for Start */
+  var lastShake=0;        /* trial number of the most recent shake (0 = none) */
   var worms=[];
 
   function rand(a,b){return a+Math.random()*(b-a);}
@@ -115,9 +145,16 @@ canvas{display:block;width:100%;border:1.5px solid #999;border-radius:3px}
       w.a=rand(-.05,.05);w.ta=0;w.dt2=rand(300,800);w.cT=0;
     });
   }
+  function responseLevel(){
+    if(lastShake===trial) return {pct:DISHAB_PCT,mm:DISHAB_MM};
+    /* after a shake, habituation starts again from the recovered level */
+    var idx=lastShake>0?1+(trial-lastShake):trial;
+    idx=Math.min(idx,FLEE_PCT.length-1);
+    return {pct:FLEE_PCT[idx],mm:FLEE_MM[idx]};
+  }
   function assignBehaviors(){
-    var pct=shaken?FLEE_PCT[6]:FLEE_PCT[trial];
-    var mm=shaken?FLEE_MM[6]:FLEE_MM[trial];
+    var lv=responseLevel();
+    var pct=lv.pct, mm=lv.mm;
     var nF=Math.round(pct*N);
     worms.slice().sort(function(){return Math.random()-.5;}).forEach(function(w,i){
       w.flee=i<nF;
@@ -128,6 +165,20 @@ canvas{display:block;width:100%;border:1.5px solid #999;border-radius:3px}
     });
   }
 
+  var EDGE=5*S;          /* soft zone (~5 mm) where a worm starts turning away from a wall */
+  var MAX_TURN=0.0018;   /* max head-turn speed, rad per ms (~100 deg/s) */
+
+  /* If the target heading points into a nearby wall, aim it back away.
+     Only the target changes; the body then turns toward it gradually. */
+  function wallSteer(w){
+    var mg=WH*.55, hx=Math.cos(w.ta), hy=Math.sin(w.ta), ch=false;
+    if(w.y<mg+EDGE&&hy<0){hy=Math.abs(hy)*.5+.15;ch=true;}
+    if(w.y>PH-mg-EDGE&&hy>0){hy=-(Math.abs(hy)*.5+.15);ch=true;}
+    if(w.x<WL/2+EDGE&&hx<0){hx=Math.abs(hx);ch=true;}
+    if(w.x>w.mx-EDGE&&hx>0){hx=-Math.abs(hx);ch=true;}
+    if(ch)w.ta=Math.atan2(hy,hx);
+  }
+
   function updateWorm(w,dt){
     w.dt2-=dt;
     if(w.dt2<=0){
@@ -136,17 +187,19 @@ canvas{display:block;width:100%;border:1.5px solid #999;border-radius:3px}
       w.cT=rand(170,290);
     }
     if(w.cT>0)w.cT-=dt;
+    wallSteer(w);
     var da=w.ta-w.a;
     while(da>Math.PI)da-=2*Math.PI;while(da<-Math.PI)da+=2*Math.PI;
-    w.a+=da*.085;
+    var turn=da*.06, lim=MAX_TURN*dt;
+    w.a+=Math.max(-lim,Math.min(lim,turn));
     var sp=(w.cT>0)?w.spd*.42:w.spd;
     var nx=w.x+Math.cos(w.a)*sp*dt;
     var ny=w.y+Math.sin(w.a)*sp*dt;
     var mg=WH*.55;
-    if(nx<WL/2){nx=WL/2;w.a=Math.PI-w.a;w.ta=Math.PI-w.ta;}
-    if(nx>w.mx){nx=w.mx;w.a=Math.PI-w.a;w.ta=Math.PI-w.ta;}
-    if(ny<mg){ny=mg;w.a=-w.a;w.ta=-w.ta;}
-    if(ny>PH-mg){ny=PH-mg;w.a=-w.a;w.ta=-w.ta;}
+    /* Walls only stop the body; no instant flip of the heading.
+       A worm that touches a wall slides along it while it turns away. */
+    nx=Math.max(WL/2,Math.min(w.mx,nx));
+    ny=Math.max(mg,Math.min(PH-mg,ny));
     w.x=nx;w.y=ny;w.wo+=dt*.003;
   }
 
@@ -194,6 +247,7 @@ canvas{display:block;width:100%;border:1.5px solid #999;border-radius:3px}
   }
 
   function showShakeRow(show){
+    if(show) g('bsh').innerHTML='&#128243; Shake before Trial '+trial;
     g('row2').style.display=show?'flex':'none';
     g('hint').style.display=show?'block':'none';
     if(show){
@@ -206,10 +260,11 @@ canvas{display:block;width:100%;border:1.5px solid #999;border-radius:3px}
   function startTrial(){
     if(running||allDone)return;
     running=true;elapsed=0;lastT=null;
+    if(pendingShake){lastShake=trial;pendingShake=false;}
     resetPos();assignBehaviors();
     g('bst').disabled=true;
     showShakeRow(false);
-    g('sm').textContent='Trial '+trial+' running...';
+    g('sm').textContent='Trial '+trial+(lastShake===trial?' (after shake)':'')+' running...';
     afId=requestAnimationFrame(loop);
   }
 
@@ -228,9 +283,9 @@ canvas{display:block;width:100%;border:1.5px solid #999;border-radius:3px}
       g('rn').textContent=trial;
       g('bst').disabled=false;
       g('bst').textContent='\u25B6 Start Trial '+trial;
-      if(justDone===5){
+      if(SHAKE_TRIALS.indexOf(trial)>=0){
         showShakeRow(true);
-        g('sm').textContent='Trial 6: Shake before starting, then press Start.';
+        g('sm').textContent='Trial 6: shake before starting, then press Start.';
       } else {
         showShakeRow(false);
         g('sm').textContent='Trial '+trial+' ready. Record positions, then Start.';
@@ -239,10 +294,10 @@ canvas{display:block;width:100%;border:1.5px solid #999;border-radius:3px}
   }
 
   function doShake(){
-    if(shaken)return;
-    shaken=true;
+    if(running||allDone||pendingShake||SHAKE_TRIALS.indexOf(trial)<0)return;
+    pendingShake=true;
     showShakeRow(false);
-    g('sm').textContent='Shaken! Press Start Trial 6.';
+    g('sm').textContent='Shaken! Press Start Trial '+trial+'.';
     var n=0;
     var sh=function(){
       CV.style.transform='translateX('+(n%2?'5px':'-4px')+')';
@@ -252,7 +307,7 @@ canvas{display:block;width:100%;border:1.5px solid #999;border-radius:3px}
 
   function resetAll(){
     cancelAnimationFrame(afId);
-    trial=1;running=false;elapsed=0;lastT=null;shaken=false;allDone=false;
+    trial=1;running=false;elapsed=0;lastT=null;allDone=false;pendingShake=false;lastShake=0;
     g('rn').textContent='1';
     g('bst').disabled=false;g('bst').textContent='\u25B6 Start Trial 1';
 
@@ -267,22 +322,58 @@ canvas{display:block;width:100%;border:1.5px solid #999;border-radius:3px}
   g('brs').addEventListener('click',resetAll);
 
   if(window.DeviceMotionEvent){
+    var motionOn=false;
     var gH=function(e){
       var a=e.accelerationIncludingGravity;if(!a)return;
       var mag=Math.sqrt((a.x||0)*(a.x||0)+(a.y||0)*(a.y||0)+(a.z||0)*(a.z||0));
       var now=Date.now();
-      if(mag>20&&now-lastGyro>1500&&trial===6&&!shaken){lastGyro=now;doShake();}
+      if(mag>20&&now-lastGyro>1500){lastGyro=now;doShake();} /* doShake checks the trial */
     };
+    var enableMotion=function(){if(motionOn)return;motionOn=true;window.addEventListener('devicemotion',gH);};
     if(typeof DeviceMotionEvent.requestPermission==='function'){
-      g('bsh').addEventListener('click',function(){
-        DeviceMotionEvent.requestPermission().then(function(r){if(r==='granted')window.addEventListener('devicemotion',gH);});
+      /* iOS: ask for motion access on the first Start tap, so a real shake works before Trial 6 */
+      g('bst').addEventListener('click',function(){
+        DeviceMotionEvent.requestPermission().then(function(r){if(r==='granted')enableMotion();}).catch(function(){});
       },{once:true});
     } else {
-      window.addEventListener('devicemotion',gH);
+      enableMotion();
     }
   }
 
-  initWorms();drawAll();
+  function fitCanvas(){
+    var st=g('stage'), w=st.clientWidth, h, ratio=0.5;
+    if(!w)return;
+    if(landscapeMQ.matches){
+      var ah=st.clientHeight;
+      ratio=ah/w;
+      if(ratio<0.3){ratio=0.3;w=ah/0.3;}      /* very wide: keep at least ~45 mm tall */
+      if(ratio>0.75)ratio=0.75;                /* very tall: cap at ~112 mm */
+    }
+    h=w*ratio;
+    var newPH=Math.round(PW*ratio);
+    if(worms.length&&newPH!==PH){
+      worms.forEach(function(wm){wm.y*=newPH/PH;});
+    }
+    PH=newPH;
+    var dpr=window.devicePixelRatio||1;
+    CV.style.width=Math.round(w)+'px';
+    CV.style.height=Math.round(h)+'px';
+    CV.width=Math.round(w*dpr);
+    CV.height=Math.round(h*dpr);
+    cx.setTransform(CV.width/PW,0,0,CV.height/PH,0,0);  /* draw in pond units, sharp on any screen */
+    drawAll();
+  }
+  var fitTimer=null;
+  function refit(){
+    fitCanvas();
+    clearTimeout(fitTimer);
+    fitTimer=setTimeout(fitCanvas,250);  /* phones report final size a moment after rotating */
+  }
+  window.addEventListener('resize',refit);
+  window.addEventListener('orientationchange',refit);
+  if(landscapeMQ.addEventListener)landscapeMQ.addEventListener('change',refit);
+
+  initWorms();fitCanvas();
 })();
 </script>
 </body></html>

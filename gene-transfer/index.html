@@ -1,0 +1,1501 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ห้องแล็บถ่ายฝากยีน</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bench:#E7EEEA; --paper:#FAFCFB; --ink:#1C2A2F; --muted:#56676C; --line:#C5D2CC;
+  --top:#0E7C86; --bot:#A3366F; --site-bg:rgba(240,186,30,.42); --site-ink:#7A5600;
+  --ok:#167A52; --ok-bg:rgba(22,122,82,.1); --bad:#C8293F; --bad-bg:rgba(200,41,63,.09);
+  --gene:#DE7F12; --gene-bg:rgba(222,127,18,.15); --lac:#3559B5; --amp:#7A4FB5; --ori:#6B7B80;
+  --agar:#E8D79E; --agar-edge:#C9B472; --xgal:#24479A; --colony:#FFFDF4; --colony-edge:#B9AE8C;
+  --accent:#0E7C86; --btn-ink:#FFFFFF; --lig:#F2BE2F; --lig-edge:#8A6400; --shadow:0 1px 0 rgba(28,42,47,.06);
+  color-scheme:light;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bench:#0F171A; --paper:#162126; --ink:#E2EBEE; --muted:#93A5AB; --line:#2B3B41;
+    --top:#4CC3CC; --bot:#E77EB4; --site-bg:rgba(240,186,30,.32); --site-ink:#F4D27A;
+    --ok:#46C08B; --ok-bg:rgba(70,192,139,.13); --bad:#FF6B7F; --bad-bg:rgba(255,107,127,.12);
+    --gene:#F29C3D; --gene-bg:rgba(242,156,61,.18); --lac:#7E9CF0; --amp:#B795EE; --ori:#8EA0A6;
+    --agar:#6E6440; --agar-edge:#8C7E4F; --xgal:#7E9CF0; --colony:#F4F0E0; --colony-edge:#CFC6A4;
+    --accent:#4CC3CC; --btn-ink:#0F171A; --lig:#F2BE2F; --lig-edge:#F6D774; --shadow:none;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bench:#0F171A; --paper:#162126; --ink:#E2EBEE; --muted:#93A5AB; --line:#2B3B41;
+  --top:#4CC3CC; --bot:#E77EB4; --site-bg:rgba(240,186,30,.32); --site-ink:#F4D27A;
+  --ok:#46C08B; --ok-bg:rgba(70,192,139,.13); --bad:#FF6B7F; --bad-bg:rgba(255,107,127,.12);
+  --gene:#F29C3D; --gene-bg:rgba(242,156,61,.18); --lac:#7E9CF0; --amp:#B795EE; --ori:#8EA0A6;
+  --agar:#6E6440; --agar-edge:#8C7E4F; --xgal:#7E9CF0; --colony:#F4F0E0; --colony-edge:#CFC6A4;
+  --accent:#4CC3CC; --btn-ink:#0F171A; --lig:#F2BE2F; --lig-edge:#F6D774; --shadow:none;
+  color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bench);color:var(--ink);
+  font-family:"IBM Plex Sans Thai","Sarabun","Noto Sans Thai","Leelawadee UI",Tahoma,sans-serif;
+  font-size:16px;line-height:1.6;-webkit-font-smoothing:antialiased}
+.mono{font-family:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace}
+button{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px;border-radius:6px}
+
+.wrap{max-width:1240px;margin:0 auto;padding:20px 18px 48px}
+header.top{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px 24px;margin-bottom:14px}
+header.top h1{margin:0;font-size:clamp(1.6rem,3.2vw,2.3rem);line-height:1.15;font-weight:700;letter-spacing:-.01em}
+header.top p{margin:4px 0 0;color:var(--muted);max-width:60ch}
+
+ol.steps{list-style:none;margin:0 0 18px;padding:0;display:flex;gap:6px;overflow-x:auto;scrollbar-width:thin}
+ol.steps li{flex:1 0 auto;display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:999px;
+  border:1px solid var(--line);background:var(--paper);color:var(--muted);font-size:.9rem;white-space:nowrap}
+ol.steps li .n{display:inline-grid;place-items:center;width:24px;height:24px;border-radius:50%;
+  border:1.5px solid currentColor;font-weight:600;font-size:.8rem}
+ol.steps li.now{color:var(--ink);border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+ol.steps li.now .n{background:var(--accent);color:var(--btn-ink);border-color:var(--accent)}
+ol.steps li.done{color:var(--ok)}
+ol.steps li.done .n{background:var(--ok);color:var(--btn-ink);border-color:var(--ok)}
+
+.stage{display:flex;flex-direction:column;gap:14px}
+.enz-nav{display:none;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
+.enz-nav span{font-size:.85rem;color:var(--muted)}
+.strand{margin-top:6px}
+.minimap{display:block;width:100%;height:46px;touch-action:none;cursor:pointer}
+.minimap .mm-line{stroke:var(--line);stroke-width:8;stroke-linecap:round}
+.minimap .mm-gene{stroke:var(--gene);stroke-width:8;stroke-linecap:butt}
+.minimap .mm-win{fill:color-mix(in srgb,var(--accent) 22%,transparent);stroke:var(--accent);stroke-width:1.5;rx:3}
+.minimap .mm-cut{stroke:var(--bad);stroke-width:2.5}
+.minimap .mm-lab{font-size:11px;fill:var(--muted)}
+.strand-nav{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:4px 0 8px}
+.strand-nav .pos{font-size:.85rem;color:var(--muted);text-align:center;flex:1}
+.cut-block .note{min-height:3.1em}
+.attempts{min-height:1.25em}
+.orf{margin-top:10px;font-family:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;font-size:1.02rem;overflow-x:auto}
+.orf-row{display:flex;align-items:center;gap:1px;margin-bottom:5px}
+.orf-num{width:2.4em;flex:0 0 auto;color:var(--muted);font-size:.78rem;text-align:right;margin-right:10px}
+.orf-gap{width:.5em;flex:0 0 auto}
+.orf b{font-weight:400;flex:0 0 auto;width:1.3em;text-align:center;border-radius:4px;cursor:pointer;color:var(--top);border:1px solid transparent;line-height:1.5}
+.orf b:hover{border-color:var(--accent)}
+.orf b.inorf{background:color-mix(in srgb,var(--gene) 16%,transparent)}
+.orf b.st{background:var(--ok);color:var(--btn-ink)}
+.orf b.sp{background:var(--bad);color:#fff}
+.orf .idx{width:100%;height:0}
+.orf-cap{font-size:.84rem;color:var(--muted);margin-top:8px}
+.bench{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,.9fr) minmax(0,1.05fr);gap:14px}
+.bench.hidden{display:none}
+.panel{background:var(--paper);border:1px solid var(--line);border-radius:16px;padding:14px 16px;box-shadow:var(--shadow);
+  transition:box-shadow .3s,border-color .3s;min-width:0}
+.panel.focus{border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 25%,transparent)}
+.panel h2{margin:0;font-size:1.08rem;font-weight:600}
+.panel .sub{margin:2px 0 8px;color:var(--muted);font-size:.88rem}
+
+/* plasmid */
+#plasmid-svg{width:100%;max-width:380px;display:block;margin:0 auto;touch-action:none;cursor:grab;user-select:none}
+#plasmid-svg.dragging{cursor:grabbing}
+#plasmid-svg.fixed{cursor:default}
+.ring{fill:none;stroke:var(--ink);stroke-width:1.4}
+.site-tick{stroke:var(--ink);stroke-width:2}
+.site-label{font-size:13px;font-weight:600;fill:var(--ink)}
+.site-label.on{fill:var(--accent)}
+.feat-label{font-size:11px;fill:var(--muted);font-weight:500}
+.pointer-line{stroke:var(--accent);stroke-width:2;stroke-dasharray:4 3}
+.pointer-icon{font-size:22px;fill:var(--accent)}
+.rot-ctrl{display:flex;justify-content:center;gap:8px;margin:4px 0 8px}
+.legend{list-style:none;margin:0;padding:0;font-size:.86rem;display:grid;gap:4px}
+.legend li{display:grid;grid-template-columns:14px 1fr;gap:8px;align-items:start}
+.legend .sw{width:14px;height:14px;border-radius:3px;margin-top:4px}
+.legend b{font-weight:600}
+
+/* enzymes */
+.enz-list{display:grid;gap:8px}
+.enz{display:grid;grid-template-columns:1fr auto;gap:2px 10px;text-align:left;padding:9px 12px;border-radius:10px;
+  border:1px solid var(--line);background:transparent;cursor:pointer;transition:border-color .2s,background .2s}
+.enz:hover:not(:disabled){border-color:var(--accent)}
+.enz:disabled{cursor:not-allowed;opacity:.55}
+.enz .nm{font-weight:700}
+.enz .src{grid-column:1;font-size:.78rem;color:var(--muted);font-style:italic}
+.enz .seq{grid-column:2;grid-row:1 / span 2;font-size:.82rem;line-height:1.35;text-align:right;white-space:pre}
+.enz .seq .t{color:var(--top)} .enz .seq .b{color:var(--bot)}
+.enz .cut{color:var(--bad);font-weight:600}
+.enz .info{grid-column:1 / -1;font-size:.8rem;color:var(--ink);margin-top:4px;display:none}
+.enz.sel{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 9%,transparent)}
+.enz.sel .info{display:block}
+.enz .tag{display:inline-block;font-size:.72rem;padding:0 7px;border-radius:999px;margin-left:6px;font-weight:600;
+  border:1px solid currentColor;font-style:normal}
+.enz .tag.p{color:var(--lac)} .enz .tag.g{color:var(--gene)}
+
+/* donor */
+#donor-map{width:100%;display:block}
+.dmap-tick{stroke:var(--ink);stroke-width:1.6}
+.dmap-tick.hl{stroke:var(--accent);stroke-width:3}
+.dmap-label{font-size:10.5px;fill:var(--muted);font-weight:500}
+.dmap-label.hl{fill:var(--accent);font-weight:700}
+.seqbox{border:1px solid var(--line);border-radius:10px;padding:8px 10px;margin-top:8px;overflow-x:auto}
+.seqbox .row{white-space:pre;font-size:.8rem;line-height:1.5}
+.seqbox .t{color:var(--top)} .seqbox .b{color:var(--bot)}
+.seqbox .hl{background:var(--site-bg);border-radius:3px}
+.seqbox .end{color:var(--muted);font-size:.75rem}
+.seqbox-cap{font-size:.8rem;color:var(--muted);margin-top:6px}
+
+/* workspace */
+.work{background:var(--paper);border:1px solid var(--line);border-radius:18px;padding:18px 20px 22px;box-shadow:var(--shadow)}
+.work h2{margin:0 0 4px;font-size:1.3rem;font-weight:700}
+.work .lead{margin:0 0 14px;color:var(--muted);max-width:75ch}
+.btns{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
+.btn{appearance:none;border:1.5px solid var(--accent);background:var(--accent);color:var(--btn-ink);
+  padding:9px 16px;border-radius:10px;font-weight:600;cursor:pointer;line-height:1.3}
+.btn:hover:not(:disabled){filter:brightness(1.07)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.ghost{background:transparent;color:var(--accent)}
+.btn.small{padding:6px 12px;font-size:.9rem}
+.slide{position:relative;height:60px;width:100%;max-width:440px;border-radius:999px;border:1.5px solid var(--line);
+  background:color-mix(in srgb,var(--ink) 5%,var(--paper));user-select:none;touch-action:none;overflow:hidden;margin-top:14px}
+.slide-fill{position:absolute;left:0;top:0;bottom:0;width:0;border-radius:999px;background:color-mix(in srgb,var(--accent) 22%,transparent)}
+.slide-label{position:absolute;inset:0;display:grid;place-items:center;padding-left:60px;padding-right:12px;font-weight:600;color:var(--muted);text-align:center;line-height:1.25;font-size:.95rem}
+.slide-knob{position:absolute;left:5px;top:5px;width:48px;height:48px;border-radius:50%;display:grid;place-items:center;font-size:22px;
+  background:var(--accent);color:var(--btn-ink);cursor:grab;box-shadow:0 2px 6px rgba(0,0,0,.18);transition:transform .35s cubic-bezier(.3,1.3,.5,1)}
+.slide-knob.drag{transition:none;cursor:grabbing}
+.slide.zap .slide-knob{background:#F2C230;color:#2A2000}
+.slide.zap .slide-fill{background:rgba(242,194,48,.35)}
+.slide.heat .slide-knob{background:#E0663A;color:#fff}
+.slide.heat .slide-fill{background:linear-gradient(90deg,rgba(242,194,48,.25),rgba(224,102,58,.35))}
+.slide.done{border-color:var(--ok)}
+.slide.done .slide-label{color:var(--ok)}
+.note{border-radius:10px;padding:10px 14px;margin-top:12px;font-size:.95rem;border:1px solid var(--line)}
+.note.ok{background:var(--ok-bg);border-color:var(--ok);color:var(--ink)}
+.note.bad{background:var(--bad-bg);border-color:var(--bad);color:var(--ink)}
+.note.info{background:transparent}
+.note b{font-weight:600}
+.note:empty{display:none}
+
+.cut-block{margin-top:10px}
+.cut-block h3{margin:0 0 6px;font-size:1rem;font-weight:600}
+.cutter-wrap{position:relative;border:1px dashed var(--line);border-radius:12px;padding:6px;overflow:hidden}
+.cutter{display:block;width:100%;max-width:720px;margin:0 auto;touch-action:none;user-select:none;cursor:crosshair}
+.cutter.locked{cursor:default}
+.cutter .nt{font-family:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;font-size:20px;font-weight:600;text-anchor:middle}
+.cutter .nt.top{fill:var(--top)} .cutter .nt.bot{fill:var(--bot)}
+.cutter .bb{stroke-width:3;stroke-linecap:butt}
+.cutter .bb.top{stroke:var(--top)} .cutter .bb.bot{stroke:var(--bot)}
+.cutter .rung{stroke:var(--muted);stroke-width:1.4;stroke-dasharray:2 3;opacity:.7;transition:opacity .4s,transform .5s}
+.cutter .rung.broken{opacity:.12}
+.cutter .ntg{transition:transform .55s cubic-bezier(.2,.8,.2,1)}
+.zoom{display:flex;flex-wrap:wrap;align-items:center;gap:6px 18px;border:1.5px solid var(--accent);border-radius:14px;padding:10px 14px;margin:4px 0 14px;
+  background:color-mix(in srgb,var(--accent) 6%,var(--paper))}
+.zoom svg{width:230px;max-width:100%;flex:0 0 auto}
+.zoom .zt{flex:1 1 220px;font-size:.92rem}
+.zoom .zt b{font-size:1.15rem}
+.zoom .znt{font-family:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;font-size:26px;font-weight:600;text-anchor:middle}
+.zoom .znt.top{fill:var(--top)} .zoom .znt.bot{fill:var(--bot)}
+.zoom .zcut{fill:none;stroke:var(--bad);stroke-width:3;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:7 5}
+.zoom .zlab{font-size:13px;fill:var(--muted);font-family:"IBM Plex Mono",ui-monospace,monospace;text-anchor:middle}
+.cutter .shade-gene{fill:var(--gene-bg);stroke:var(--gene);stroke-width:1;stroke-dasharray:4 3}
+.cutter .shade-label{font-size:12px;fill:var(--gene);font-weight:600}
+.cutter .endlab{font-size:12px;fill:var(--muted);text-anchor:middle;font-family:"IBM Plex Mono",ui-monospace,monospace}
+.cutter .stroke{fill:none;stroke:var(--ink);stroke-width:3.2;stroke-linecap:round;stroke-linejoin:round;opacity:.85}
+.cutter .stroke.ok{stroke:var(--ok)}
+.cutter .stroke.bad{stroke:var(--bad);transition:opacity .5s}
+.cutter .mark{font-size:64px;font-weight:700;text-anchor:middle;pointer-events:none}
+.cutter .mark.ok{fill:var(--ok)} .cutter .mark.bad{fill:var(--bad)}
+.lockveil{position:absolute;inset:0;display:grid;place-items:center;background:color-mix(in srgb,var(--paper) 72%,transparent);
+  font-weight:600;color:var(--muted);text-align:center;padding:12px}
+.attempts{font-size:.82rem;color:var(--muted);margin-top:4px}
+
+/* ligation */
+.lig-svg{display:block;width:100%;max-width:820px;margin:0 auto;touch-action:none;user-select:none}
+.lig-svg .nt{font-family:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;font-size:15px;font-weight:600;text-anchor:middle}
+.lig-svg .nt.top{fill:var(--top)} .lig-svg .nt.bot{fill:var(--bot)}
+.lig-svg .bb{stroke-width:3} .lig-svg .bb.top{stroke:var(--top)} .lig-svg .bb.bot{stroke:var(--bot)}
+.lig-svg .bb.dash{stroke-dasharray:3 4}
+.lig-svg .rung{stroke:var(--muted);stroke-width:1.2;stroke-dasharray:2 3;opacity:.7}
+.lig-svg .rest-outer{fill:none;stroke:var(--ink);stroke-width:12;opacity:.85}
+.lig-svg .rest-inner{fill:none;stroke:var(--paper);stroke-width:8}
+.lig-svg .rest-label{font-size:13px;fill:var(--muted);text-anchor:middle}
+.lig-svg .genebox{fill:var(--gene-bg);stroke:var(--gene);stroke-width:2}
+.lig-svg .genetext{font-size:15px;font-weight:700;fill:var(--gene);text-anchor:middle}
+.lig-svg .hint{font-size:12.5px;fill:var(--muted);text-anchor:middle}
+.lig-svg .gene-g{cursor:grab;transition:transform .55s cubic-bezier(.2,.8,.2,1)}
+.lig-svg .gene-g.drag{transition:none;cursor:grabbing}
+.lig-svg .gene-g.fixed{cursor:default}
+.lig-svg .nick{fill:var(--paper);stroke:var(--bad);stroke-width:2.5}
+.lig-svg .seal{fill:var(--ok);opacity:0;animation:seal 1.2s ease-out}
+@keyframes seal{0%{opacity:.9;r:4}100%{opacity:0;r:16}}
+.lig-svg .gene-arrow{stroke:var(--gene);stroke-width:2.5;fill:none;stroke-linecap:round}
+.lig-svg .gene-head{fill:var(--gene)}
+.lig-svg .prom-line{stroke:var(--lac);stroke-width:2.5;fill:none}
+.lig-svg .prom-head{fill:var(--lac)}
+.lig-svg .prom-label{font-size:12px;fill:var(--lac);font-weight:600}
+.lig-svg .endtag{font-size:12px;fill:var(--muted);font-family:"IBM Plex Mono",ui-monospace,monospace;text-anchor:middle}
+.cutter .endtag{font-size:13px;font-family:"IBM Plex Mono",ui-monospace,monospace;text-anchor:middle;font-weight:600}
+.cutter .endtag.top{fill:var(--top)} .cutter .endtag.bot{fill:var(--bot)}
+.choice{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));margin-top:14px}
+.choice button{text-align:left;padding:14px 16px;border-radius:14px;border:1.5px solid var(--line);background:transparent;cursor:pointer}
+.choice button:hover{border-color:var(--accent)}
+.choice b{display:block;font-size:1.05rem;margin-bottom:4px}
+.choice span{color:var(--muted);font-size:.9rem;display:block}
+.mrna{font-family:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;font-size:1rem;color:var(--top);
+  overflow-x:auto;white-space:nowrap;padding:10px 12px;border:1px solid var(--line);border-radius:10px;margin-top:10px}
+.codons{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
+.codon{border:1.5px solid var(--line);border-radius:12px;padding:8px 10px;text-align:center;min-width:120px;flex:1 1 120px;max-width:170px}
+.codon .cd{font-family:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;font-size:1.05rem;font-weight:600;color:var(--top)}
+.codon .no{font-size:.72rem;color:var(--muted)}
+.codon select{width:100%;margin-top:6px;padding:6px 4px;border-radius:8px;border:1px solid var(--line);background:var(--paper);color:var(--ink);font:inherit;font-size:.84rem}
+.codon.good{border-color:var(--ok);background:var(--ok-bg)}
+.codon.bad{border-color:var(--bad);background:var(--bad-bg)}
+.codebook{margin-top:14px}
+.codebook summary{cursor:pointer;font-weight:600}
+table.code{border-collapse:collapse;font-size:.76rem;margin-top:10px;width:100%}
+table.code th,table.code td{border:1px solid var(--line);padding:4px 6px;vertical-align:top}
+table.code th{background:color-mix(in srgb,var(--accent) 10%,transparent)}
+table.code code{font-family:"IBM Plex Mono",ui-monospace,monospace}
+.peptide{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:10px;font-weight:600}
+.peptide i{display:inline-block;padding:5px 10px;border-radius:999px;background:var(--gene-bg);color:var(--gene);font-style:normal}
+.lig-svg .lig-body{fill:var(--lig);stroke:var(--lig-edge);stroke-width:2}
+.lig-svg .lig-eye{fill:var(--lig-edge)}
+.lig-svg .lig-label{font-size:12.5px;font-weight:700;fill:var(--lig-edge);text-anchor:middle}
+.lig-svg .target{fill:none;stroke:var(--accent);stroke-width:1.5;stroke-dasharray:6 5;opacity:.6}
+.shake{animation:shake .45s}
+@keyframes shake{0%,100%{translate:0 0}20%{translate:-8px 0}40%{translate:8px 0}60%{translate:-5px 0}80%{translate:5px 0}}
+.mixture{display:flex;flex-wrap:wrap;gap:14px 22px;margin-top:10px;font-size:.88rem;color:var(--muted)}
+.mixture span{display:inline-flex;align-items:center;gap:8px}
+
+/* transformation */
+.tf-svg{display:block;width:100%;max-width:860px;margin:0 auto}
+.cuvette{fill:color-mix(in srgb,var(--top) 6%,var(--paper));stroke:var(--line);stroke-width:2}
+.cell-mem{fill:none;stroke:#3C8D5A;stroke-width:4;transition:stroke-dasharray .2s}
+:root[data-theme="dark"] .cell-mem{stroke:#6CC48C}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .cell-mem{stroke:#6CC48C}}
+.cell-cyto{fill:color-mix(in srgb,#3C8D5A 16%,var(--paper))}
+.cell-chr{fill:none;stroke:color-mix(in srgb,#3C8D5A 55%,var(--paper));stroke-width:1.6}
+.porous .cell-mem{stroke-dasharray:12 7}
+.dna{transition:transform 1.3s cubic-bezier(.25,.8,.25,1),opacity .6s}
+.flash{fill:#FFF6C4;opacity:0;pointer-events:none}
+.flash.go{animation:flash .7s ease-out}
+@keyframes flash{0%{opacity:0}15%{opacity:.85}100%{opacity:0}}
+.bolt{fill:#F2C230;stroke:#B98B00;stroke-width:1.5;opacity:0}
+.bolt.go{animation:bolt .7s ease-out}
+@keyframes bolt{0%{opacity:0}10%{opacity:1}70%{opacity:1}100%{opacity:0}}
+
+/* plate */
+.plate-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:20px;align-items:start}
+.plate-svg{display:block;width:100%;max-width:440px;margin:0 auto}
+.dish-rim{fill:color-mix(in srgb,var(--ink) 5%,var(--paper));stroke:var(--line);stroke-width:3}
+.agar{fill:var(--agar);stroke:var(--agar-edge);stroke-width:2}
+.plate-svg.spreading{touch-action:none;cursor:crosshair}
+.wet{fill:none;stroke:var(--colony);stroke-width:46;stroke-linecap:round;stroke-linejoin:round;opacity:.22}
+.puddle{fill:var(--colony);opacity:.55;stroke:var(--colony-edge);stroke-width:1}
+.spreader line{stroke:var(--ink);stroke-width:4;stroke-linecap:round;opacity:.8}
+.spread-pct{font-weight:600}
+.colony{transform-box:fill-box;transform-origin:center;transform:scale(0);transition:transform .9s cubic-bezier(.3,1.4,.5,1);cursor:pointer}
+.colony.grown{transform:scale(1)}
+.colony .white{fill:var(--colony);stroke:var(--colony-edge);stroke-width:1.5}
+.colony .blue{fill:var(--xgal);stroke:color-mix(in srgb,var(--xgal) 70%,#000);stroke-width:1.5}
+.colony .sel-ring{fill:none;stroke:var(--accent);stroke-width:3;opacity:0}
+.colony.sel .sel-ring{opacity:1}
+.colony:focus{outline:none}
+.colony:focus-visible .sel-ring{opacity:1;stroke-dasharray:4 3}
+.medium{font-size:.92rem}
+.medium dl{margin:6px 0 0;display:grid;grid-template-columns:auto 1fr;gap:4px 12px}
+.medium dt{font-weight:600}
+.medium dd{margin:0;color:var(--muted)}
+.progress{height:10px;border-radius:999px;background:var(--line);overflow:hidden;margin-top:10px}
+.progress i{display:block;height:100%;width:0;background:var(--accent);transition:width 1.8s linear}
+.pick{border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-top:12px}
+.pick .dot{display:inline-block;width:16px;height:16px;border-radius:50%;vertical-align:-3px;margin-right:6px}
+
+/* result */
+.result-head{font-size:clamp(2rem,6vw,3.4rem);font-weight:700;line-height:1.05;margin:4px 0 10px;letter-spacing:-.01em}
+.result-head.fail{color:var(--bad)}
+.result-head.win{color:var(--ok)}
+.result-grid{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:22px;align-items:start}
+.reason p{margin:0 0 10px;max-width:68ch}
+.summary{font-size:.9rem;border-top:1px solid var(--line);padding-top:10px;margin-top:6px;color:var(--muted)}
+.summary div{margin:2px 0}
+.prod-svg{display:block;width:100%;max-width:420px;margin:0 auto}
+.bubble{fill:color-mix(in srgb,var(--top) 30%,transparent);animation:rise 3.2s linear infinite}
+.prot{fill:var(--gene);animation:rise 4s linear infinite}
+@keyframes rise{0%{transform:translateY(0);opacity:0}10%{opacity:1}90%{opacity:1}100%{transform:translateY(-190px);opacity:0}}
+.bug{fill:color-mix(in srgb,#3C8D5A 30%,var(--paper));stroke:#3C8D5A;stroke-width:2;animation:drift 5s ease-in-out infinite alternate}
+@keyframes drift{from{transform:translate(0,0)}to{transform:translate(14px,-8px)}}
+
+@media (max-width: 980px){
+  .bench{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+  .bench .p-donor{grid-column:1 / -1}
+}
+@media (max-width: 680px){
+  .wrap{padding:14px 12px 40px}
+  .bench{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px}
+  .bench .p-donor{grid-column:1 / -1}
+  .panel{padding:12px 10px}
+  .plate-grid,.result-grid{grid-template-columns:minmax(0,1fr)}
+  .work{padding:14px 12px 18px}
+  .enz-nav{display:flex}
+  .enz-list .enz{display:none}
+  .enz-list .enz.cur{display:grid}
+  .enz{grid-template-columns:1fr}
+  .enz .seq{grid-column:1;grid-row:auto;text-align:left}
+  .legend{font-size:.8rem}
+  #plasmid-svg{max-width:100%}
+}
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>ห้องแล็บถ่ายฝากยีน</h1>
+      <p>ตัดพลาสมิด ตัดยีนจากสิ่งมีชีวิตอื่น เชื่อมให้เป็น DNA ลูกผสม แล้วใส่เข้าเซลล์แบคทีเรียเพื่อผลิตโปรตีน</p>
+    </div>
+    <button class="btn ghost small" id="reset-top" type="button">เริ่มใหม่ทั้งหมด</button>
+  </header>
+
+  <ol class="steps" id="steps"></ol>
+
+  <div class="stage" id="stage">
+  <section class="bench" id="bench">
+    <div class="panel p-donor" id="p-donor">
+      <h2>ชิ้น DNA จากสิ่งมีชีวิตอื่น</h2>
+      <p class="sub">gene A สร้างโปรตีน A ส่วนสีส้มคือช่วงที่ถูกแปลรหัสเป็นโปรตีน มีตำแหน่งที่เอนไซม์จดจำทั้งก่อนยีน ในยีน และหลังยีน</p>
+      <svg id="donor-map" viewBox="0 0 360 112" aria-label="แผนที่ชิ้น DNA ที่มี gene A"></svg>
+      <div class="seqbox mono" id="gene-seq"></div>
+      <div class="seqbox-cap" id="gene-seq-cap">ลำดับเบสช่วงที่แปลรหัสของ gene A (แบ่งเป็นโคดอน)</div>
+    </div>
+    <div class="panel p-enz" id="p-enz">
+      <h2>เอนไซม์ตัดจำเพาะ</h2>
+      <p class="sub" id="enz-sub">ใช้ได้ในขั้นตัดพลาสมิดและขั้นตัดชิ้น gene</p>
+      <div class="enz-nav" id="enz-nav">
+        <button type="button" class="btn ghost small" id="enz-up">▲</button>
+        <span id="enz-count"></span>
+        <button type="button" class="btn ghost small" id="enz-down">▼</button>
+      </div>
+      <div class="enz-list" id="enz-list"></div>
+    </div>
+    <div class="panel p-plasmid" id="p-plasmid">
+      <h2>พลาสมิด</h2>
+      <p class="sub">ลากวงกลมเพื่อหมุน ให้ตำแหน่งที่ต้องการตัดอยู่ใต้กรรไกร</p>
+      <svg id="plasmid-svg" viewBox="-22 0 404 380" tabindex="0" aria-label="แผนที่พลาสมิด หมุนได้ด้วยการลากหรือปุ่มลูกศร"></svg>
+      <div class="rot-ctrl">
+        <button class="btn ghost small" type="button" id="rot-prev">◀ หมุน</button>
+        <button class="btn ghost small" type="button" id="rot-next">หมุน ▶</button>
+      </div>
+      <ul class="legend">
+        <li><span class="sw" style="background:var(--lac)"></span><span><b>gene Y (lacZ)</b> ย่อย X-gal ได้สีน้ำเงิน</span></li>
+        <li><span class="sw" style="background:var(--amp)"></span><span><b>gene X (ampᴿ)</b> ดื้อยาแอมพิซิลลิน</span></li>
+        <li><span class="sw" style="background:var(--ori)"></span><span><b>ORI</b> จุดเริ่มจำลองตัวเอง</span></li>
+      </ul>
+    </div>
+
+  </section>
+
+  <section class="work" id="work" aria-live="polite"></section>
+  </div>
+</div>
+
+<script>
+(function(){
+"use strict";
+const NS="http://www.w3.org/2000/svg";
+const COMP={A:"T",T:"A",G:"C",C:"G"};
+const comp=s=>[...s].map(c=>COMP[c]).join("");
+const $=s=>document.querySelector(s);
+function sv(tag,attrs,parent){const e=document.createElementNS(NS,tag);if(attrs)for(const k in attrs){if(k==="text")e.textContent=attrs[k];else e.setAttribute(k,attrs[k]);}if(parent)parent.appendChild(e);return e;}
+function hv(tag,attrs,parent){const e=document.createElement(tag);if(attrs)for(const k in attrs){const v=attrs[k];if(k==="text")e.textContent=v;else if(k==="html")e.innerHTML=v;else if(k==="class")e.className=v;else if(k.startsWith("on"))e.addEventListener(k.slice(2),v);else if(v!==false&&v!=null)e.setAttribute(k,v===true?"":v);}if(parent)parent.appendChild(e);return e;}
+const rand=(a,b)=>a+Math.random()*(b-a);
+function shuffle(a){a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+const norm=a=>{a=((a%360)+360)%360;return a>180?a-360:a;};
+
+/* ---------- Data ---------- */
+const ENZ={
+  EcoRI:{name:"EcoRI",site:"GAATTC",t:1,b:5,src:"Escherichia coli"},
+  BamHI:{name:"BamHI",site:"GGATCC",t:1,b:5,src:"Bacillus amyloliquefaciens"},
+  HindIII:{name:"HindIII",site:"AAGCTT",t:1,b:5,src:"Haemophilus influenzae"},
+  SmaI:{name:"SmaI",site:"CCCGGG",t:3,b:3,src:"Serratia marcescens"},
+  EcoRV:{name:"EcoRV",site:"GATATC",t:3,b:3,src:"Escherichia coli"},
+  PstI:{name:"PstI",site:"CTGCAG",t:5,b:1,src:"Providencia stuartii"}
+};
+const ENZ_ORDER=["EcoRI","BamHI","HindIII","SmaI","EcoRV","PstI"];
+function endType(e){
+  if(e.t===e.b)return{kind:"blunt"};
+  if(e.t<e.b)return{kind:"5",seq:e.site.slice(e.t,e.b)};
+  return{kind:"3",seq:e.site.slice(e.b,e.t)};
+}
+function endText(e){const t=endType(e);if(t.kind==="blunt")return"ปลายทู่ (blunt end)";return`ปลายเหนียว ด้าน ${t.kind}′ ยื่น ${t.seq}`;}
+function compatible(a,b){const x=endType(a),y=endType(b);if(x.kind==="blunt"&&y.kind==="blunt")return true;return x.kind===y.kind&&x.seq===y.seq;}
+
+const FEATURES=[
+  {id:"lacZ",label:"gene Y",sub:"lacZ",from:316,to:56,color:"--lac"},
+  {id:"ori",label:"ORI",sub:"",from:96,to:130,color:"--ori"},
+  {id:"amp",label:"gene X",sub:"ampᴿ",from:170,to:256,color:"--amp"}
+];
+const SITES=[
+  {id:"hind",enzyme:"HindIII",angle:334,region:"lacZ",win:"GCTAAAGACAAGCTTAATTACATA"},
+  {id:"sma",enzyme:"SmaI",angle:8,region:"lacZ",win:"ACATACCCGGGCACGTCAGCACGA"},
+  {id:"eco",enzyme:"EcoRI",angle:34,region:"lacZ",win:"AACTTGTTGGCCCGAATTCAGTGT"},
+  {id:"ecorv",enzyme:"EcoRV",angle:112,region:"ori",win:"GAATCGCGATATCTTAAGGGTTAA"},
+  {id:"bam",enzyme:"BamHI",angle:196,region:"amp",win:"GTAAGTGTGATGGATCCGCATACG"},
+  {id:"pst",enzyme:"PstI",angle:232,region:"amp",win:"CCTTTACTTGCTGTCTGCAGGTCC"}
+];
+const REGION_NAME={lacZ:"gene Y (lacZ)",amp:"gene X (ampᴿ)",ori:"ORI"};
+
+const GENE_A="ATGGCTAAGCTTGTTCGGATCCGCATTCCATAA";
+const LFL="GAATTCACGATATCTAAGCTTGGGATCCATCCCGGGAC";
+const RFL="GCCCGGGAGGATCCTAAGCTTCGAATTCAT";
+const DONOR=LFL+GENE_A+RFL;
+const GS=LFL.length, GE=LFL.length+GENE_A.length;
+const SITE_ZONE=i=>(i+6<=GS?"up":(i>=GE?"down":"in"));
+function findAll(seq,site){const r=[];let i=seq.indexOf(site);while(i>=0){r.push(i);i=seq.indexOf(site,i+1);}return r;}
+function donorSites(name){return findAll(DONOR,ENZ[name].site);}
+
+/* ---------- Genetic code ---------- */
+const AA1={F:"Phe",L:"Leu",S:"Ser",Y:"Tyr","*":"Stop",C:"Cys",W:"Trp",P:"Pro",H:"His",Q:"Gln",R:"Arg",I:"Ile",M:"Met",T:"Thr",N:"Asn",K:"Lys",V:"Val",A:"Ala",D:"Asp",E:"Glu",G:"Gly"};
+const AA_TH={Phe:"ฟีนิลอะลานีน",Leu:"ลิวซีน",Ser:"เซรีน",Tyr:"ไทโรซีน",Stop:"รหัสหยุด",Cys:"ซิสเทอีน",Trp:"ทริปโตเฟน",Pro:"โพรลีน",His:"ฮิสทิดีน",Gln:"กลูตามีน",Arg:"อาร์จินีน",Ile:"ไอโซลิวซีน",Met:"เมไทโอนีน",Thr:"ทรีโอนีน",Asn:"แอสพาราจีน",Lys:"ไลซีน",Val:"วาลีน",Ala:"อะลานีน",Asp:"แอสพาร์เทต",Glu:"กลูตาเมต",Gly:"ไกลซีน"};
+const CODE=(()=>{const tbl="FFLLSSSSYY**CC*WLLLLPPPPHHQQRRRRIIIMTTTTNNKKSSRRVVVVAAAADDEEGGGG",b="UCAG",m={};let i=0;
+  for(const x of b)for(const y of b)for(const z of b)m[x+y+z]=AA1[tbl[i++]];return m;})();
+const AA_LIST=[...new Set(Object.values(CODE))].sort((a,b)=>a==="Stop"?1:b==="Stop"?-1:a.localeCompare(b));
+const revcomp=x=>[...x].reverse().map(c=>COMP[c]).join("");
+
+/* ---------- State ---------- */
+function fresh(){return{step:1,rot:52,site:null,pEnz:null,pCut:false,gEnz:null,gCuts:[],gFrag:null,gDone:false,
+  flipped:null,docked:false,ligated:false,cells:null,rings:null,pulsed:false,plate:null,spread:false,incubated:false,colonies:null,picked:null,trans:null,result:null};}
+let S=fresh();
+
+/* ---------- Stepper ---------- */
+const STEP_NAMES=["เลือกตำแหน่งตัด","ตัดพลาสมิด","ตัดชิ้น gene A","เชื่อม DNA","ใส่เข้าเซลล์","เลี้ยงและคัดเลือก","ถอดรหัสโปรตีน"];
+function renderSteps(){
+  const ol=$("#steps");ol.innerHTML="";
+  STEP_NAMES.forEach((n,i)=>{
+    const k=i+1;const cls=S.step===k?"now":(S.step>k?"done":"");
+    const li=hv("li",{class:cls},ol);
+    if(S.step===k)li.setAttribute("aria-current","step");
+    hv("span",{class:"n",text:S.step>k?"✓":String(k)},li);hv("span",{text:n},li);
+  });
+}
+
+/* ---------- Plasmid ---------- */
+const CX=180,CY=200,R=112;
+function polar(a,r){const rad=(a-90)*Math.PI/180;return[CX+r*Math.cos(rad),CY+r*Math.sin(rad)];}
+function arcPath(a1,a2,r){const d=((a2-a1)%360+360)%360;const[x1,y1]=polar(a1,r),[x2,y2]=polar(a1+d,r);return`M${x1.toFixed(2)} ${y1.toFixed(2)} A${r} ${r} 0 ${d>180?1:0} 1 ${x2.toFixed(2)} ${y2.toFixed(2)}`;}
+let rotor,labelsG;
+function buildPlasmid(){
+  const svg=$("#plasmid-svg");svg.innerHTML="";
+  const defs=sv("defs",null,svg);
+  FEATURES.forEach(f=>{
+    const p=sv("pattern",{id:"hatch-"+f.id,width:"6",height:"6",patternUnits:"userSpaceOnUse",patternTransform:"rotate(45)"},defs);
+    sv("line",{x1:"0",y1:"0",x2:"0",y2:"6",style:`stroke:var(${f.color});stroke-width:2.4`},p);
+  });
+  rotor=sv("g",{id:"rotor"},svg);
+  labelsG=sv("g",null,svg);
+  // pointer
+  sv("line",{x1:CX,y1:CY-R-44,x2:CX,y2:CY-R+22,class:"pointer-line"},svg);
+  sv("text",{x:CX,y:CY-R-50,class:"pointer-icon","text-anchor":"middle",transform:`rotate(90 ${CX} ${CY-R-57})`,text:"✂"},svg);
+  drawRotor();updatePlasmid();
+}
+function drawRotor(){
+  rotor.innerHTML="";
+  sv("circle",{cx:CX,cy:CY,r:R-8,class:"ring"},rotor);
+  sv("circle",{cx:CX,cy:CY,r:R+8,class:"ring"},rotor);
+  FEATURES.forEach(f=>{
+    sv("path",{d:arcPath(f.from,f.to,R),style:`fill:none;stroke:var(${f.color});stroke-width:15;opacity:.2`},rotor);
+    sv("path",{d:arcPath(f.from,f.to,R),style:`fill:none;stroke:url(#hatch-${f.id});stroke-width:15`},rotor);
+  });
+  SITES.forEach(s=>{const[a,b]=polar(s.angle,R-16),[c,d]=polar(s.angle,R+16);sv("line",{x1:a,y1:b,x2:c,y2:d,class:"site-tick"},rotor);});
+  if(S.site&&S.pCut&&!S.ligated){
+    sv("path",{d:arcPath(S.site.angle-3.5,S.site.angle+3.5,R),style:"fill:none;stroke:var(--paper);stroke-width:36"},rotor);
+  }
+  if(S.site&&S.ligated){
+    sv("path",{d:arcPath(S.site.angle-11,S.site.angle+11,R),style:"fill:none;stroke:var(--paper);stroke-width:36"},rotor);
+    sv("path",{d:arcPath(S.site.angle-10,S.site.angle+10,R),style:"fill:none;stroke:var(--gene);stroke-width:16"},rotor);
+  }
+}
+function alignedSite(){for(const s of SITES){if(Math.abs(norm(s.angle+S.rot))<2.5)return s;}return null;}
+function updatePlasmid(){
+  rotor.setAttribute("transform",`rotate(${S.rot.toFixed(2)} ${CX} ${CY})`);
+  labelsG.innerHTML="";
+  const al=S.step===1?alignedSite():S.site;
+  SITES.forEach(s=>{
+    const a=norm(s.angle+S.rot);let[x,y]=polar(a,R+30);let anchor="middle";
+    if(Math.abs(a)<14){anchor="start";x=CX+12;}
+    else if(x>CX+12)anchor="start";else if(x<CX-12)anchor="end";
+    sv("text",{x,y:y+4,"text-anchor":anchor,class:"site-label"+(al&&al.id===s.id?" on":""),text:s.enzyme},labelsG);
+  });
+  FEATURES.forEach(f=>{
+    const span=((f.to-f.from)%360+360)%360;const mid=f.from+span/2;
+    const[x,y]=polar(norm(mid+S.rot),R-40);
+    const t=sv("text",{x,y:y-2,"text-anchor":"middle",class:"feat-label"},labelsG);
+    sv("tspan",{x,dy:"0",text:f.label},t);
+    if(f.sub)sv("tspan",{x,dy:"13",text:f.sub},t);
+  });
+  if(S.ligated&&S.site){const[x,y]=polar(norm(S.site.angle+S.rot),R-30);void 0;sv("text",{x,y:y+4,"text-anchor":"middle",class:"feat-label",style:"fill:var(--gene);font-weight:700",text:"gene A"},labelsG);}
+  const svg=$("#plasmid-svg");svg.classList.toggle("fixed",S.step!==1);
+  if(S.step===1)updateStep1Info();
+}
+let tween=null;
+function rotateTo(target){
+  cancelAnimationFrame(tween);
+  const start=S.rot,delta=norm(target-start),t0=performance.now(),dur=420;
+  const reduce=matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const step=now=>{const k=reduce?1:Math.min(1,(now-t0)/dur);const e=1-Math.pow(1-k,3);S.rot=start+delta*e;updatePlasmid();if(k<1)tween=requestAnimationFrame(step);};
+  tween=requestAnimationFrame(step);
+}
+function snapNearest(){
+  let best=null,bd=999;SITES.forEach(s=>{const d=Math.abs(norm(s.angle+S.rot));if(d<bd){bd=d;best=s;}});
+  if(best&&bd<18)rotateTo(-best.angle);
+}
+function stepSite(dir){
+  if(S.step!==1)return;
+  const list=SITES.map(s=>({s,d:norm(s.angle+S.rot)}));
+  // pointer at 0: next site clockwise-from-pointer means site currently at negative angle closest to 0
+  let cand;
+  if(dir>0){cand=list.filter(o=>o.d<-1.5).sort((a,b)=>b.d-a.d)[0]||list.sort((a,b)=>b.d-a.d)[0];}
+  else{cand=list.filter(o=>o.d>1.5).sort((a,b)=>a.d-b.d)[0]||list.sort((a,b)=>a.d-b.d)[0];}
+  rotateTo(-cand.s.angle);
+}
+function wirePlasmid(){
+  const svg=$("#plasmid-svg");let last=null;
+  const ang=e=>{const p=svg.createSVGPoint();p.x=e.clientX;p.y=e.clientY;const q=p.matrixTransform(svg.getScreenCTM().inverse());return Math.atan2(q.y-CY,q.x-CX)*180/Math.PI;};
+  svg.addEventListener("pointerdown",e=>{if(S.step!==1)return;cancelAnimationFrame(tween);svg.setPointerCapture(e.pointerId);last=ang(e);svg.classList.add("dragging");});
+  svg.addEventListener("pointermove",e=>{if(last==null)return;const a=ang(e);S.rot+=norm(a-last);last=a;updatePlasmid();});
+  const end=()=>{if(last==null)return;last=null;svg.classList.remove("dragging");snapNearest();};
+  svg.addEventListener("pointerup",end);svg.addEventListener("pointercancel",end);
+  svg.addEventListener("keydown",e=>{if(e.key==="ArrowRight"){e.preventDefault();stepSite(1);}else if(e.key==="ArrowLeft"){e.preventDefault();stepSite(-1);}});
+  $("#rot-next").addEventListener("click",()=>stepSite(1));
+  $("#enz-up").addEventListener("click",()=>moveCursor(-1));
+  $("#enz-down").addEventListener("click",()=>moveCursor(1));
+  $("#rot-prev").addEventListener("click",()=>stepSite(-1));
+}
+
+/* ---------- Enzymes ---------- */
+let enzCursor=0;
+function enzActive(){return(S.step===2&&!S.pCut)||(S.step===3&&!S.gDone&&!(S.gCuts&&S.gCuts.length));}
+function renderEnzymes(){
+  const host=$("#enz-list");host.innerHTML="";
+  const sel=S.step===2?S.pEnz:(S.step===3?S.gEnz:null);
+  if(sel)enzCursor=Math.max(0,ENZ_ORDER.indexOf(sel));
+  $("#enz-sub").textContent=S.step===2?"เลือกเอนไซม์สำหรับตัดพลาสมิด":S.step===3?"เลือกเอนไซม์สำหรับตัดชิ้น gene A":"ใช้ได้ในขั้นตัดพลาสมิดและขั้นตัดชิ้น gene";
+  ENZ_ORDER.forEach((k,ix)=>{
+    const e=ENZ[k];const isSel=sel===k;
+    const b=hv("button",{type:"button",class:"enz"+(isSel?" sel":"")+(ix===enzCursor?" cur":""),"aria-pressed":isSel?"true":"false"},host);
+    b.disabled=!enzActive();
+    const nm=hv("span",{class:"nm",text:e.name},b);
+    if(S.pEnz===k&&S.step>2)hv("span",{class:"tag p",text:"พลาสมิด"},nm);
+    if(S.gEnz===k&&S.step>3)hv("span",{class:"tag g",text:"gene A"},nm);
+    hv("span",{class:"src",text:e.src},b);
+    const top=e.site,bot=comp(e.site);
+    let tHtml,bHtml;
+    if(isSel){
+      tHtml=`5′ ${top.slice(0,e.t)}<span class="cut">▼</span>${top.slice(e.t)} 3′`;
+      bHtml=`3′ ${bot.slice(0,e.b)}<span class="cut">▲</span>${bot.slice(e.b)} 5′`;
+    }else{tHtml=`5′ ${top} 3′`;bHtml=`3′ ${bot} 5′`;}
+    hv("span",{class:"seq mono",html:`<span class="t">${tHtml}</span>\n<span class="b">${bHtml}</span>`},b);
+    hv("span",{class:"info",text:"ตัดแล้วได้ "+endText(e)},b);
+    b.addEventListener("click",()=>chooseEnzyme(k));
+  });
+  $("#enz-count").textContent=`${enzCursor+1} / ${ENZ_ORDER.length}`;
+}
+function moveCursor(d){enzCursor=(enzCursor+d+ENZ_ORDER.length)%ENZ_ORDER.length;renderEnzymes();}
+function chooseEnzyme(k){
+  if(!enzActive())return;
+  if(S.step===2)S.pEnz=k;
+  else if(S.step===3){S.gEnz=k;S.gCuts=[];S.gFrag=null;}
+  renderEnzymes();renderDonor();renderWork();
+}
+/* ---------- Donor ---------- */
+function renderDonor(){
+  const svg=$("#donor-map");svg.innerHTML="";
+  const L=DONOR.length,x=i=>14+i*(332/L);
+  sv("line",{x1:x(0),x2:x(L),y1:52,y2:52,style:"stroke:var(--ink);stroke-width:1.4"},svg);
+  sv("line",{x1:x(0),x2:x(L),y1:62,y2:62,style:"stroke:var(--ink);stroke-width:1.4"},svg);
+  sv("rect",{x:x(GS),y:44,width:x(GE)-x(GS),height:26,rx:5,style:"fill:var(--gene-bg);stroke:var(--gene);stroke-width:1.6"},svg);
+  sv("text",{x:(x(GS)+x(GE))/2-7,y:61,"text-anchor":"middle",style:"font-size:11px;font-weight:700;fill:var(--gene)",text:"gene A"},svg);
+  sv("path",{d:`M${x(GE)-11} 57 l7 0 m-7 7 l7 0 M${x(GE)-2} 60.5 l-5 -4 l0 9 z`,style:"stroke:var(--gene);stroke-width:1.4;fill:var(--gene)"},svg);
+  const rows=[];
+  ENZ_ORDER.forEach(k=>{
+    donorSites(k).forEach(pos=>{
+      const xx=x(pos+3);const zone=SITE_ZONE(pos);
+      sv("line",{x1:xx,x2:xx,y1:zone==="in"?46:42,y2:zone==="in"?68:72,class:"dmap-tick"},svg);
+      let row=0;while(rows.some(r=>r.row===row&&Math.abs(r.x-xx)<34))row++;rows.push({row,x:xx});
+      sv("text",{x:xx,y:zone==="in"?(90+row*13):(36-row*13),"text-anchor":"middle",class:"dmap-label",text:k},svg);
+    });
+  });
+  sv("text",{x:14,y:112,class:"dmap-label",text:"5′"},svg);sv("text",{x:346,y:112,"text-anchor":"end",class:"dmap-label",text:"3′"},svg);
+  const box=$("#gene-seq");box.innerHTML="";
+  const grp=t=>{let h="";for(let i=0;i<t.length;i+=3)h+=(i?" ":"")+t.slice(i,i+3);return h;};
+  hv("div",{class:"row",html:`<span class="end">5′ </span><span class="t">${grp(GENE_A)}</span><span class="end"> 3′</span>`},box);
+  hv("div",{class:"row",html:`<span class="end">3′ </span><span class="b">${grp(comp(GENE_A))}</span><span class="end"> 5′</span>`},box);
+  $("#p-donor").classList.toggle("focus",S.step===3);
+  $("#p-plasmid").classList.toggle("focus",S.step===1||S.step===2);
+}
+/* ---------- Cutter ---------- */
+function crossings(pts,y){const r=[];for(let i=1;i<pts.length;i++){const a=pts[i-1],b=pts[i];if((a.y<=y&&b.y>y)||(b.y<=y&&a.y>y))r.push(a.x+(b.x-a.x)*(y-a.y)/(b.y-a.y));}return r;}
+const TRIM={};
+function buildCutter(host,o){
+  let{seq,enz,idx,shade,done,veil}=o;
+  if(host.clientWidth&&host.clientWidth<560&&seq.length>14){
+    const key=seq+"|"+idx;let off=TRIM[key];
+    if(off==null){const lo=idx>=0?Math.max(0,idx+6-14):0,hi=idx>=0?Math.min(idx,seq.length-14):seq.length-14;off=TRIM[key]=Math.floor(rand(lo,hi+1));}
+    seq=seq.slice(off,off+14);if(idx>=0)idx-=off;if(shade)shade=[shade[0]-off,shade[1]-off];
+  }
+  const n=seq.length,cw=26,pad=30,W=pad*2+n*cw,H=158;
+  const T0=36,T1=66,B0=90,B1=120,tY=(T0+T1)/2,bY=(B0+B1)/2;
+  const wrap=hv("div",{class:"cutter-wrap"},host);
+  const svg=sv("svg",{viewBox:`0 0 ${W} ${H}`,class:"cutter",role:"img","aria-label":"สาย DNA สองสาย ลากนิ้วหรือเมาส์เพื่อตัด"},wrap);
+  if(shade){const a=Math.max(0,shade[0]),b=Math.min(n,shade[1]);if(b>a){sv("rect",{x:pad+a*cw,y:T0-14,width:(b-a)*cw,height:B1-T0+28,rx:5,class:"shade-gene"},svg);sv("text",{x:pad+a*cw+5,y:H-4,class:"shade-label",text:"gene A"},svg);}}
+  const rungs=[],gT=[],gB=[];
+  for(let i=0;i<n;i++){
+    const cx=pad+i*cw+cw/2;
+    rungs.push(sv("line",{x1:cx,x2:cx,y1:T1+3,y2:B0-3,class:"rung"},svg));
+    const g1=sv("g",{class:"ntg"},svg);sv("line",{x1:pad+i*cw,x2:pad+(i+1)*cw,y1:T0-3,y2:T0-3,class:"bb top"},g1);sv("text",{x:cx,y:tY+6,class:"nt top",text:seq[i]},g1);gT.push(g1);
+    const g2=sv("g",{class:"ntg"},svg);sv("line",{x1:pad+i*cw,x2:pad+(i+1)*cw,y1:B1+3,y2:B1+3,class:"bb bot"},g2);sv("text",{x:cx,y:bY+6,class:"nt bot",text:COMP[seq[i]]},g2);gB.push(g2);
+  }
+  sv("text",{x:pad-15,y:tY+5,class:"endlab",text:"5′"},svg);sv("text",{x:W-pad+15,y:tY+5,class:"endlab",text:"3′"},svg);
+  sv("text",{x:pad-15,y:bY+5,class:"endlab",text:"3′"},svg);sv("text",{x:W-pad+15,y:bY+5,class:"endlab",text:"5′"},svg);
+  const msg=hv("div",{class:"note",role:"status"},host);
+  const att=hv("div",{class:"attempts"},host);
+  let locked=!enz||idx<0||done;let tries=0;
+  svg.classList.toggle("locked",locked);
+  if(veil)hv("div",{class:"lockveil",text:veil},wrap);
+  const toSvg=e=>{const p=svg.createSVGPoint();p.x=e.clientX;p.y=e.clientY;return p.matrixTransform(svg.getScreenCTM().inverse());};
+  const stairs=(kT,kB)=>{const xT=pad+kT*cw,xB=pad+kB*cw,m=(T1+B0)/2;return`M${xT} ${T0-14} L${xT} ${m} L${xB} ${m} L${xB} ${B1+14}`;};
+  const tags=sv("g",{style:"opacity:0;transition:opacity .6s .35s"},svg);
+  function applyCut(kT,kB){
+    const sh=11;
+    const xT=pad+kT*cw,xB=pad+kB*cw;
+    sv("text",{x:xT-sh-7,y:T0-13,class:"endtag top",text:"3′"},tags);
+    sv("text",{x:xT+sh+7,y:T0-13,class:"endtag top",text:"5′"},tags);
+    sv("text",{x:xB-sh-7,y:B1+24,class:"endtag bot",text:"5′"},tags);
+    sv("text",{x:xB+sh+7,y:B1+24,class:"endtag bot",text:"3′"},tags);
+    tags.style.opacity="1";
+    for(let i=0;i<n;i++){gT[i].style.transform=`translate(${i<kT?-sh:sh}px,0)`;gB[i].style.transform=`translate(${i<kB?-sh:sh}px,0)`;
+      const lo=Math.min(kT,kB),hi=Math.max(kT,kB);
+      if(i>=lo&&i<hi){rungs[i].classList.add("broken");}else{rungs[i].style.transform=`translate(${i<lo?-sh:sh}px,0)`;}
+    }
+  }
+  if(done&&enz&&idx>=0){const kT=idx+enz.t,kB=idx+enz.b;applyCut(kT,kB);sv("path",{d:stairs(kT,kB),class:"stroke ok"},svg);}
+  let pts=null,path=null;
+  const draw=()=>path.setAttribute("d","M"+pts.map(p=>p.x.toFixed(1)+" "+p.y.toFixed(1)).join(" L"));
+  svg.addEventListener("pointerdown",e=>{if(locked)return;e.preventDefault();svg.setPointerCapture(e.pointerId);pts=[toSvg(e)];path=sv("path",{class:"stroke"},svg);draw();msg.className="note";msg.textContent="";});
+  svg.addEventListener("pointermove",e=>{if(!pts)return;pts.push(toSvg(e));draw();});
+  const up=()=>{if(!pts)return;const p=pts;pts=null;evaluate(p);};
+  svg.addEventListener("pointerup",up);svg.addEventListener("pointercancel",up);
+  function mark(ok){const m=sv("text",{x:W/2,y:H/2+22,class:"mark "+(ok?"ok":"bad"),text:ok?"✓":"✕"},svg);setTimeout(()=>m.remove(),ok?1100:900);}
+  function fail(text){
+    tries++;path.classList.add("bad");mark(false);
+    msg.className="note bad";msg.textContent=text;
+    att.textContent=`ลองไปแล้ว ${tries} ครั้ง`;
+    const pth=path;setTimeout(()=>{pth.style.opacity="0";setTimeout(()=>pth.remove(),500);},700);
+  }
+  function evaluate(p){
+    if(p.length<3){path.remove();return;}
+    const cT=crossings(p,tY),cB=crossings(p,bY);
+    if(!cT.length||!cB.length)return fail("รอยตัดต้องผ่านทั้งสายบนและสายล่าง ลากใหม่อีกครั้ง");
+    if(cT.length>1||cB.length>1)return fail("ลากเป็นเส้นเดียวจากบนลงล่าง ไม่วกกลับ ลากใหม่อีกครั้ง");
+    const kT=Math.round((cT[0]-pad)/cw),kB=Math.round((cB[0]-pad)/cw);
+    if(kT===idx+enz.t&&kB===idx+enz.b){
+      locked=true;svg.classList.add("locked");path.classList.add("ok");path.setAttribute("d",stairs(kT,kB));mark(true);applyCut(kT,kB);
+      msg.className="note ok";msg.innerHTML=`ตัดถูกต้อง ได้<b>${endText(enz)}</b>`;att.textContent="";
+      if(o.onSuccess)setTimeout(o.onSuccess,o.successDelay||0);
+    }else{
+      fail(`รอยตัดยังไม่ตรงกับตำแหน่งที่ ${enz.name} ตัด หาลำดับเบสที่ตรงกับภาพขยายของเอนไซม์ แล้วลากใหม่`);
+    }
+  }
+  if(done&&enz&&idx>=0){msg.className="note ok";msg.innerHTML=`ตัดแล้ว ได้<b>${endText(enz)}</b>`;}
+  return{msg};
+}
+
+/* ---------- Enzyme zoom ---------- */
+function enzymeZoom(host,e){
+  const z=hv("div",{class:"zoom"},host);
+  const cw=32,pad=28,W=pad*2+6*cw,H=124;
+  const svg=sv("svg",{viewBox:`0 0 ${W} ${H}`,role:"img","aria-label":`ลำดับเบสและตำแหน่งตัดของ ${e.name}`},z);
+  const top=e.site,bot=comp(e.site);
+  for(let i=0;i<6;i++){const x=pad+i*cw+cw/2;sv("text",{x,y:46,class:"znt top",text:top[i]},svg);sv("text",{x,y:100,class:"znt bot",text:bot[i]},svg);}
+  sv("text",{x:12,y:42,class:"zlab",text:"5′"},svg);sv("text",{x:W-12,y:42,class:"zlab",text:"3′"},svg);
+  sv("text",{x:12,y:96,class:"zlab",text:"3′"},svg);sv("text",{x:W-12,y:96,class:"zlab",text:"5′"},svg);
+  const xT=pad+e.t*cw,xB=pad+e.b*cw;
+  sv("path",{d:`M${xT} 10 L${xT} 64 L${xB} 64 L${xB} 116`,class:"zcut"},svg);
+  hv("div",{class:"zt",html:`<b>${e.name}</b> ขยายให้ดู<br>ลำดับที่เอนไซม์จดจำและแนวที่ตัด (เส้นประสีแดง) หาลำดับนี้บนสาย DNA ด้านล่างเอง แล้วลากตัดให้เหมือนกัน`},z);
+}
+
+/* ---------- Slide control ---------- */
+function slideControl(host,label,icon,variant,onDone){
+  const tr=hv("div",{class:"slide "+variant},host);
+  const fill=hv("div",{class:"slide-fill"},tr);
+  const lab=hv("div",{class:"slide-label",text:label},tr);
+  const k=hv("div",{class:"slide-knob",role:"slider",tabindex:"0","aria-label":label,"aria-valuemin":"0","aria-valuemax":"100","aria-valuenow":"0",text:icon},tr);
+  let x=0,startX=null,done=false;
+  const max=()=>tr.clientWidth-k.offsetWidth-10;
+  const set=v=>{x=Math.max(0,Math.min(max(),v));k.style.transform=`translateX(${x}px)`;fill.style.width=(x+k.offsetWidth/2+5)+"px";k.setAttribute("aria-valuenow",String(Math.round(100*x/Math.max(1,max()))));};
+  const finish=()=>{done=true;set(max());tr.classList.add("done");lab.textContent="✓";k.setAttribute("aria-disabled","true");onDone();};
+  k.addEventListener("pointerdown",e=>{if(done)return;e.preventDefault();k.setPointerCapture(e.pointerId);startX=e.clientX-x;k.classList.add("drag");});
+  k.addEventListener("pointermove",e=>{if(startX==null)return;set(e.clientX-startX);});
+  const up=()=>{if(startX==null)return;startX=null;k.classList.remove("drag");if(x>=max()*0.9)finish();else{set(0);fill.style.width="0";}};
+  k.addEventListener("pointerup",up);k.addEventListener("pointercancel",up);
+  k.addEventListener("keydown",e=>{if(done)return;if(e.key==="ArrowRight"){e.preventDefault();set(x+max()/5);if(x>=max()*0.9)finish();}else if(e.key==="ArrowLeft"){e.preventDefault();set(x-max()/5);}else if(e.key==="End"||e.key==="Enter"){e.preventDefault();finish();}});
+  return tr;
+}
+
+/* ---------- Workspace ---------- */
+function renderWork(){
+  const w=$("#work");w.innerHTML="";
+  $("#bench").classList.toggle("hidden",S.step>=5);$("#stage").dataset.step=String(S.step);
+  ({1:work1,2:work2,3:work3,4:work4,5:work5,6:work6,7:work7,8:work8})[S.step](w);
+}
+function head(w,title,lead){hv("h2",{text:title},w);if(lead)hv("p",{class:"lead",html:lead},w);}
+function backBtn(box,label,fn){return hv("button",{type:"button",class:"btn ghost back",text:"← "+label,onclick:fn},box);}
+function goStep(n,patch){Object.assign(S,patch||{});S.step=n;render();window.scrollTo({top:0,behavior:"smooth"});}
+
+let step1Info=null,step1Btn=null;
+function work1(w){
+  head(w,"ขั้นที่ 1 เลือกตำแหน่งที่จะตัดพลาสมิด","หมุนพลาสมิดให้ตำแหน่งตัดที่ต้องการอยู่ใต้กรรไกร คิดก่อนเลือก: การแทรก gene A เข้าไปในบริเวณใด จะไปรบกวนการทำงานของยีนหรือบริเวณนั้น");
+  step1Info=hv("div",{class:"note info"},w);
+  const b=hv("div",{class:"btns"},w);
+  step1Btn=hv("button",{type:"button",class:"btn",text:"เลือกจุดตัดนี้",onclick:()=>{const s=alignedSite();if(!s)return;S.site=s;S.step=2;S.pEnz=null;render();}},b);
+  updateStep1Info();
+}
+function updateStep1Info(){
+  if(!step1Info||!step1Info.isConnected)return;
+  const s=alignedSite();
+  if(s){step1Info.innerHTML=`ใต้กรรไกรตอนนี้: ตำแหน่ง <b>${s.enzyme}</b> อยู่ใน <b>${REGION_NAME[s.region]}</b>`;step1Btn.disabled=false;}
+  else{step1Info.textContent="ยังไม่มีตำแหน่งตัดอยู่ใต้กรรไกร หมุนพลาสมิดต่อ";step1Btn.disabled=true;}
+}
+
+function work2(w){
+  const s=S.site;
+  head(w,"ขั้นที่ 2 ตัดพลาสมิด",`บริเวณที่เลือก: ตำแหน่ง ${s.enzyme} ใน ${REGION_NAME[s.region]} เลือกเอนไซม์ตัดจำเพาะ จากนั้นหาลำดับเบสที่เอนไซม์จดจำบนสาย DNA ด้วยตัวเอง แล้วลากนิ้วหรือเมาส์ตัดให้ตรงกับแนวที่เอนไซม์ตัด`);
+  const enz=S.pEnz?ENZ[S.pEnz]:null;const idx=enz?s.win.indexOf(enz.site):-1;
+  if(enz)enzymeZoom(w,enz);
+  const blk=hv("div",{class:"cut-block"},w);
+  let veil=null;
+  if(!enz)veil="เลือกเอนไซม์ตัดจำเพาะก่อน";
+  else if(idx<0)veil=`ไม่พบลำดับ ${enz.site} ที่ ${enz.name} จดจำในบริเวณนี้ ลองเลือกเอนไซม์อื่น`;
+  const btns=hv("div",{class:"btns"});
+  buildCutter(blk,{seq:s.win,enz,idx,done:S.pCut,veil,onSuccess:()=>{S.pCut=true;drawRotor();updatePlasmid();renderEnzymes();showNext();}});
+  w.appendChild(btns);
+  const back=backBtn(btns,"ย้อนกลับ: เลือกตำแหน่งตัดใหม่",()=>goStep(1,{site:null,pEnz:null,pCut:false}));
+  function showNext(){
+    if(btns.querySelector(".next"))return;
+    hv("button",{type:"button",class:"btn next",text:"ต่อไป: ตัดชิ้น gene A",onclick:()=>goStep(3)},btns);
+  }
+  if(S.pCut)showNext();
+  void back;
+}
+
+function strandCutter(host,enz,onCut){
+  const cw=26,T0=36,T1=66,B0=90,B1=120,tY=(T0+T1)/2,bY=(B0+B1)/2,H=168;
+  const wrap=hv("div",{class:"strand"},host);
+  const mini=sv("svg",{viewBox:"0 0 400 46",class:"minimap",role:"img","aria-label":"แผนที่ย่อของชิ้น DNA แตะเพื่อเลื่อนหน้าต่าง"},wrap);
+  const nav=hv("div",{class:"strand-nav"},wrap);
+  const bPrev=hv("button",{type:"button",class:"btn ghost small",text:"◀ เลื่อน"},nav);
+  const posLab=hv("div",{class:"pos"},nav);
+  const bNext=hv("button",{type:"button",class:"btn ghost small",text:"เลื่อน ▶"},nav);
+  const cw2=hv("div",{class:"cutter-wrap"},wrap);
+  const svg=sv("svg",{class:"cutter",role:"img","aria-label":"สาย DNA ลากนิ้วหรือเมาส์เพื่อตัด"},cw2);
+  const msg=hv("div",{class:"note",role:"status"},host);
+  const att=hv("div",{class:"attempts"},host);
+  let cols=14,pos=0,tries=0,locked=false;
+  function fit(){const wpx=cw2.clientWidth||360;cols=Math.max(9,Math.min(22,Math.floor((wpx-24)/cw)));pos=Math.max(0,Math.min(pos,DONOR.length-cols));}
+  const sites=donorSites(S.gEnz||"EcoRI");
+  function draw(){
+    fit();
+    const W=cols*cw+56,pad=28;
+    svg.setAttribute("viewBox",`0 0 ${W} ${H}`);
+    svg.style.width="100%";svg.style.maxWidth=W+"px";
+    while(svg.firstChild)svg.removeChild(svg.firstChild);
+    const gs=GS-pos,ge=GE-pos;
+    if(ge>0&&gs<cols){
+      const a=Math.max(0,gs),b=Math.min(cols,ge);
+      sv("rect",{x:pad+a*cw,y:T0-16,width:(b-a)*cw,height:B1-T0+32,rx:5,class:"shade-gene"},svg);
+      if(gs>=0)sv("text",{x:pad+gs*cw+4,y:H-5,class:"shade-label",text:"เริ่ม gene A"},svg);
+      else if(ge<=cols)sv("text",{x:pad+Math.max(0,ge-6)*cw,y:H-5,class:"shade-label",text:"จบ gene A"},svg);
+      else sv("text",{x:pad+4,y:H-5,class:"shade-label",text:"ภายใน gene A"},svg);
+    }
+    for(let i=0;i<cols;i++){
+      const abs=pos+i,ch=DONOR[abs],cx=pad+i*cw+cw/2;
+      sv("line",{x1:cx,x2:cx,y1:T1+3,y2:B0-3,class:"rung"},svg);
+      sv("line",{x1:pad+i*cw,x2:pad+(i+1)*cw,y1:T0-3,y2:T0-3,class:"bb top"},svg);
+      sv("text",{x:cx,y:tY+6,class:"nt top",text:ch},svg);
+      sv("line",{x1:pad+i*cw,x2:pad+(i+1)*cw,y1:B1+3,y2:B1+3,class:"bb bot"},svg);
+      sv("text",{x:cx,y:bY+6,class:"nt bot",text:COMP[ch]},svg);
+      if(abs%10===0)sv("text",{x:cx,y:14,style:"font-size:10px;fill:var(--muted);text-anchor:middle",text:String(abs+1)},svg);
+    }
+    sv("text",{x:10,y:tY+5,class:"endlab",text:"5′"},svg);sv("text",{x:W-10,y:tY+5,class:"endlab",text:"3′"},svg);
+    sv("text",{x:10,y:bY+5,class:"endlab",text:"3′"},svg);sv("text",{x:W-10,y:bY+5,class:"endlab",text:"5′"},svg);
+    (S.gCuts||[]).forEach(si=>{
+      const kT=si+enz.t-pos,kB=si+enz.b-pos;
+      if(Math.max(kT,kB)<0||Math.min(kT,kB)>cols)return;
+      const xT=pad+kT*cw,xB=pad+kB*cw,m=(T1+B0)/2;
+      sv("path",{d:`M${xT} ${T0-14} L${xT} ${m} L${xB} ${m} L${xB} ${B1+14}`,class:"stroke ok"},svg);
+      sv("text",{x:xT-9,y:T0-18,class:"endtag top",text:"3′"},svg);
+      sv("text",{x:xT+9,y:T0-18,class:"endtag top",text:"5′"},svg);
+      sv("text",{x:xB-9,y:B1+29,class:"endtag bot",text:"5′"},svg);
+      sv("text",{x:xB+9,y:B1+29,class:"endtag bot",text:"3′"},svg);
+    });
+    posLab.textContent=`เบสที่ ${pos+1}–${Math.min(DONOR.length,pos+cols)} จาก ${DONOR.length}`;
+    bPrev.disabled=pos<=0;bNext.disabled=pos>=DONOR.length-cols;
+    drawMini();
+    return{pad,W};
+  }
+  function drawMini(){
+    while(mini.firstChild)mini.removeChild(mini.firstChild);
+    const mx=i=>14+i*(372/DONOR.length);
+    sv("line",{x1:mx(0),x2:mx(DONOR.length),y1:24,y2:24,class:"mm-line"},mini);
+    sv("line",{x1:mx(GS),x2:mx(GE),y1:24,y2:24,class:"mm-gene"},mini);
+    sv("text",{x:(mx(GS)+mx(GE))/2,y:44,class:"mm-lab",style:"text-anchor:middle",text:"gene A"},mini);
+    (S.gCuts||[]).forEach(si=>sv("line",{x1:mx(si+3),x2:mx(si+3),y1:12,y2:36,class:"mm-cut"},mini));
+    sv("rect",{x:mx(pos),y:12,width:Math.max(6,mx(pos+cols)-mx(pos)),height:24,class:"mm-win"},mini);
+  }
+  const stepBy=()=>Math.max(2,Math.floor(cols/3));
+  bPrev.addEventListener("click",()=>{pos=Math.max(0,pos-stepBy());draw();});
+  bNext.addEventListener("click",()=>{pos=Math.min(DONOR.length-cols,pos+stepBy());draw();});
+  const jump=e=>{const r=mini.getBoundingClientRect();const f=(e.clientX-r.left)/r.width*400;const i=Math.round((f-14)/(372/DONOR.length))-Math.floor(cols/2);pos=Math.max(0,Math.min(DONOR.length-cols,i));draw();};
+  mini.addEventListener("pointerdown",e=>{mini.setPointerCapture(e.pointerId);jump(e);});
+  mini.addEventListener("pointermove",e=>{if(e.buttons)jump(e);});
+  let geo=draw();
+  window.addEventListener("resize",()=>{geo=draw();});
+  const toSvg=e=>{const p=svg.createSVGPoint();p.x=e.clientX;p.y=e.clientY;return p.matrixTransform(svg.getScreenCTM().inverse());};
+  let pts=null,path=null;
+  const drawPath=()=>path.setAttribute("d","M"+pts.map(p=>p.x.toFixed(1)+" "+p.y.toFixed(1)).join(" L"));
+  svg.addEventListener("pointerdown",e=>{if(locked)return;e.preventDefault();svg.setPointerCapture(e.pointerId);pts=[toSvg(e)];path=sv("path",{class:"stroke"},svg);drawPath();msg.className="note";msg.textContent="";});
+  svg.addEventListener("pointermove",e=>{if(!pts)return;pts.push(toSvg(e));drawPath();});
+  const up=()=>{if(!pts)return;const p=pts;pts=null;evaluate(p);};
+  svg.addEventListener("pointerup",up);svg.addEventListener("pointercancel",up);
+  function mark(ok){const m=sv("text",{x:(cols*cw+56)/2,y:H/2+22,class:"mark "+(ok?"ok":"bad"),text:ok?"✓":"✕"},svg);setTimeout(()=>m.remove(),ok?1000:850);}
+  function fail(text){
+    tries++;path.classList.add("bad");mark(false);
+    msg.className="note bad";msg.textContent=text;att.textContent=`ลองไปแล้ว ${tries} ครั้ง`;
+    const pth=path;setTimeout(()=>{pth.style.opacity="0";setTimeout(()=>pth.remove(),500);},700);
+  }
+  function evaluate(p){
+    if(p.length<3){path.remove();return;}
+    const cT=crossings(p,tY),cB=crossings(p,bY);
+    if(!cT.length||!cB.length)return fail("รอยตัดต้องผ่านทั้งสายบนและสายล่าง ลากใหม่อีกครั้ง");
+    if(cT.length>1||cB.length>1)return fail("ลากเป็นเส้นเดียวจากบนลงล่าง ไม่วกกลับ ลากใหม่อีกครั้ง");
+    const pad=28;
+    const kT=pos+Math.round((cT[0]-pad)/cw),kB=pos+Math.round((cB[0]-pad)/cw);
+    const si=sites.find(i=>i+enz.t===kT&&i+enz.b===kB);
+    if(si==null)return fail(`ตรงนี้ไม่ใช่ลำดับที่ ${enz.name} จดจำ หรือแนวตัดยังไม่ตรง เลื่อนหาลำดับ ${enz.site} บนสายบนแล้วลากใหม่`);
+    if((S.gCuts||[]).includes(si))return fail("ตำแหน่งนี้ถูกตัดไปแล้ว ลองหาอีกตำแหน่งหนึ่ง");
+    S.gCuts=[...(S.gCuts||[]),si].sort((a,b)=>a-b);
+    path.classList.add("ok");mark(true);
+    msg.className="note ok";msg.innerHTML=`ตัดสำเร็จที่เบสที่ ${si+1}–${si+6} ได้<b>${endText(enz)}</b>`;att.textContent="";
+    if(S.gCuts.length>=2){locked=true;svg.classList.add("locked");}
+    draw();onCut();
+  }
+  if((S.gCuts||[]).length>=2){locked=true;svg.classList.add("locked");}
+}
+function work3(w){
+  head(w,"ขั้นที่ 3 ตัดชิ้น gene A","เลือกเอนไซม์ตัดจำเพาะ แล้วเลื่อนดูสาย DNA หาลำดับที่เอนไซม์จดจำด้วยตัวเอง ตัดสองตำแหน่งเพื่อแยกชิ้นที่มี gene A ออกมา ชิ้นที่ได้ต้องมีช่วงที่แปลรหัสครบถ้วน");
+  const enz=S.gEnz?ENZ[S.gEnz]:null;
+  if(enz)enzymeZoom(w,enz);
+  const btns=hv("div",{class:"btns"});
+  const blk=hv("div",{class:"cut-block"},w);
+  const res=hv("div",{class:"note",role:"status"},w);
+  if(!enz){hv("div",{class:"note info",text:"เลือกเอนไซม์ตัดจำเพาะจากรายการก่อน แล้วสาย DNA จะปรากฏให้ตัด"},blk);}
+  else{
+    const sites=donorSites(S.gEnz);
+    if(sites.length<2){
+      hv("div",{class:"note bad",html:sites.length?`${S.gEnz} มีลำดับที่จดจำเพียงตำแหน่งเดียวบนชิ้น DNA นี้ ตัดครั้งเดียวแยกยีนออกมาไม่ได้ ต้องมีรอยตัดทั้งสองข้าง ลองเลือกเอนไซม์อื่น`:`ไม่พบลำดับ ${enz.site} ที่ ${S.gEnz} จดจำบนชิ้น DNA นี้เลย ลองเลือกเอนไซม์อื่น`},blk);
+    }else{
+      strandCutter(blk,enz,()=>{if((S.gCuts||[]).length>=2)finishGene();});
+    }
+  }
+  w.appendChild(btns);
+  backBtn(btns,"ย้อนกลับ: ตัดพลาสมิดใหม่",()=>goStep(2,{pEnz:null,pCut:false,gEnz:null,gCuts:[],gFrag:null,gDone:false}));
+  if(enz)hv("button",{type:"button",class:"btn ghost",text:"เลือกเอนไซม์ใหม่",onclick:()=>goStep(3,{gEnz:null,gCuts:[],gFrag:null,gDone:false})},btns);
+  function finishGene(){
+    const t=ENZ[S.gEnz].t,all=donorSites(S.gEnz);
+    const s1=S.gCuts[0],picked=S.gCuts[1];
+    const next=all.filter(i=>i>s1).sort((a,b)=>a-b)[0];
+    const s2=Math.min(picked,next==null?picked:next);
+    const skipped=s2!==picked;
+    const geneOk=(s1+t<=GS)&&(s2+t>=GE);
+    S.gFrag={s1,s2,geneOk,skipped};S.gDone=true;renderEnzymes();
+    const len=(s2+t)-(s1+t);
+    let html=`ได้ชิ้น DNA ยาว ${len} คู่เบส ปลายทั้งสองข้างเป็น<b>${endText(ENZ[S.gEnz])}</b>`;
+    if(skipped)html+=`<br>ระหว่างรอยตัดทั้งสองยังมีลำดับ ${ENZ[S.gEnz].site} อยู่อีกตำแหน่งหนึ่ง เอนไซม์ตัดทุกตำแหน่งที่พบ ชิ้นที่ได้จึงสิ้นสุดที่ตำแหน่งนั้น`;
+    res.className=geneOk?"note ok":"note bad";
+    if(!geneOk)html+="<br>ชิ้นนี้มีช่วงที่แปลรหัสของ gene A ไม่ครบ จะนำไปใช้ต่อก็ได้ แต่ควรคิดไว้ว่าจะเกิดอะไรขึ้นตอนสร้างโปรตีน";
+    res.innerHTML=html;
+    if(!btns.querySelector(".next"))hv("button",{type:"button",class:"btn next",text:"ต่อไป: เชื่อมชิ้น gene เข้ากับพลาสมิด",onclick:()=>goStep(4)},btns);
+  }
+  if(S.gFrag){S.gDone=true;finishGene();}
+}
+function resetFromPlasmid(){Object.assign(S,fresh(),{rot:S.rot});render();window.scrollTo({top:0,behavior:"smooth"});}
+function resetGene(){goStep(3,{gEnz:null,gCuts:[],gFrag:null,gDone:false,flipped:null,docked:false,ligated:false});}
+
+/* ---------- Ligation ---------- */
+function work4(w){
+  const eP=ENZ[S.pEnz],eG=ENZ[S.gEnz];
+  if(S.flipped==null)S.flipped=Math.random()<0.5;
+  head(w,"ขั้นที่ 4 เชื่อมชิ้น gene A เข้ากับพลาสมิด","ชิ้น DNA ที่ตัดออกมาลอยอยู่ในสารละลาย ไม่มีด้านบนด้านล่างตายตัว หมุนชิ้น gene A ให้ปลายเข้าคู่กับพลาสมิดก่อน แล้วลากขึ้นไปประกบ จากนั้นเติม DNA ligase เชื่อมสาย สังเกตทิศของยีนเทียบกับโปรโมเตอร์ไว้ด้วย จะได้ใช้ในขั้นถอดรหัส");
+  hv("div",{class:"note info",html:`ปลายพลาสมิด (${eP.name}): <b>${endText(eP)}</b><br>ปลายชิ้น gene A (${eG.name}): <b>${endText(eG)}</b>`},w);
+  const wP=S.site.win,sP=wP.indexOf(eP.site);const sL=S.gFrag.s1,sR=S.gFrag.s2;
+  const t=eG.t,b=eG.b,lo=Math.min(t,b),hi=Math.max(t,b);
+  const cw=18,boxW=104,span=12*cw+boxW;
+  const X1=74+9*cw,X2=X1+span,W=X2+9*cw+74,H=352;
+  const tY=146,bY=176,REST=120;
+  const svg=sv("svg",{viewBox:`0 0 ${W} ${H}`,class:"lig-svg",role:"img","aria-label":"พลาสมิดที่ถูกตัดเปิดและชิ้น gene A"},w);
+  const box=hv("div",{class:"btns"});
+  const tb=tY-19,bb=bY+9;
+  function piece(g,seq,tr,br,aJ,aX,dash){
+    for(let j=tr[0];j<tr[1];j++){const x=aX+(j-aJ)*cw;sv("line",{x1:x,x2:x+cw,y1:tb,y2:tb,class:"bb top"},g);sv("text",{x:x+cw/2,y:tY,class:"nt top",text:seq[j]},g);}
+    for(let j=br[0];j<br[1];j++){const x=aX+(j-aJ)*cw;sv("line",{x1:x,x2:x+cw,y1:bb,y2:bb,class:"bb bot"},g);sv("text",{x:x+cw/2,y:bY,class:"nt bot",text:COMP[seq[j]]},g);}
+    for(let j=Math.max(tr[0],br[0]);j<Math.min(tr[1],br[1]);j++){const x=aX+(j-aJ)*cw+cw/2;sv("line",{x1:x,x2:x,y1:tY+5,y2:bY-16,class:"rung"},g);}
+    if(dash==="left"){const x=aX+(Math.min(tr[0],br[0])-aJ)*cw;sv("line",{x1:x-26,x2:x,y1:tb,y2:tb,class:"bb top dash"},g);sv("line",{x1:x-26,x2:x,y1:bb,y2:bb,class:"bb bot dash"},g);return x-26;}
+    if(dash==="right"){const x=aX+(Math.max(tr[1],br[1])-aJ)*cw;sv("line",{x1:x,x2:x+26,y1:tb,y2:tb,class:"bb top dash"},g);sv("line",{x1:x,x2:x+26,y1:bb,y2:bb,class:"bb bot dash"},g);return x+26;}
+  }
+  const mP=Math.min(eP.t,eP.b),MP=Math.max(eP.t,eP.b);
+  const arms=sv("g",null,svg);
+  const xl=piece(arms,wP,[sP+mP-4,sP+eP.t],[sP+mP-4,sP+eP.b],sP+eP.t,X1,"left");
+  const xr=piece(arms,wP,[sP+eP.t,sP+MP+4],[sP+eP.b,sP+MP+4],sP+eP.t,X2,"right");
+  const midY=(tb+bb)/2;
+  const restD=`M${xl} ${midY} C${xl-48} ${midY}, ${xl-48} 22, ${xl+34} 22 L${xr-34} 22 C${xr+48} 22, ${xr+48} ${midY}, ${xr} ${midY}`;
+  sv("path",{d:restD,class:"rest-outer"},svg);sv("path",{d:restD,class:"rest-inner"},svg);
+  sv("text",{x:(xl+xr)/2,y:44,class:"rest-label",text:"ส่วนที่เหลือของพลาสมิด (ถูกตัดเปิด)"},svg);
+  // promoter on the plasmid, upstream of the cut
+  const px=xl+16,py=tb-34;
+  sv("path",{d:`M${px} ${py} L${px+56} ${py}`,class:"prom-line"},svg);
+  sv("path",{d:`M${px+68} ${py} L${px+56} ${py-6} L${px+56} ${py+6} Z`,class:"prom-head"},svg);
+  sv("text",{x:px,y:py-11,class:"prom-label",text:"โปรโมเตอร์ ทิศการถอดรหัส"},svg);
+  const tgt=sv("rect",{x:X1+4,y:tY-30,width:X2-X1-8,height:bY-tY+48,rx:10,class:"target"},svg);
+  // ----- gene fragment, rotatable -----
+  const g=sv("g",{class:"gene-g"},svg);
+  const fragX=X1+(lo-t)*cw, fragW=(12+hi-lo)*cw+boxW;
+  g.style.transformOrigin=`${fragX+fragW/2}px ${(tY+bY)/2}px`;
+  function baseCols(){
+    const c=[];
+    for(let j=sL+lo;j<sL+9;j++)c.push({ch:DONOR[j],top:j>=sL+t,bot:j>=sL+b});
+    c.push({gene:true});
+    for(let j=sR-3;j<sR+hi;j++)c.push({ch:DONOR[j],top:j<sR+t,bot:j<sR+b});
+    return c;
+  }
+  function fragCols(){const c=baseCols();return S.flipped?c.slice().reverse().map(o=>o.gene?{gene:true}:{ch:COMP[o.ch],top:o.bot,bot:o.top}):c;}
+  let hint=null;
+  function buildFrag(){
+    while(g.firstChild)g.removeChild(g.firstChild);
+    const cols=fragCols();let x=fragX;
+    let tL=null,tR=null,bL=null,bR=null;
+    cols.forEach(c=>{
+      if(c.gene){
+        sv("rect",{x:x+5,y:tY-27,width:boxW-10,height:bY-tY+42,rx:9,class:"genebox"},g);
+        const cx=x+boxW/2;
+        sv("text",{x:cx,y:(tY+bY)/2+9,class:"genetext",text:S.gFrag.geneOk?"gene A":"gene A (ไม่ครบ)"},g);
+        const d=S.flipped?-1:1,ay=tY-13;
+        sv("path",{d:`M${cx-d*28} ${ay} L${cx+d*20} ${ay}`,class:"gene-arrow"},g);
+        sv("path",{d:`M${cx+d*30} ${ay} L${cx+d*19} ${ay-5} L${cx+d*19} ${ay+5} Z`,class:"gene-head"},g);
+        x+=boxW;return;
+      }
+      if(c.top){sv("line",{x1:x,x2:x+cw,y1:tb,y2:tb,class:"bb top"},g);sv("text",{x:x+cw/2,y:tY,class:"nt top",text:c.ch},g);if(tL===null)tL=x;tR=x+cw;}
+      if(c.bot){sv("line",{x1:x,x2:x+cw,y1:bb,y2:bb,class:"bb bot"},g);sv("text",{x:x+cw/2,y:bY,class:"nt bot",text:COMP[c.ch]},g);if(bL===null)bL=x;bR=x+cw;}
+      if(c.top&&c.bot)sv("line",{x1:x+cw/2,x2:x+cw/2,y1:tY+5,y2:bY-16,class:"rung"},g);
+      x+=cw;
+    });
+    sv("text",{x:tL-13,y:tY-4,class:"endtag",text:"5′"},g);
+    sv("text",{x:tR+13,y:tY-4,class:"endtag",text:"3′"},g);
+    sv("text",{x:bL-13,y:bY+4,class:"endtag",text:"3′"},g);
+    sv("text",{x:bR+13,y:bY+4,class:"endtag",text:"5′"},g);
+    hint=sv("text",{x:fragX+fragW/2,y:bY+44,class:"hint",text:"หมุนให้ปลายเข้าคู่กัน แล้วลากขึ้นไปประกบ"},g);
+    if(S.docked)hint.style.display="none";
+    sv("rect",{x:fragX-34,y:tY-34,width:fragW+68,height:bY-tY+74,style:"fill:transparent"},g);
+  }
+  buildFrag();
+  let dx=0,dy=REST,rotating=false;
+  const setPos=()=>{g.style.transform=`translate(${dx}px,${dy}px)`;};
+  const jr=sv("g",null,svg);const nicks=sv("g",null,svg);
+  function junctionRungs(){
+    jr.innerHTML="";
+    [[X1,eP],[X2,eG]].forEach(([X,e])=>{const d=e.b-e.t;for(let k=0;k<Math.abs(d);k++){const x=X+(Math.min(0,d)+k)*cw+cw/2;sv("line",{x1:x,x2:x,y1:tY+5,y2:bY-16,class:"rung"},jr);}});
+  }
+  function drawNicks(){
+    junctionRungs();nicks.innerHTML="";const o=(eP.b-eP.t)*cw;const o2=(eG.b-eG.t)*cw;
+    [[X1,tb],[X1+o,bb],[X2,tb],[X2+o2,bb]].forEach(([x,y])=>sv("circle",{cx:x,cy:y,r:4.5,class:"nick"},nicks));
+  }
+  if(S.docked){svg.setAttribute("viewBox",`0 0 ${W} ${bY+58}`);dx=0;dy=0;g.classList.add("fixed");tgt.style.display="none";if(!S.ligated)drawNicks();else junctionRungs();}
+  setPos();
+  const note=hv("div",{class:"note",role:"status"},w);
+  w.appendChild(box);
+  function rotateFrag(){
+    if(S.docked||rotating)return;rotating=true;
+    const reduce=matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const fin=()=>{S.flipped=!S.flipped;buildFrag();g.style.transition="none";setPos();rotating=false;requestAnimationFrame(()=>{g.style.transition="";});};
+    if(reduce)return fin();
+    g.style.transition="transform .6s cubic-bezier(.3,.8,.3,1)";
+    g.style.transform=`translate(${dx}px,${dy}px) rotate(180deg)`;
+    setTimeout(fin,620);
+  }
+  function tryDock(){
+    if(compatible(eP,eG)){
+      dx=0;dy=0;setPos();S.docked=true;g.classList.add("fixed");if(hint)hint.style.display="none";tgt.style.display="none";
+      setTimeout(()=>{drawNicks();svg.setAttribute("viewBox",`0 0 ${W} ${bY+58}`);},550);
+      note.className="note ok";note.innerHTML=(endType(eP).kind==="blunt"?"ปลายทู่ทั้งสองฝั่งวางชิดกันได้":"ปลายเหนียวทั้งสองฝั่งจับคู่เบสกันได้พอดี")+" ยังมีรอยขาด (nick) ที่สายหลักของ DNA ซึ่งวงกลมสีแดงแสดงไว้ ต้องเติม DNA ligase เพื่อเชื่อม";
+      ligBtns();
+    }else{
+      dx=0;dy=46;setPos();
+      setTimeout(()=>{dx=0;dy=REST;setPos();svg.classList.remove("shake");void svg.getBoundingClientRect();svg.classList.add("shake");},420);
+      note.className="note bad";
+      const a=endType(eP),c=endType(eG);
+      let why;
+      if(a.kind==="blunt"||c.kind==="blunt")why="ปลายทู่เชื่อมได้กับปลายทู่เท่านั้น เชื่อมกับปลายเหนียวไม่ได้";
+      else why=`เบสที่ยื่นออกมา ${a.seq} และ ${c.seq} ไม่เป็นคู่สมกัน จึงจับคู่กันไม่ได้`;
+      note.innerHTML=`<b>ปลายไม่เข้าคู่กัน เชื่อมไม่ได้</b> ${why} ต้องตัดด้วยเอนไซม์ที่ได้ปลายแบบเดียวกัน`;
+      failBtns();
+    }
+  }
+  function ligBtns(){box.innerHTML="";hv("button",{type:"button",class:"btn",text:"เติม DNA ligase",onclick:e=>{e.currentTarget.disabled=true;runLigase(()=>{S.ligated=true;drawRotor();updatePlasmid();afterLig();});}},box);}
+  function runLigase(done){
+    const yT=tb,yB=bb,o=(eP.b-eP.t)*cw,o2=(eG.b-eG.t)*cw;
+    const nk=[...nicks.querySelectorAll("circle")];
+    note.className="note info";note.textContent="DNA ligase กำลังเคลื่อนไปตามสาย DNA และเชื่อมพันธะที่รอยขาดทีละจุด";
+    const L=sv("g",{class:"ligase"},svg);const body=sv("g",null,L);
+    const open=sv("path",{d:"M0 0 L15.6 -9 A18 18 0 1 0 15.6 9 Z",class:"lig-body"},body);
+    const shut=sv("circle",{cx:0,cy:0,r:18,class:"lig-body",style:"display:none"},body);
+    sv("circle",{cx:3,cy:-9,r:2.6,class:"lig-eye"},body);
+    const lab=sv("text",{x:0,y:-26,class:"lig-label",text:"DNA ligase"},L);
+    const way=[{x:X1-6*cw,y:yT},{x:X1,y:yT,seal:0},{x:X2,y:yT,seal:2},{x:X2+7*cw,y:yT},{x:X2+7*cw,y:yB},{x:X2+o2,y:yB,seal:3},{x:X1+o,y:yB,seal:1},{x:X1-7*cw,y:yB,end:true}];
+    const reduce=matchMedia("(prefers-reduced-motion: reduce)").matches;const speed=reduce?6:0.3,pause=reduce?60:650;
+    let i=0,cx=way[0].x,cy=way[0].y,dir=1;
+    const place=()=>{const low=cy>(yT+yB)/2;L.setAttribute("transform",`translate(${cx} ${cy+(low?9:-9)})`);body.setAttribute("transform",`scale(${dir*0.82} 0.82)`);lab.setAttribute("y",low?32:-21);};
+    place();L.style.opacity="0";requestAnimationFrame(()=>{L.style.transition="opacity .4s";L.style.opacity="1";});
+    function seal(n){
+      open.style.display="none";shut.style.display="";
+      const c=nk[n];if(c){const x=c.getAttribute("cx"),y=c.getAttribute("cy");c.remove();sv("circle",{cx:x,cy:y,r:4,class:"seal"},nicks);}
+      setTimeout(()=>{open.style.display="";shut.style.display="none";},pause*0.5);
+    }
+    function leg(){
+      if(i>=way.length-1){L.style.opacity="0";setTimeout(()=>{L.remove();done();},450);return;}
+      const a={x:cx,y:cy},b2=way[i+1];const dist=Math.hypot(b2.x-a.x,b2.y-a.y);const dur=Math.max(1,dist/speed);
+      if(b2.x!==a.x)dir=b2.x>a.x?1:-1;const t0=performance.now();
+      const step=now=>{const k=Math.min(1,(now-t0)/dur);cx=a.x+(b2.x-a.x)*k;cy=a.y+(b2.y-a.y)*k;place();
+        if(k<1){requestAnimationFrame(step);return;}
+        i++;if(b2.seal!=null){seal(b2.seal);setTimeout(leg,pause);}else leg();};
+      requestAnimationFrame(step);
+    }
+    setTimeout(leg,300);
+  }
+  function backToGene(){goStep(3,{flipped:null,docked:false,ligated:false});}
+  function failBtns(){box.innerHTML="";backBtn(box,"ย้อนกลับ: ตัดชิ้น gene ใหม่",resetGene);
+    hv("button",{type:"button",class:"btn ghost",text:"⟳ หมุนชิ้น DNA 180°",onclick:rotateFrag},box);
+    hv("button",{type:"button",class:"btn",text:"ประกบชิ้น gene",onclick:tryDock},box);}
+  function afterLig(){
+    note.className="note ok";note.innerHTML="DNA ligase เชื่อมสายหลักเรียบร้อย ได้<b>พลาสมิดลูกผสม</b> ในหลอดทดลองยังมีพลาสมิดที่เชื่อมกลับเป็นวงเดิมและชิ้น gene ที่เชื่อมปลายตัวเองเป็นวงปนอยู่ด้วย";
+    box.innerHTML="";
+    if(!w.querySelector(".mixture")){const mix=hv("div",{class:"mixture"},w);w.insertBefore(mix,box);mix.innerHTML=ringLegend();}
+    backBtn(box,"ย้อนกลับ: เชื่อมใหม่",backToGene);
+    hv("button",{type:"button",class:"btn",text:"ต่อไป: ใส่พลาสมิดเข้าเซลล์แบคทีเรีย",onclick:()=>goStep(5)},box);
+  }
+  if(S.ligated)afterLig();
+  else if(S.docked){note.className="note ok";note.textContent="ชิ้น gene ประกบกับพลาสมิดแล้ว เติม DNA ligase เพื่อเชื่อมรอยขาด";ligBtns();}
+  else{
+    box.innerHTML="";
+    backBtn(box,"ย้อนกลับ: ตัดชิ้น gene ใหม่",resetGene);
+    hv("button",{type:"button",class:"btn ghost",text:"⟳ หมุนชิ้น DNA 180°",onclick:rotateFrag},box);
+    hv("button",{type:"button",class:"btn",text:"ประกบชิ้น gene",onclick:tryDock},box);
+  }
+  // drag
+  let start=null;
+  const toSvg=e=>{const p=svg.createSVGPoint();p.x=e.clientX;p.y=e.clientY;return p.matrixTransform(svg.getScreenCTM().inverse());};
+  g.addEventListener("pointerdown",e=>{if(S.docked||rotating)return;e.preventDefault();g.setPointerCapture(e.pointerId);const p=toSvg(e);start={x:p.x-dx,y:p.y-dy};g.classList.add("drag");});
+  g.addEventListener("pointermove",e=>{if(!start)return;const p=toSvg(e);dx=p.x-start.x;dy=Math.max(-10,Math.min(REST+40,p.y-start.y));setPos();});
+  const up=()=>{if(!start)return;start=null;g.classList.remove("drag");if(dy<64&&Math.abs(dx)<90)tryDock();else{dx=0;dy=REST;setPos();}};
+  g.addEventListener("pointerup",up);g.addEventListener("pointercancel",up);
+}
+function ringSvg(type,size){
+  const s=size||30,c=s/2;
+  if(type==="gene")return`<svg width="${s}" height="${s}" viewBox="0 0 30 30" aria-hidden="true"><circle cx="15" cy="15" r="6" fill="none" style="stroke:var(--gene)" stroke-width="3"/></svg>`;
+  const ins=type==="rec"?`<path d="M15 4 A11 11 0 0 1 25.4 11.4" fill="none" style="stroke:var(--gene)" stroke-width="4.5"/>`:"";
+  void c;return`<svg width="${s}" height="${s}" viewBox="0 0 30 30" aria-hidden="true"><circle cx="15" cy="15" r="11" fill="none" style="stroke:var(--lac)" stroke-width="3"/>${ins}</svg>`;
+}
+function ringLegend(){return`<span>${ringSvg("rec")}พลาสมิดลูกผสม (มี gene A)</span><span>${ringSvg("nonrec")}พลาสมิดที่เชื่อมกลับเป็นวงเดิม</span><span>${ringSvg("gene")}ชิ้น gene ที่เชื่อมกันเอง</span>`;}
+
+/* ---------- Transformation ---------- */
+function work5(w){
+  head(w,"ขั้นที่ 5 ใส่พลาสมิดเข้าเซลล์แบคทีเรีย","ผสม DNA จากขั้นที่แล้วกับเซลล์แบคทีเรีย แล้วกระตุ้นด้วยไฟฟ้า (electroporation) ให้เยื่อหุ้มเซลล์เกิดรูชั่วคราว DNA ที่อยู่รอบ ๆ จะสุ่มเข้าไปในเซลล์");
+  if(!S.cells){
+    S.cells=shuffle(["rec","rec","rec","nonrec","nonrec","nonrec","gene","gene","none","none","none","none"]);
+    const rings=[];S.cells.forEach((t,i)=>{if(t!=="none")rings.push({type:t,target:i});});
+    ["rec","nonrec","gene"].forEach(t=>rings.push({type:t,target:-1}));
+    const ys=[34,140,250,360],used=[];
+    rings.forEach(r=>{let x,y,ok,n=0;do{x=rand(40,680);y=ys[Math.floor(Math.random()*4)]+rand(-6,6);ok=used.every(u=>Math.hypot(u[0]-x,u[1]-y)>40);n++;}while(!ok&&n<200);used.push([x,y]);r.x0=x;r.y0=y;});
+    S.rings=shuffle(rings);
+  }
+  const W=720,H=392;
+  const svg=sv("svg",{viewBox:`0 0 ${W} ${H}`,class:"tf-svg",role:"img","aria-label":"เซลล์แบคทีเรีย 12 เซลล์และ DNA รอบ ๆ"},w);
+  sv("rect",{x:6,y:6,width:W-12,height:H-12,rx:20,class:"cuvette"},svg);
+  const cellG=sv("g",null,svg);const pos=[];
+  S.cells.forEach((t,i)=>{
+    const c=i%4,r=Math.floor(i/4),cx=105+c*170,cy=87+r*110;pos.push([cx,cy]);
+    const g=sv("g",null,cellG);
+    sv("rect",{x:cx-60,y:cy-26,width:120,height:52,rx:26,class:"cell-cyto"},g);
+    sv("rect",{x:cx-60,y:cy-26,width:120,height:52,rx:26,class:"cell-mem"},g);
+    sv("path",{d:`M${cx-34} ${cy+4} q8 -14 16 0 t16 0 t16 0 t16 0`,class:"cell-chr"},g);
+  });
+  const dnaG=sv("g",null,svg);
+  const els=S.rings.map(r=>{
+    const g=sv("g",{class:"dna"},dnaG);
+    if(r.type==="gene")sv("circle",{cx:0,cy:0,r:6,style:"fill:none;stroke:var(--gene);stroke-width:3"},g);
+    else{sv("circle",{cx:0,cy:0,r:11,style:"fill:none;stroke:var(--lac);stroke-width:3"},g);if(r.type==="rec")sv("path",{d:"M0 -11 A11 11 0 0 1 10.4 -3.6",style:"fill:none;stroke:var(--gene);stroke-width:4.5"},g);}
+    return g;
+  });
+  function finalPos(r){if(r.target<0)return[r.x0,r.y0];if(r.xf==null){const[cx,cy]=pos[r.target];r.xf=cx+rand(-26,26);r.yf=cy+rand(-6,6);}return[r.xf,r.yf];}
+  els.forEach((g,i)=>{const r=S.rings[i];const[x,y]=S.pulsed?finalPos(r):[r.x0,r.y0];g.style.transform=`translate(${x}px,${y}px)`+(S.pulsed&&r.target>=0?" scale(.8)":"");if(S.pulsed&&r.target<0)g.style.opacity=".3";});
+  const flash=sv("rect",{x:6,y:6,width:W-12,height:H-12,rx:20,class:"flash"},svg);
+  const bolt=sv("path",{d:"M372 8 l-34 70 h26 l-22 64 l58 -86 h-28 l24 -48 z",class:"bolt"},svg);
+  const mix=hv("div",{class:"mixture",html:ringLegend()},w);void mix;
+  const note=hv("div",{class:"note",role:"status"},w);
+  const box=hv("div",{class:"btns"},w);
+  function after(){
+    note.className="note ok";note.textContent="DNA เข้าสู่เซลล์บางเซลล์แล้ว แต่ละเซลล์ได้รับ DNA ต่างชนิดกัน และบางเซลล์ไม่ได้รับ DNA เลย";
+    box.innerHTML="";
+    backBtn(box,"ย้อนกลับ: เชื่อม DNA ใหม่",()=>goStep(4,{docked:false,ligated:false,cells:null,rings:null,pulsed:false}));
+    hv("button",{type:"button",class:"btn",text:"ต่อไป: นำไปเลี้ยงบนจานเพาะเชื้อ",onclick:()=>goStep(6)},box);
+  }
+  if(S.pulsed)after();
+  else{
+  backBtn(box,"ย้อนกลับ: เชื่อม DNA ใหม่",()=>goStep(4,{docked:false,ligated:false,cells:null,rings:null,pulsed:false}));
+  slideControl(w,"เลื่อนไปทางขวาเพื่อปล่อยกระแสไฟฟ้า","⚡","zap",()=>{
+    flash.classList.add("go");bolt.classList.add("go");cellG.classList.add("porous");
+    setTimeout(()=>{els.forEach((g,i)=>{const r=S.rings[i];const[x,y]=finalPos(r);g.style.transform=`translate(${x}px,${y}px)`+(r.target>=0?" scale(.8)":"");if(r.target<0)g.style.opacity=".3";});},350);
+    setTimeout(()=>{cellG.classList.remove("porous");S.pulsed=true;after();},1900);
+  });}
+}
+
+/* ---------- Plate ---------- */
+function effType(t){if(t==="rec"&&S.site.region==="ori")return "none";return t;}
+function growsOnAmp(e){return e==="nonrec"||(e==="rec"&&S.site.region!=="amp");}
+function colonyColor(e){return (e==="nonrec"||(e==="rec"&&S.site.region!=="lacZ"))?"blue":"white";}
+const TYPE_TH={rec:"พลาสมิดลูกผสมที่มี gene A",nonrec:"พลาสมิดที่เชื่อมกลับเป็นวงเดิม",gene:"ชิ้น gene ที่เชื่อมปลายตัวเองเป็นวง",none:"ไม่มีพลาสมิดที่เพิ่มจำนวนได้"};
+function work6(w){
+  head(w,"ขั้นที่ 6 เลี้ยงเชื้อและคัดเลือกโคโลนี","เลือกจานอาหารเลี้ยงเชื้อ เกลี่ยเซลล์ให้ทั่วผิวอาหาร อุ่นจานให้เซลล์แบ่งตัวจนเป็นโคโลนี แล้วเลือกโคโลนีที่จะนำไปใช้ต่อ");
+  if(!S.plate){
+    hv("div",{class:"note info",text:"ในหลอดมีทั้งเซลล์ที่ได้รับพลาสมิดลูกผสม เซลล์ที่ได้รับพลาสมิดวงเดิม เซลล์ที่ได้รับแต่ชิ้น gene และเซลล์ที่ไม่ได้รับ DNA เลย จะเลี้ยงบนจานแบบไหน"},w);
+    const ch=hv("div",{class:"choice"},w);
+    hv("button",{type:"button",html:"<b>LB + X-gal + แอมพิซิลลิน</b><span>อาหารเลี้ยงเชื้อ ผสมสารเปลี่ยนสี X-gal และยาปฏิชีวนะแอมพิซิลลิน</span>",onclick:()=>goStep(6,{plate:"amp"})},ch);
+    hv("button",{type:"button",html:"<b>LB + X-gal (ไม่มียาปฏิชีวนะ)</b><span>อาหารเลี้ยงเชื้อ ผสมสารเปลี่ยนสี X-gal อย่างเดียว</span>",onclick:()=>goStep(6,{plate:"noamp"})},ch);
+    const bb=hv("div",{class:"btns"},w);
+    backBtn(bb,"ย้อนกลับ: ใส่ DNA เข้าเซลล์ใหม่",()=>goStep(5,{cells:null,rings:null,pulsed:false,plate:null}));
+    return;
+  }
+  const amp=S.plate==="amp";
+  if(!S.colonies){
+    const list=[];
+    S.cells.forEach(t=>{const e=effType(t);if(amp&&!growsOnAmp(e))return;for(let k=0;k<2;k++)list.push({type:e,color:colonyColor(e)});});
+    const used=[];
+    list.forEach(c=>{let x,y,ok,n=0;do{const a=rand(0,Math.PI*2),r=Math.sqrt(Math.random())*146;x=200+r*Math.cos(a);y=200+r*Math.sin(a);ok=used.every(u=>Math.hypot(u[0]-x,u[1]-y)>(list.length>14?29:36));n++;}while(!ok&&n<500);used.push([x,y]);c.x=x;c.y=y;c.r=list.length>14?rand(7,10):rand(9,13);});
+    S.colonies=shuffle(list);
+  }
+  const grid=hv("div",{class:"plate-grid"},w);
+  const left=hv("div",null,grid),right=hv("div",{class:"medium"},grid);
+  const svg=sv("svg",{viewBox:"0 0 400 400",class:"plate-svg",role:"group","aria-label":"จานเพาะเชื้อ"},left);
+  sv("circle",{cx:200,cy:200,r:192,class:"dish-rim"},svg);sv("circle",{cx:200,cy:200,r:176,class:"agar"},svg);
+  const cp=sv("clipPath",{id:"agar-clip"},sv("defs",null,svg));sv("circle",{cx:200,cy:200,r:174},cp);
+  const wetG=sv("g",{"clip-path":"url(#agar-clip)"},svg);
+  if(S.spread)sv("circle",{cx:200,cy:200,r:174,style:"fill:var(--colony);opacity:.12"},wetG);
+  const puddle=S.spread?null:sv("circle",{cx:200,cy:200,r:34,class:"puddle"},svg);
+  const cols=S.colonies.map((c,i)=>{
+    const g=sv("g",{class:"colony"+(S.incubated?" grown":"")+(S.picked===i?" sel":""),tabindex:S.incubated?"0":"-1",role:"button","aria-label":`โคโลนีสี${c.color==="white"?"ขาว":"น้ำเงิน"}`},svg);
+    sv("circle",{cx:c.x,cy:c.y,r:c.r,class:c.color},g);
+    sv("circle",{cx:c.x-c.r*.3,cy:c.y-c.r*.3,r:c.r*.28,style:"fill:#fff;opacity:.35"},g);
+    sv("circle",{cx:c.x,cy:c.y,r:c.r+6,class:"sel-ring"},g);
+    const pick=()=>{if(!S.incubated)return;S.picked=i;cols.forEach((x,j)=>x.classList.toggle("sel",j===i));showPick();};
+    g.addEventListener("click",pick);g.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();pick();}});
+    return g;
+  });
+  hv("h3",{text:"จานที่เลือก: "+(amp?"LB + X-gal + แอมพิซิลลิน":"LB + X-gal"),style:"margin:0;font-size:1rem"},right);
+  const dl=hv("dl",null,right);
+  hv("dt",{text:"LB agar"},dl);hv("dd",{text:"สารอาหารสำหรับแบคทีเรีย"},dl);
+  hv("dt",{text:"X-gal"},dl);hv("dd",{text:"เปลี่ยนเป็นสีน้ำเงินเมื่อถูกเอนไซม์ β-galactosidase ย่อย"},dl);
+  if(amp){hv("dt",{text:"แอมพิซิลลิน"},dl);hv("dd",{text:"ยาปฏิชีวนะ ฆ่าเซลล์ที่ไม่ดื้อยา"},dl);}
+  const ctl=hv("div",null,right);
+  const pickBox=hv("div",{class:"pick",style:"display:none"},right);
+  const backRow=hv("div",{class:"btns"},right);
+  backBtn(backRow,"ย้อนกลับ: เลือกจานใหม่",()=>goStep(6,{plate:null,spread:false,colonies:null,incubated:false,picked:null}));
+  function showIncubated(){
+    ctl.innerHTML="";
+    const n=hv("div",{class:"note info"},ctl);
+    n.innerHTML=(amp?"บ่มเสร็จแล้ว เฉพาะเซลล์ที่ดื้อแอมพิซิลลินเท่านั้นที่เจริญเป็นโคโลนี":"บ่มเสร็จแล้ว ไม่มียาปฏิชีวนะคัดเลือก เซลล์ทุกเซลล์จึงเจริญเป็นโคโลนีได้")+"<br><br>แตะโคโลนีบนจานเพื่อเลือก";
+    const b=hv("div",{class:"btns"},ctl);
+    hv("button",{type:"button",class:"btn ghost",text:"ไม่มีโคโลนีที่ต้องการ",onclick:()=>finish("none")},b);
+  }
+  function showPick(){
+    pickBox.style.display="";const c=S.colonies[S.picked];pickBox.innerHTML="";
+    hv("div",{html:`<span class="dot" style="background:var(${c.color==="white"?"--colony":"--xgal"});border:1.5px solid var(${c.color==="white"?"--colony-edge":"--xgal"})"></span>เลือก<b>โคโลนีสี${c.color==="white"?"ขาว":"น้ำเงิน"}</b>`},pickBox);
+    const b=hv("div",{class:"btns"},pickBox);
+    hv("button",{type:"button",class:"btn",text:"นำโคโลนีนี้ไปใช้ต่อ",onclick:()=>finish(S.picked)},b);
+  }
+  function showWarm(){
+    ctl.innerHTML="";
+    hv("div",{class:"note ok",text:"เกลี่ยเซลล์ทั่วจานแล้ว ต่อไปนำจานไปอุ่นที่ 37 °C ข้ามคืนเพื่อให้เซลล์แบ่งตัว"},ctl);
+    const bar=hv("div",{class:"progress"});const fill=hv("i",null,bar);
+    slideControl(ctl,"เลื่อนไปทางขวาเพื่ออุ่นจานที่ 37 °C","🌡","heat",()=>{
+      ctl.appendChild(bar);requestAnimationFrame(()=>{fill.style.width="100%";});
+      setTimeout(()=>{S.incubated=true;cols.forEach((g,i)=>{g.setAttribute("tabindex","0");setTimeout(()=>g.classList.add("grown"),i*70);});showIncubated();},1900);
+    });
+  }
+  function startSpread(){
+    ctl.innerHTML="";
+    const n=hv("div",{class:"note info"},ctl);
+    n.innerHTML='ใช้นิ้วหรือเมาส์ลากวนไปบนผิวอาหารในจาน เพื่อเกลี่ยเซลล์ให้กระจายทั่ว เกลี่ยแล้ว <span class="spread-pct">0%</span>';
+    const pct=n.querySelector(".spread-pct");
+    svg.classList.add("spreading");
+    const samples=[];for(let x=200-160;x<=360;x+=20)for(let y=40;y<=360;y+=20){if(Math.hypot(x-200,y-200)<=158)samples.push({x,y,c:false});}
+    let covered=0,stroke=null,pts=null,last=null;
+    const tool=sv("g",{class:"spreader",style:"display:none;pointer-events:none"},svg);
+    sv("line",{x1:-24,y1:0,x2:24,y2:0},tool);sv("line",{x1:24,y1:0,x2:24,y2:-46},tool);
+    const toSvg=e=>{const p=svg.createSVGPoint();p.x=e.clientX;p.y=e.clientY;return p.matrixTransform(svg.getScreenCTM().inverse());};
+    const mark=(x,y)=>{samples.forEach(s=>{if(!s.c&&Math.hypot(s.x-x,s.y-y)<28){s.c=true;covered++;}});};
+    const visit=p=>{
+      if(last){const d=Math.hypot(p.x-last.x,p.y-last.y),n2=Math.ceil(d/6);for(let k=1;k<=n2;k++)mark(last.x+(p.x-last.x)*k/n2,last.y+(p.y-last.y)*k/n2);}else mark(p.x,p.y);
+      last=p;const f=covered/samples.length;pct.textContent=Math.min(100,Math.round(f/0.8*100))+"%";
+      puddle.setAttribute("r",String(Math.max(0,34*(1-f/0.8))));
+      tool.setAttribute("transform",`translate(${p.x} ${p.y})`);
+      if(f>=0.8&&!S.spread){S.spread=true;svg.classList.remove("spreading");tool.remove();puddle.remove();showWarm();}
+    };
+    svg.addEventListener("pointerdown",e=>{if(S.spread)return;e.preventDefault();svg.setPointerCapture(e.pointerId);const p=toSvg(e);pts=[p];last=null;stroke=sv("path",{class:"wet",d:`M${p.x} ${p.y} L${p.x+.1} ${p.y}`},wetG);tool.style.display="";visit(p);});
+    svg.addEventListener("pointermove",e=>{if(!pts||S.spread)return;const p=toSvg(e);pts.push(p);stroke.setAttribute("d","M"+pts.map(q=>q.x.toFixed(1)+" "+q.y.toFixed(1)).join(" L"));visit(p);});
+    const up=()=>{pts=null;last=null;tool.style.display="none";};
+    svg.addEventListener("pointerup",up);svg.addEventListener("pointercancel",up);
+  }
+  if(S.incubated){showIncubated();if(S.picked!=null)showPick();}
+  else if(S.spread)showWarm();
+  else startSpread();
+}
+function finish(choice){
+  const region=S.site.region,amp=S.plate==="amp";
+  const reasons=[];
+  const anyRec=S.colonies.some(c=>c.type==="rec");
+  const regionWhy={
+    amp:`คุณตัดพลาสมิดภายใน <b>gene X (ampᴿ)</b> เมื่อ gene A แทรกเข้าไป ยีนดื้อยาจึงเสียหาย เซลล์ที่ได้รับพลาสมิดลูกผสมจึงตายบนอาหารที่มีแอมพิซิลลิน`,
+    ori:`คุณตัดพลาสมิดตรงบริเวณ <b>ORI</b> เมื่อ gene A แทรกเข้าไป จุดเริ่มต้นการจำลองตัวเองจึงเสียหาย พลาสมิดลูกผสมเพิ่มจำนวนในเซลล์ไม่ได้`
+  };
+  const plateWhy="จานที่ไม่ใส่ยาปฏิชีวนะไม่ได้คัดเลือกอะไรเลย เซลล์ที่ไม่ได้รับพลาสมิดก็เจริญเป็นโคโลนีสีขาวเหมือนกัน สีของโคโลนีจึงแยกไม่ออกว่าเซลล์ใดมีพลาสมิดลูกผสม";
+  if(choice==="none"){
+    if(anyRec)reasons.push("บนจานยังมีโคโลนีที่มีพลาสมิดลูกผสมอยู่ ลองพิจารณาสีของโคโลนีอีกครั้ง: gene A แทรกกลาง lacZ ทำให้ย่อย X-gal ไม่ได้ โคโลนีจึงเป็นสีขาว");
+    else{reasons.push("คุณสังเกตถูกต้องว่าไม่มีโคโลนีที่มี gene A บนจานนี้ การทดลองรอบนี้จึงผลิตโปรตีน A ไม่ได้");if(regionWhy[region])reasons.push(regionWhy[region]);}
+  }else{
+    const c=S.colonies[choice];
+    if(c.type==="rec"){S.trans={start:null,stop:null};S.step=7;render();window.scrollTo({top:0,behavior:"smooth"});return;}
+    if(c.type==="nonrec")reasons.push("โคโลนีนี้มาจากเซลล์ที่ได้รับ<b>พลาสมิดที่เชื่อมกลับเป็นวงเดิม</b> ไม่มี gene A อยู่ ยีน lacZ จึงยังทำงานและย่อย X-gal ได้สีน้ำเงิน เซลล์นี้ผลิตโปรตีน A ไม่ได้");
+    else if(c.type==="gene")reasons.push("โคโลนีนี้มาจากเซลล์ที่ได้รับเพียง<b>ชิ้น gene ที่เชื่อมปลายตัวเองเป็นวง</b> ไม่มี ORI จึงเพิ่มจำนวนไม่ได้และไม่มียีนดื้อยา เซลล์นี้ใช้ผลิตโปรตีน A ไม่ได้");
+    else reasons.push("โคโลนีนี้มาจากเซลล์ที่<b>ไม่มีพลาสมิดที่เพิ่มจำนวนได้</b> จึงไม่มี gene A ให้แสดงออก");
+    if(!amp)reasons.push(plateWhy);
+    if(region!=="lacZ"&&regionWhy[region])reasons.push(regionWhy[region]);
+  }
+  if(region!=="lacZ")reasons.push("ลองเลือกตำแหน่งตัดที่อยู่ใน gene Y (lacZ) ซึ่งไม่ทำลายยีนดื้อยาและ ORI และใช้คัดแยกด้วยสีโคโลนีได้");
+  if(!amp&&choice!=="none"&&!reasons.includes(plateWhy))reasons.push(plateWhy);
+  S.result={ok:false,reasons};S.step=8;render();window.scrollTo({top:0,behavior:"smooth"});
+}
+
+/* ---------- Translation ---------- */
+const STOPS=["UAA","UAG","UGA"];
+function insertTop(){const t=ENZ[S.gEnz].t;return DONOR.slice(S.gFrag.s1+t,S.gFrag.s2+t);}
+function mrnaOf(){const d=S.flipped?revcomp(insertTop()):insertTop();return d.replace(/T/g,"U");}
+function expectedPeptide(){const g=GENE_A;const r=[];for(let i=0;i<g.length;i+=3){const a=CODE[g.slice(i,i+3).replace(/T/g,"U")];if(a==="Stop")break;r.push(a);}return r;}
+function codonTable(host){
+  const d=hv("details",{class:"codebook"},host);
+  hv("summary",{text:"เปิดตารางรหัสพันธุกรรม"},d);
+  const t=hv("table",{class:"code"},d);
+  const hr=hv("tr",null,hv("thead",null,t));hv("th",{text:"เบสที่ 1"},hr);
+  "UCAG".split("").forEach(b=>hv("th",{text:"เบสที่ 2: "+b},hr));
+  const tb=hv("tbody",null,t);
+  "UCAG".split("").forEach(b1=>{
+    const r=hv("tr",null,tb);hv("th",{text:b1},r);
+    "UCAG".split("").forEach(b2=>{
+      const cell=hv("td",null,r);
+      "UCAG".split("").forEach(b3=>{const c=b1+b2+b3;hv("div",{html:`<code>${c}</code> ${CODE[c]}`},cell);});
+    });
+  });
+}
+function work7(w){
+  const mrna=mrnaOf();
+  head(w,"ขั้นที่ 7 ถอดรหัสเป็นโปรตีน","RNA polymerase เริ่มจากโปรโมเตอร์บนพลาสมิดและถอดรหัสชิ้นที่แทรกเข้าไป ได้ mRNA ข้างล่างนี้ ขั้นแรกให้หา<b>โคดอนเริ่มต้น</b>และ<b>โคดอนหยุด</b>ด้วยตัวเอง โดยแตะเบสตัวแรกของแต่ละโคดอน");
+  const st=S.trans||(S.trans={start:null,stop:null});
+  const host=hv("div",{class:"orf"},w);
+  const cells=[];
+  const per=window.matchMedia("(max-width: 680px)").matches?15:30;
+  let row=null;
+  for(let i=0;i<mrna.length;i++){
+    if(i%per===0){row=hv("div",{class:"orf-row"},host);hv("span",{class:"orf-num",text:String(i+1)},row);}
+    else if(i%10===0)hv("span",{class:"orf-gap"},row);
+    const c=hv("b",{text:mrna[i],title:"เบสที่ "+(i+1)},row);
+    c.addEventListener("click",()=>{
+      if(st.start==null||(st.start!=null&&st.stop!=null)){st.start=i;st.stop=null;}
+      else if(i===st.start){st.start=null;}
+      else st.stop=i;
+      paint();
+    });
+    cells.push(c);
+  }
+  hv("div",{class:"orf-cap",html:`mRNA ยาว ${mrna.length} นิวคลีโอไทด์ อ่านจากซ้าย (5′) ไปขวา (3′) · แตะเบสเพื่อเลือก แตะซ้ำที่เบสเดิมเพื่อยกเลิก`},w);
+  const note=hv("div",{class:"note",role:"status"},w);
+  const codeHost=hv("div",null,w);
+  const b=hv("div",{class:"btns"},w);
+  function paint(){
+    cells.forEach((c,i)=>{c.className="";});
+    if(st.start!=null)for(let k=0;k<3;k++)if(cells[st.start+k])cells[st.start+k].className="st";
+    if(st.stop!=null)for(let k=0;k<3;k++)if(cells[st.stop+k])cells[st.stop+k].className="sp";
+    if(st.start!=null&&st.stop!=null&&st.stop>st.start)for(let i=st.start+3;i<st.stop;i++)if(!cells[i].className)cells[i].className="inorf";
+    note.className="note";note.textContent="";
+    const info=[];
+    if(st.start!=null)info.push(`โคดอนเริ่ม: ${mrna.substr(st.start,3)} ที่เบสที่ ${st.start+1}`);
+    if(st.stop!=null)info.push(`โคดอนหยุด: ${mrna.substr(st.stop,3)} ที่เบสที่ ${st.stop+1}`);
+    if(info.length){note.className="note info";note.textContent=info.join(" · ");}
+  }
+  paint();
+  backBtn(b,"ย้อนกลับ: เลือกโคโลนีใหม่",()=>goStep(6,{picked:null,trans:null}));
+  hv("button",{type:"button",class:"btn ghost",text:"ล้างการเลือก",onclick:()=>{st.start=null;st.stop=null;codeHost.innerHTML="";paint();}},b);
+  hv("button",{type:"button",class:"btn ghost",text:"ไม่มีกรอบการอ่านที่สมบูรณ์",onclick:noOrf},b);
+  hv("button",{type:"button",class:"btn",text:"ยืนยันกรอบการอ่าน",onclick:confirmOrf},b);
+  function bad(t){note.className="note bad";note.innerHTML=t;}
+  function noOrf(){
+    const hasOrf=findOrf()!=null;
+    if(hasOrf){bad("ลองดูอีกครั้ง ยังมีช่วงที่ขึ้นต้นด้วย AUG และจบด้วยโคดอนหยุดในกรอบเดียวกันอยู่บน mRNA สายนี้");return;}
+    const reasons=[];
+    if(S.flipped){
+      reasons.push("<b>คุณวิเคราะห์ถูกต้อง</b> mRNA สายนี้ไม่มีกรอบการอ่านที่เริ่มด้วย AUG และจบด้วยโคดอนหยุดอย่างครบถ้วน");
+      reasons.push("สาเหตุคือตอนเชื่อม DNA ชิ้น gene A ถูกใส่กลับทิศ ลูกศรของยีนชี้สวนทางกับโปรโมเตอร์ RNA polymerase จึงถอดรหัสจากสายที่ไม่ใช่สายรหัสของยีน");
+      reasons.push("เอนไซม์ตัดจำเพาะตัวเดียวให้ปลายเหมือนกันทั้งสองข้าง ชิ้น gene จึงเข้าไปได้ทั้งสองทิศ ในงานจริงจึงนิยมใช้เอนไซม์สองชนิดที่ต่างกันเพื่อบังคับทิศทาง");
+      S.result={ok:false,flipped:true,reasons,fixStep:4};
+    }else{
+      reasons.push("<b>คุณวิเคราะห์ถูกต้อง</b> mRNA สายนี้ไม่มีกรอบการอ่านที่สมบูรณ์");
+      reasons.push("ตอนตัดชิ้น gene A รอยตัดไม่ได้ขนาบช่วงที่แปลรหัสทั้งหมด ชิ้นที่แทรกเข้าไปจึงมียีนไม่ครบ ขาดโคดอนเริ่มต้นหรือโคดอนหยุดไป");
+      reasons.push("ถ้าเอนไซม์ที่เลือกมีลำดับที่จดจำอยู่ภายในยีนด้วย เอนไซม์จะตัดตรงนั้นเสมอ ควรเลือกเอนไซม์ที่ตัดเฉพาะด้านนอกของยีน");
+      S.result={ok:false,reasons,fixStep:3};
+    }
+    S.step=8;render();window.scrollTo({top:0,behavior:"smooth"});
+  }
+  function findOrf(){
+    for(let i=0;i+3<=mrna.length;i++){
+      if(mrna.substr(i,3)!=="AUG")continue;
+      for(let j=i+3;j+3<=mrna.length;j+=3){const c=mrna.substr(j,3);if(STOPS.includes(c))return{start:i,stop:j};}
+    }
+    return null;
+  }
+  function confirmOrf(){
+    if(st.start==null)return bad("ยังไม่ได้เลือกโคดอนเริ่มต้น แตะเบสตัวแรกของโคดอนที่คิดว่าเป็นจุดเริ่ม");
+    if(st.stop==null)return bad("ยังไม่ได้เลือกโคดอนหยุด แตะเบสตัวแรกของโคดอนหยุด");
+    const sc=mrna.substr(st.start,3),pc=mrna.substr(st.stop,3);
+    if(sc!=="AUG")return bad(`ตำแหน่งที่เลือกเป็นโคดอน <b>${sc}</b> การสังเคราะห์โปรตีนเริ่มที่โคดอน <b>AUG</b> เสมอ`);
+    if(st.stop<=st.start)return bad("โคดอนหยุดต้องอยู่หลังโคดอนเริ่มต้น");
+    if((st.stop-st.start)%3)return bad("โคดอนหยุดยังไม่อยู่ในกรอบการอ่านเดียวกับ AUG ระยะห่างจากจุดเริ่มต้องเป็นจำนวนเท่าของ 3");
+    if(!STOPS.includes(pc))return bad(`โคดอน <b>${pc}</b> ไม่ใช่โคดอนหยุด โคดอนหยุดคือ UAA UAG หรือ UGA`);
+    for(let j=st.start+3;j<st.stop;j+=3)if(STOPS.includes(mrna.substr(j,3)))return bad(`ในกรอบนี้มีโคดอนหยุด <b>${mrna.substr(j,3)}</b> อยู่ก่อนแล้วที่เบสที่ ${j+1} การแปลรหัสจะจบตรงนั้น`);
+    showCodons();
+  }
+  function showCodons(){
+    note.className="note ok";note.textContent="กรอบการอ่านถูกต้อง ต่อไปแปลแต่ละโคดอนเป็นกรดอะมิโนด้วยตารางรหัสพันธุกรรม";
+    codeHost.innerHTML="";
+    const codons=[];for(let i=st.start;i<st.stop;i+=3)codons.push(mrna.substr(i,3));
+    const wrap=hv("div",{class:"codons"},codeHost);
+    const sels=codons.map((c,i)=>{
+      const card=hv("div",{class:"codon"},wrap);
+      hv("div",{class:"no",text:"โคดอนที่ "+(i+1)},card);
+      hv("div",{class:"cd",text:c},card);
+      const sel=hv("select",{"aria-label":"กรดอะมิโนของโคดอน "+c},card);
+      hv("option",{value:"",text:"— เลือก —"},sel);
+      AA_LIST.filter(a=>a!=="Stop").forEach(a=>hv("option",{value:a,text:`${a} (${AA_TH[a]})`},sel));
+      sel.addEventListener("change",()=>card.classList.remove("good","bad"));
+      return{sel,card,c};
+    });
+    codonTable(codeHost);
+    const note2=hv("div",{class:"note",role:"status"},codeHost);
+    const b2=hv("div",{class:"btns"},codeHost);
+    hv("button",{type:"button",class:"btn",text:"ตรวจคำตอบ",onclick:()=>{
+      let blank=0,wrong=0;
+      sels.forEach(o=>{const v=o.sel.value;o.card.classList.remove("good","bad");
+        if(!v){blank++;return;}
+        if(v===CODE[o.c])o.card.classList.add("good");else{o.card.classList.add("bad");wrong++;}});
+      if(blank){note2.className="note bad";note2.textContent=`ยังเหลืออีก ${blank} โคดอนที่ยังไม่ได้เลือกกรดอะมิโน`;return;}
+      if(wrong){note2.className="note bad";note2.textContent=`มี ${wrong} โคดอนที่ยังไม่ถูก เทียบกับตารางรหัสพันธุกรรมอีกครั้ง`;return;}
+      const pep=codons.map(c=>CODE[c]);
+      const want=expectedPeptide();
+      const same=pep.length===want.length&&pep.every((a,i)=>a===want[i]);
+      if(same&&!S.flipped&&S.gFrag.geneOk){S.result={ok:true,peptide:pep};}
+      else{
+        const reasons=["โปรตีนที่ได้คือ "+pep.join("-")+" ซึ่งไม่ใช่โปรตีน A ที่ต้องการ (โปรตีน A คือ "+want.join("-")+")"];
+        if(S.flipped){reasons.push("ชิ้น gene A ถูกใส่กลับทิศกับโปรโมเตอร์ RNA polymerase จึงอ่านจากสายที่ไม่ใช่สายรหัสของยีน ได้ลำดับกรดอะมิโนคนละชุด");reasons.push("ในงานจริงนิยมใช้เอนไซม์สองชนิดที่ต่างกันตัดคนละด้านเพื่อบังคับทิศทางของยีน");S.result={ok:false,flipped:true,reasons,fixStep:4};}
+        else{reasons.push("ชิ้นที่ตัดมามีช่วงแปลรหัสของ gene A ไม่ครบ กรอบการอ่านที่พบจึงไม่ใช่ของยีนจริง");reasons.push("ตอนตัดต้องให้รอยตัดทั้งสองอยู่นอกช่วงแปลรหัส และเลือกเอนไซม์ที่ไม่มีลำดับจดจำอยู่ภายในยีน");S.result={ok:false,reasons,fixStep:3};}
+      }
+      S.step=8;render();window.scrollTo({top:0,behavior:"smooth"});
+    }},b2);
+  }
+}
+/* ---------- Result ---------- */
+function work8(w){
+  const r=S.result;
+  const grid=hv("div",{class:"result-grid"},w);
+  const L=hv("div",{class:"reason"},grid),Rr=hv("div",null,grid);
+  if(r.ok){
+    hv("div",{class:"result-head win",text:"ผลิตโปรตีน A สำเร็จ"},L);
+    hv("p",{html:"เซลล์ที่เลือกมี<b>พลาสมิดลูกผสม</b> ที่เพิ่มจำนวนได้และวาง gene A ไว้ตรงทิศกับโปรโมเตอร์ เมื่อเลี้ยงขยายในถังหมัก แบคทีเรียจะถอดรหัสและแปลรหัส gene A ออกมาเป็นโปรตีน A"},L);
+    const pep=hv("div",{class:"peptide"},L);
+    (r.peptide||[]).forEach((a,i)=>{if(i)hv("span",{text:"–"},pep);hv("i",{text:a},pep);});
+    if(S.plate!=="amp")hv("p",{html:"<b>หมายเหตุ</b> รอบนี้คุณเลี้ยงบนจานที่ไม่มียาปฏิชีวนะ และบังเอิญหยิบโคโลนีที่มีพลาสมิดลูกผสมได้ ในงานจริงจานแบบนี้มีโคโลนีของเซลล์ที่ไม่ได้รับพลาสมิดปนอยู่มาก จึงควรใช้จานที่ใส่แอมพิซิลลินเพื่อคัดเลือก",style:"color:var(--muted);font-size:.92rem"},L);
+    hv("p",{html:"การใช้เอนไซม์ตัวเดียวตัดทั้งสองด้านทำให้ชิ้น gene เข้าไปได้ทั้งสองทิศ รอบนี้ได้ทิศที่ถูก ในงานจริงนิยมใช้เอนไซม์สองชนิดที่ต่างกันเพื่อบังคับทิศทางของยีน",style:"color:var(--muted);font-size:.92rem"},L);
+    if(S.gFrag.skipped)hv("p",{html:"<b>หมายเหตุ</b> เอนไซม์ที่เลือกมีลำดับที่จดจำอยู่ระหว่างรอยตัดด้วย ชิ้นที่ได้จึงสั้นกว่าที่ตั้งใจ",style:"color:var(--muted);font-size:.92rem"},L);
+    prodScene(Rr);
+  }else{
+    hv("div",{class:"result-head fail",text:"Operation fail"},L);
+    r.reasons.forEach(t=>hv("p",{html:t},L));
+    if(r.flipped)flipScene(Rr);else failScene(Rr);
+  }
+  const sm=hv("div",{class:"summary"},L);
+  hv("div",{html:`พลาสมิด: ตัดที่ตำแหน่ง ${S.site.enzyme} ใน ${REGION_NAME[S.site.region]} ด้วย ${S.pEnz}`},sm);
+  hv("div",{html:`gene A: ตัดด้วย ${S.gEnz} ที่เบสที่ ${S.gFrag.s1+1} และ ${S.gFrag.s2+1} ได้ชิ้นที่มีช่วงแปลรหัส${S.gFrag.geneOk?"ครบ":"ไม่ครบ"} ใส่ใน${S.flipped?"ทิศสวนกับโปรโมเตอร์":"ทิศเดียวกับโปรโมเตอร์"}`},sm);
+  hv("div",{html:`จานเพาะเชื้อ: ${S.plate==="amp"?"LB + X-gal + แอมพิซิลลิน":"LB + X-gal ไม่มียาปฏิชีวนะ"}`},sm);
+  const b=hv("div",{class:"btns"},L);
+  if(!r.ok){
+    const clear={flipped:null,docked:false,ligated:false,cells:null,rings:null,pulsed:false,plate:null,spread:false,colonies:null,incubated:false,picked:null,trans:null,result:null};
+    if(r.fixStep===3)backBtn(b,"ย้อนกลับไปตัดชิ้น gene ใหม่",()=>goStep(3,Object.assign({gCuts:[],gFrag:null,gDone:false},clear)));
+    else if(r.fixStep===4)backBtn(b,"ย้อนกลับไปเชื่อม DNA ใหม่",()=>goStep(4,clear));
+    else backBtn(b,"ย้อนกลับไปเลือกโคโลนีใหม่",()=>goStep(6,{picked:null,trans:null,result:null}));
+  }
+  hv("button",{type:"button",class:"btn",text:r.ok?"ทำการทดลองอีกครั้ง":"เริ่มใหม่ทั้งหมด",onclick:()=>{S=fresh();render();window.scrollTo({top:0,behavior:"smooth"});}},b);
+}
+function flipScene(host){
+  const svg=sv("svg",{viewBox:"0 0 400 220",class:"prod-svg",style:"max-width:420px",role:"img","aria-label":"ยีนที่ใส่กลับทิศกับโปรโมเตอร์"},host);
+  sv("line",{x1:20,x2:380,y1:110,y2:110,style:"stroke:var(--ink);stroke-width:3"},svg);
+  sv("path",{d:"M40 78 L120 78",class:"prom-line",style:"stroke:var(--lac);stroke-width:3;fill:none"},svg);
+  sv("path",{d:"M134 78 L120 71 L120 85 Z",style:"fill:var(--lac)"},svg);
+  sv("text",{x:40,y:64,style:"font-size:13px;fill:var(--lac);font-weight:600",text:"โปรโมเตอร์"},svg);
+  sv("rect",{x:190,y:92,width:150,height:36,rx:8,style:"fill:var(--gene-bg);stroke:var(--gene);stroke-width:2"},svg);
+  sv("text",{x:265,y:116,style:"font-size:15px;font-weight:700;fill:var(--gene);text-anchor:middle",text:"gene A"},svg);
+  sv("path",{d:"M320 150 L212 150",style:"stroke:var(--gene);stroke-width:3;fill:none"},svg);
+  sv("path",{d:"M198 150 L212 143 L212 157 Z",style:"fill:var(--gene)"},svg);
+  sv("text",{x:265,y:176,style:"font-size:13px;fill:var(--gene);text-anchor:middle",text:"ทิศของยีนสวนทางกับโปรโมเตอร์"},svg);
+  sv("text",{x:200,y:208,style:"font-size:13px;fill:var(--bad);text-anchor:middle;font-weight:600",text:"RNA polymerase อ่านไปทางขวา จึงไม่ได้ mRNA ของโปรตีน A"},svg);
+}
+function prodScene(host){
+  const svg=sv("svg",{viewBox:"0 0 320 300",class:"prod-svg",role:"img","aria-label":"ถังหมักที่แบคทีเรียกำลังผลิตโปรตีน A"},host);
+  sv("rect",{x:70,y:40,width:180,height:230,rx:28,style:"fill:color-mix(in srgb,var(--top) 8%,var(--paper));stroke:var(--ink);stroke-width:2.5"},svg);
+  sv("rect",{x:74,y:90,width:172,height:176,rx:24,style:"fill:color-mix(in srgb,var(--agar) 45%,var(--paper))"},svg);
+  sv("rect",{x:140,y:18,width:40,height:26,rx:4,style:"fill:var(--paper);stroke:var(--ink);stroke-width:2"},svg);
+  for(let i=0;i<7;i++){const x=95+(i%4)*42+(i>3?20:0),y=150+Math.floor(i/4)*60;sv("rect",{x,y,width:30,height:14,rx:7,class:"bug",style:`animation-delay:${-i*0.7}s`},svg);}
+  for(let i=0;i<14;i++){sv("circle",{cx:rand(90,230),cy:rand(230,262),r:rand(3,5),class:i%2?"prot":"bubble",style:`animation-delay:${-rand(0,4)}s`},svg);}
+  sv("text",{x:160,y:292,"text-anchor":"middle",style:"font-size:13px;fill:var(--muted)",text:"จุดสีส้ม: โปรตีน A ที่แบคทีเรียสร้าง"},svg);
+}
+function failScene(host){
+  const svg=sv("svg",{viewBox:"0 0 400 400",class:"plate-svg",role:"img","aria-label":"จานเพาะเชื้อของการทดลองนี้"},host);
+  sv("circle",{cx:200,cy:200,r:192,class:"dish-rim"},svg);sv("circle",{cx:200,cy:200,r:176,class:"agar"},svg);
+  (S.colonies||[]).forEach((c,i)=>{const g=sv("g",{class:"colony grown"+(S.result&&S.picked===i?" sel":"")},svg);sv("circle",{cx:c.x,cy:c.y,r:c.r,class:c.color},g);sv("circle",{cx:c.x,cy:c.y,r:c.r+6,class:"sel-ring"},g);});
+}
+
+/* ---------- Render ---------- */
+function render(){
+  renderSteps();drawRotor();updatePlasmid();renderEnzymes();renderDonor();renderWork();
+}
+$("#reset-top").addEventListener("click",()=>{S=fresh();render();window.scrollTo({top:0,behavior:"smooth"});});
+buildPlasmid();wirePlasmid();render();
+})();
+</script>
+</body>
+</html>
