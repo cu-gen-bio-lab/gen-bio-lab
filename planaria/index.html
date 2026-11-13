@@ -23,7 +23,9 @@ canvas{display:block;width:100%;border:1.5px solid #999;border-radius:3px}
 #tw{flex:1;min-width:80px;height:4px;background:#ddd;border-radius:2px;overflow:hidden}
 #tf{height:100%;width:0%;background:#3B6D11;border-radius:2px;transition:width .05s linear}
 #tl{font-size:13px;color:#777;min-width:32px}
-#hint{font-size:11px;color:#b45309;margin-top:2px}
+#hint{font-size:12px;color:#b45309;margin-top:2px;line-height:1.4}
+#hint.tap{cursor:pointer;text-decoration:underline;font-weight:600}
+#hint.warn{color:#8a5a00}
 #brs{margin-left:auto}
 #opt{font-size:12px;color:#777}
 
@@ -65,7 +67,7 @@ canvas{display:block;width:100%;border:1.5px solid #999;border-radius:3px}
     <button class="btn" id="bsh">&#128243; Shake before Trial 6</button>
     <span id="opt">Optional &mdash; skip it and just press Start</span>
   </div>
-  <div id="hint" style="display:none">&#128241; Or shake your phone (gyroscope)</div>
+  <div id="hint" style="display:none" role="status"></div>
 </div>
 
 
@@ -97,34 +99,54 @@ canvas{display:block;width:100%;border:1.5px solid #999;border-radius:3px}
   function rand(a,b){return a+Math.random()*(b-a);}
   function g(id){return document.getElementById(id);}
 
+  /* Body outline traced from the reference picture.
+     [t, half-width]: t = 0 tail tip ... 1 head tip, both as fractions of body length.
+     Auricles (the "ears") stick out at t ~0.78; the head ends in a blunt arrow point. */
+  var BODY=[[0,0],[.025,.03],[.06,.05],[.12,.075],[.19,.1],[.27,.12],[.36,.135],[.5,.149],
+            [.7,.148],[.745,.143],[.765,.185],[.785,.2],[.84,.185],[.88,.16],[.92,.128],
+            [.95,.095],[.975,.062],[.993,.03],[1,0]];
+  var OUTLINE=(function(){
+    var top=BODY.map(function(p){return [p[0]-.5,-p[1]];});
+    var bot=BODY.slice(1,-1).reverse().map(function(p){return [p[0]-.5,p[1]];});
+    return top.concat(bot);
+  })();
+  var SPOTS=[[-.25,-.04],[-.1,.05],[0,-.06],[.1,.02],[.18,-.04],[-.17,0],[.05,.08],[.22,.06],[-.32,.02]];
+
   function drawWorm(w){
     var sc=w.cT>0?0.82+0.18*(1-Math.max(0,w.cT)/260):1.0;
-    var l=WL*sc,h=WH*sc;
+    var l=WL*sc;
     var wave=Math.sin(w.wo)*0.07;
     cx.save();
     cx.translate(w.x,w.y);
     cx.rotate(w.a+wave);
+    /* smooth closed curve through the outline (midpoint quadratic smoothing) */
+    var n=OUTLINE.length;
     cx.beginPath();
-    cx.moveTo(l/2,0);
-    cx.bezierCurveTo(l/2-l*.18,-h*.55,-l/2+l*.25,-h*.5,-l/2,0);
-    cx.bezierCurveTo(-l/2+l*.25,h*.5,l/2-l*.18,h*.55,l/2,0);
+    var p0=OUTLINE[n-1],p1=OUTLINE[0];
+    cx.moveTo((p0[0]+p1[0])/2*l,(p0[1]+p1[1])/2*l);
+    for(var i=0;i<n;i++){
+      var p=OUTLINE[i],q=OUTLINE[(i+1)%n];
+      cx.quadraticCurveTo(p[0]*l,p[1]*l,(p[0]+q[0])/2*l,(p[1]+q[1])/2*l);
+    }
     cx.closePath();
     var grd=cx.createLinearGradient(l/2,0,-l/2,0);
-    grd.addColorStop(0,'#5c3317');grd.addColorStop(.35,'#8B5E3C');
+    grd.addColorStop(0,'#5c3317');grd.addColorStop(.3,'#8B5E3C');
     grd.addColorStop(.65,'#7a4f2e');grd.addColorStop(1,'#4a2a10');
     cx.fillStyle=grd;cx.fill();
+    cx.strokeStyle='rgba(235,205,175,0.45)';cx.lineWidth=l*.025;cx.stroke();  /* pale rim */
     cx.fillStyle='rgba(0,0,0,0.18)';
-    [[l*.1,-h*.1],[0,-h*.15],[-l*.1,h*.05],[l*.18,h*.08],[-l*.05,-h*.05],[-l*.18,h*.1],[l*.05,h*.15]].forEach(function(d){
-      if(Math.abs(d[0])<l*.4&&Math.abs(d[1])<h*.45){cx.beginPath();cx.arc(d[0],d[1],h*.055,0,6.28);cx.fill();}
+    SPOTS.forEach(function(d){cx.beginPath();cx.arc(d[0]*l,d[1]*l,l*.014,0,6.28);cx.fill();});
+    /* eyes: pale pigment-cup rim with a dark centre, tilted toward the midline */
+    [[-1,.45],[1,-.45]].forEach(function(e){
+      var ex=.377*l, ey=e[0]*.055*l;
+      cx.fillStyle='rgba(235,220,200,0.75)';
+      cx.beginPath();cx.ellipse(ex,ey,l*.034,l*.02,e[1],0,6.28);cx.fill();
+      cx.fillStyle='rgba(0,0,0,0.85)';
+      cx.beginPath();cx.ellipse(ex,ey,l*.022,l*.012,e[1],0,6.28);cx.fill();
     });
-    cx.fillStyle='#6b3d1e';
-    cx.beginPath();cx.ellipse(l/2-l*.08,-h*.38,h*.18,h*.14,.5,0,6.28);cx.fill();
-    cx.beginPath();cx.ellipse(l/2-l*.08,h*.38,h*.18,h*.14,-.5,0,6.28);cx.fill();
-    cx.fillStyle='rgba(0,0,0,0.75)';
-    cx.beginPath();cx.arc(l/2-l*.12,-h*.14,h*.08,0,6.28);cx.fill();
-    cx.beginPath();cx.arc(l/2-l*.12,h*.14,h*.08,0,6.28);cx.fill();
     cx.restore();
   }
+
 
   function makeWorm(i){
     var lh=(PH-24)/(N-1);
@@ -250,6 +272,7 @@ canvas{display:block;width:100%;border:1.5px solid #999;border-radius:3px}
     if(show) g('bsh').innerHTML='&#128243; Shake before Trial '+trial;
     g('row2').style.display=show?'flex':'none';
     g('hint').style.display=show?'block':'none';
+    if(show)updateHint();
     if(show){
       g('bsh').classList.add('pulse');
     } else {
@@ -297,7 +320,9 @@ canvas{display:block;width:100%;border:1.5px solid #999;border-radius:3px}
     if(running||allDone||pendingShake||SHAKE_TRIALS.indexOf(trial)<0)return;
     pendingShake=true;
     showShakeRow(false);
-    g('sm').textContent='Shaken! Press Start Trial '+trial+'.';
+    g('sm').textContent='Shake detected! Press Start Trial '+trial+'.';
+    g('bst').textContent='\u25B6 Start Trial '+trial+' (shaken)';
+    if(navigator.vibrate)navigator.vibrate(150);
     var n=0;
     var sh=function(){
       CV.style.transform='translateX('+(n%2?'5px':'-4px')+')';
@@ -321,24 +346,67 @@ canvas{display:block;width:100%;border:1.5px solid #999;border-radius:3px}
   g('bsh').addEventListener('click',doShake);
   g('brs').addEventListener('click',resetAll);
 
-  if(window.DeviceMotionEvent){
-    var motionOn=false;
-    var gH=function(e){
-      var a=e.accelerationIncludingGravity;if(!a)return;
-      var mag=Math.sqrt((a.x||0)*(a.x||0)+(a.y||0)*(a.y||0)+(a.z||0)*(a.z||0));
-      var now=Date.now();
-      if(mag>20&&now-lastGyro>1500){lastGyro=now;doShake();} /* doShake checks the trial */
-    };
-    var enableMotion=function(){if(motionOn)return;motionOn=true;window.addEventListener('devicemotion',gH);};
-    if(typeof DeviceMotionEvent.requestPermission==='function'){
-      /* iOS: ask for motion access on the first Start tap, so a real shake works before Trial 6 */
-      g('bst').addEventListener('click',function(){
-        DeviceMotionEvent.requestPermission().then(function(r){if(r==='granted')enableMotion();}).catch(function(){});
-      },{once:true});
-    } else {
-      enableMotion();
-    }
+  /* ---- Phone shake (motion sensor) ----
+     state: ask    = iPhone/iPad, needs a tap to allow motion access
+            wait   = listening, no sensor data yet
+            live   = sensor data arriving, shaking works
+            denied = motion access refused
+            none   = no sensor data here (desktop, or page not on https)   */
+  var motion={state:'none',prev:null,timer:null};
+  var SHAKE_ACC=12;    /* m/s^2 without gravity (~1.2 g): a firm wrist shake */
+  var SHAKE_DELTA=18;  /* fallback: change between two readings incl. gravity */
+
+  function updateHint(){
+    var h=g('hint');
+    var msg={
+      ask:'\uD83D\uDCF1 Tap here to turn on phone shaking',
+      wait:'\uD83D\uDCF1 Or shake your phone (checking the motion sensor\u2026)',
+      live:'\uD83D\uDCF1 Or shake your phone firmly now',
+      denied:'Phone shaking is off because motion access was refused. Use the Shake button, or allow Motion & Orientation Access for this site and reload.',
+      none:'Phone shaking isn\u2019t available here (no motion sensor data). Use the Shake button. On a phone, the page has to be opened from an https:// address.'
+    }[motion.state];
+    h.textContent=msg;
+    h.classList.toggle('tap',motion.state==='ask');
+    h.classList.toggle('warn',motion.state==='denied'||motion.state==='none');
   }
+  function setMotion(st){motion.state=st;updateHint();}
+
+  function onMotion(e){
+    var hit=false,a=e.acceleration,b=e.accelerationIncludingGravity;
+    if(a&&a.x!=null){
+      hit=Math.sqrt(a.x*a.x+a.y*a.y+a.z*a.z)>SHAKE_ACC;
+    } else if(b&&b.x!=null){
+      if(motion.prev)hit=Math.abs(b.x-motion.prev.x)+Math.abs(b.y-motion.prev.y)+Math.abs(b.z-motion.prev.z)>SHAKE_DELTA;
+      motion.prev={x:b.x,y:b.y,z:b.z};
+    } else return;                       /* event with no data: ignore */
+    if(motion.state!=='live'){clearTimeout(motion.timer);setMotion('live');}
+    var now=Date.now();
+    if(hit&&now-lastGyro>1500){lastGyro=now;doShake();}  /* doShake checks the trial */
+  }
+  var motionOn=false;
+  function enableMotion(){
+    if(motionOn)return;motionOn=true;
+    window.addEventListener('devicemotion',onMotion);
+    setMotion('wait');
+    motion.timer=setTimeout(function(){if(motion.state==='wait')setMotion('none');},2500);
+  }
+  function askMotion(){
+    DeviceMotionEvent.requestPermission().then(function(r){
+      if(r==='granted')enableMotion();else setMotion('denied');
+    }).catch(function(){setMotion('none');});
+  }
+
+  if(!window.DeviceMotionEvent||!window.isSecureContext){
+    setMotion('none');
+  } else if(typeof DeviceMotionEvent.requestPermission==='function'){
+    /* iPhone/iPad: permission must come from a tap. Ask on the first Start, or when the hint is tapped. */
+    setMotion('ask');
+    g('bst').addEventListener('click',function(){if(motion.state==='ask')askMotion();});
+    g('hint').addEventListener('click',function(){if(motion.state==='ask')askMotion();});
+  } else {
+    enableMotion();
+  }
+
 
   function fitCanvas(){
     var st=g('stage'), w=st.clientWidth, h, ratio=0.5;
